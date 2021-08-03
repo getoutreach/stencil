@@ -1,0 +1,23 @@
+# This yaml file has some shared version info.
+#
+# The Go & Protobuf versions are used by .circleci/docker-builder.sh.
+
+# Languages
+nodejs: 14.14.0
+ruby: 2.6.6
+go: 1.15.2
+terraform: 0.13.5
+
+# Maestro's terraform is held back because the maestro terraform provider is
+# not yet compatible with the v0.13 plugin distribution schemes.
+maestro-terraform: 0.12.26
+
+# Utils
+goveralls: 0.0.6
+
+# runtime-alpine is the version of the production runtime base image
+runtime-alpine: 3.12
+
+# concourse go module version does not match github version, so we
+# pin fly version below to a commit hash corresponding to v6.5.0
+fly: cfe7746ae74247743708be6c5b2f40215030a1f1

@@ -1,0 +1,20 @@
+name: stencil
+versions:
+  go: 1.16.5
+
+# Support bootstrap
+library: true
+commands:
+  - stencil
+reportingTeam: cia-dev-tooling
+releaseOptions:
+  allowMajorVersions: true
+
+# Support newer stencil
+arguments:
+  library: true
+  commands:
+    - stencil
+  reportingTeam: cia-dev-tooling
+  releaseOptions:
+    allowMajorVersions: true

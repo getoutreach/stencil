@@ -1,0 +1,59 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Editors (please update any new editor files in
+# https://github.com/getoutreach/bootstrap/edit/master/pkg/codegen/templates/.gitignore.tpl
+# so every updated project gets it)
+*.swp
+*~
+\#*\#
+.idea/*
+TAGS
+*.sublime-project
+*.sublime-workspace
+.\#*
+
+# Test binary, build with "go test -c"
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Log files
+*.log
+
+# Releases and other binaries
+bin/
+dist/
+
+# Don't. Commit. Vendor. Or other package manager dep directories
+node_modules
+vendor
+
+# Fetched by make
+concourse/jsonnet-libs
+
+# pulumi secrets, obtained from vault
+Pulumi.*.yaml
+
+# terraform
+.terraform
+
+# macOS
+.DS_Store
+
+# Ruby gRPC client
+*.gem
+
+# bootstrap libs
+.bootstrap
+
+# CircleCI cache version
+/cache-version.txt
+
+###Block(extras)
+###EndBlock(extras)
