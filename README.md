@@ -18,11 +18,11 @@ Profit.
 
 **TODO**
 
-For now you can simply create a [`service.yaml`](ADD LINK AFTER OSS) and add a module to the list.
+For now you can simply create a [`service.yaml`](https://github.com/getoutreach/stencil/blob/main/pkg/configuration/configuration.go#L33) and add a module to the list.
 
 ## Writing Templates
 
-Templates are written via [go-template](https://pkg.go.dev/text/template) syntax. Simply create a new module repository with a [`manifest.yaml`](ADD LINK AFTER OSS) and create a `.tpl` file to have it be automatically included / rendered. By default a file is written to the same place as the name it has in the template repository. This can be changed with the `file.SetPath` function.
+Templates are written via [go-template](https://pkg.go.dev/text/template) syntax. Simply create a new module repository with a [`manifest.yaml`](https://github.com/getoutreach/stencil/blob/main/pkg/configuration/configuration.go#L61) and create a `.tpl` file to have it be automatically included / rendered. By default a file is written to the same place as the name it has in the template repository. This can be changed with the `file.SetPath` function.
 
 ### Functions
 
