@@ -1,4 +1,4 @@
-package codegen
+package functions
 
 import (
 	"fmt"
@@ -7,10 +7,10 @@ import (
 	"text/template"
 )
 
-// templateFunctions are stock template functions that don't impact
+// Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead
-var templateFunctions = template.FuncMap{
+var Default = template.FuncMap{
 	"Dereference": func(i interface{}) interface{} {
 		infType := reflect.TypeOf(i)
 

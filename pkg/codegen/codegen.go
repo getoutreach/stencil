@@ -35,6 +35,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/vfs"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/getoutreach/stencil/pkg/processors"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -426,20 +427,20 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath, contents string, 
 
 //nolint:gocritic,funlen
 func (b *Builder) renderTemplate(fileName, contents string,
-	args map[string]interface{}) ([]*RenderedTemplate, error) {
-	srcRendered := &RenderedTemplate{}
+	args map[string]interface{}) ([]*functions.RenderedTemplate, error) {
+	srcRendered := &functions.RenderedTemplate{}
 
 	tmpl := template.New(fileName)
-	st := &Stencil{tmpl, b.Manifest, make([]*RenderedTemplate, 0), srcRendered}
+	st := functions.NewStencil(tmpl, b.Manifest, srcRendered)
 
 	nargs := make(map[string]interface{})
 	for k, v := range args {
 		nargs[k] = v
 	}
 
-	funcs := templateFunctions
-	funcs["stencil"] = func() *Stencil { return st }
-	funcs["file"] = func() *RenderedTemplate { return st.File }
+	funcs := functions.Default
+	funcs["stencil"] = func() *functions.Stencil { return st }
+	funcs["file"] = func() *functions.RenderedTemplate { return st.File }
 
 	tmpl, err := tmpl.Funcs(sprig.TxtFuncMap()).Funcs(funcs).Parse(contents)
 	if err != nil {
