@@ -26,7 +26,7 @@ Templates are written via [go-template](https://pkg.go.dev/text/template) syntax
 
 ### Functions
 
-All available template functions are able to be found on [pkg.dev](ADD LINK AFTER OSS).
+All available template functions are able to be found on [pkg.go.dev](https://pkg.go.dev/github.com/getoutreach/stencil/pkg/functions).
 
 # License
 
