@@ -162,8 +162,8 @@ github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
-github.com/getoutreach/gobox v1.9.1 h1:uEwpNa0G3V+JJ604SxolWKE2rSjQVD+Vb6lOZ0HnclA=
-github.com/getoutreach/gobox v1.9.1/go.mod h1:GXinZAZWZo4UdGHxXfnJ4YXOmfYX/mFB2x/ghNZDkPA=
+github.com/getoutreach/gobox v1.9.2 h1:6ZgZBICvh74wck+Rt+ELVpVT8EkgRvt/VJVKqc7oBJQ=
+github.com/getoutreach/gobox v1.9.2/go.mod h1:GXinZAZWZo4UdGHxXfnJ4YXOmfYX/mFB2x/ghNZDkPA=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
 github.com/gin-gonic/gin v1.6.3/go.mod h1:75u5sXoLsGZoRN5Sgbi1eraJ4GU3++wFwWzhwvtwp4M=
