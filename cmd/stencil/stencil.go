@@ -84,7 +84,7 @@ func overrideConfigLoaders() {
 	})
 }
 
-func main() { //nolint:funlen,gocyclo
+func main() { //nolint:funlen
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
