@@ -84,7 +84,7 @@ func overrideConfigLoaders() {
 	})
 }
 
-func main() { //nolint:funlen,gocyclo
+func main() { //nolint:funlen
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
@@ -117,11 +117,16 @@ func main() { //nolint:funlen,gocyclo
 	///Block(init)
 	///EndBlock(init)
 
+	// optional cleanup function for use after NeedsUpdate
+	// this function is re-defined later when NeedsUpdate is true
+	cleanup := func() {}
+
 	exit := func() {
 		trace.End(ctx)
 		trace.CloseTracer(ctx)
 		///Block(exit)
 		///EndBlock(exit)
+		cleanup()
 		os.Exit(exitCode)
 	}
 	defer exit()
@@ -308,10 +313,25 @@ func main() { //nolint:funlen,gocyclo
 
 		// restart when updated
 		if updater.NeedsUpdate(traceCtx, log, "", oapp.Version, c.Bool("skip-update"), c.Bool("debug"), c.Bool("enable-prereleases"), c.Bool("force-update-check")) {
-			log.Infof("stencil has been updated, please re-run your command")
+			// replace running process(execve)
+			switch runtime.GOOS {
+			case "linux", "darwin":
+				cleanup = func() {
+					log.Infof("stencil has been updated")
+					osarg0 := os.Args[0]
+					err := syscall.Exec(osarg0, os.Args, os.Environ())
+					if err != nil {
+						log.WithError(err).Error("failed to execute updated binary")
+					}
+				}
+			default:
+				log.Infof("stencil has been updated, please re-run your command")
+			}
+
 			exitCode = 5
 			trace.EndCall(traceCtx)
 			exit()
+			return nil
 		}
 
 		return nil
