@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/getoutreach/gobox/pkg/updater"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
@@ -34,13 +35,56 @@ func NewHost() *Host {
 	}
 }
 
+// GetTemplateFunctions returns a function map from the available
+// plugins.
+func (h *Host) GetTemplateFunctions(ctx context.Context) (template.FuncMap, error) {
+	funcMap := map[string]interface{}{}
+	for name, ext := range h.extensions {
+		funcs, err := ext.GetTemplateFunctions()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get template functions from plugin '%s'", name)
+		}
+
+		for _, f := range funcs {
+			funcKey := fmt.Sprintf("extensions.%s.%s", name, f.Name)
+
+			// create a new function based on the arguments provided
+			// that calls the rpc
+			tfunc := reflect.MakeFunc(reflect.FuncOf(f.Arguments, []reflect.Type{nil}, false), func(reflectArgs []reflect.Value) []reflect.Value {
+				args := make([]interface{}, len(reflectArgs))
+				for i, v := range reflectArgs {
+					args[i] = v.Interface()
+				}
+
+				iresp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
+					Name:      f.Name,
+					Arguments: args,
+					// TODO: Figure out how to inject stencil/file information here
+				})
+				if err != nil {
+					return []reflect.Value{reflect.ValueOf(nil), reflect.ValueOf(err)}
+				}
+
+				// convert the response from an interface into reflect.Value
+				// to satisfy MakeFunc
+				resp := make([]reflect.Value, len(iresp))
+				for i, inf := range iresp {
+					resp[i] = reflect.ValueOf(inf)
+				}
+
+				return resp
+			})
+			funcMap[funcKey] = tfunc.Interface()
+		}
+	}
+
+	return funcMap, nil
+}
+
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
 func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error {
-	// 1. download the ext from a repository
-	// 2. (optional) support local paths (how?)
-	// 3. run the ext by creating a connection to it
 	u, err := giturls.Parse(source)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse extension URL")

@@ -2,6 +2,8 @@
 package apiv1
 
 import (
+	"reflect"
+
 	"github.com/getoutreach/stencil/pkg/functions"
 )
 
@@ -25,9 +27,8 @@ type TemplateFunction struct {
 	//  extensions.<extensionLowerName>.<name>
 	Name string
 
-	// NumArguments are the number of arguments, arbitrarily, that this
-	// function expects.
-	NumArguments int
+	// Arguments are the arguments that this function expects
+	Arguments []reflect.Type
 }
 
 // TemplateFunctionExec executes a template function

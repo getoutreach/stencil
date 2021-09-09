@@ -44,6 +44,7 @@ func (s *ExtensionPluginServer) GetTemplateFunctions(args interface{}, resp *[]*
 	return err
 }
 
+//nolint:gocritic // Why: This is how go-plugin does it. :shrug:
 func (s *ExtensionPluginServer) ExecuteTemplateFunction(t *TemplateFunctionExec, resp *interface{}) error {
 	v, err := s.Impl.ExecuteTemplateFunction(t)
 	*resp = v
