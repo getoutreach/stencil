@@ -46,6 +46,20 @@ type ServiceManifest struct {
 	Arguments map[string]interface{} `yaml:"arguments"`
 }
 
+// TemplateRepositoryType specifies what type of a template
+// repository a repository is.
+type TemplateRepositoryType string
+
+const (
+	// TemplateRepositoryTypeExt denotes a repository as being
+	// an extension repository.
+	TemplateRepositoryTypeExt TemplateRepositoryType = "extension"
+
+	// TemplateRepositoryTypeStd denotes a repository as being a
+	// standard template repository. This is the default
+	TemplateRepositoryTypeStd TemplateRepositoryType = "standard"
+)
+
 // TemplateRepository is a repository of template files.
 type TemplateRepository struct {
 	// URL is the fully qualified URL that is able to access the templates
@@ -65,6 +79,9 @@ type TemplateRepositoryManifest struct {
 
 	// Modules are template repositories that this manifest requires
 	Modules []*TemplateRepository `yaml:"modules"`
+
+	// Type is the type of repository this is
+	Type TemplateRepositoryType `yaml:"type"`
 
 	// PostRunCommand is a command to be ran after rendering and post-processors
 	// have been ran on the project

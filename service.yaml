@@ -1,6 +1,6 @@
 name: stencil
 versions:
-  go: 1.16.5
+  go: 1.17
 
 # Support bootstrap
 library: true
