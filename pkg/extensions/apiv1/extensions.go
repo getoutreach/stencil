@@ -11,6 +11,9 @@ const (
 	// Version that this extension API implements
 	Version = 1
 
+	// Name is the plugin name that is served by go-plugin
+	Name = "extension"
+
 	// CookieKey is a basic UX feature for ensuring that
 	// we execute a valid stencil plugin. This is exported
 	// for ease of consumption by extensions.

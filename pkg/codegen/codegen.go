@@ -34,6 +34,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/vfs"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/getoutreach/stencil/pkg/processors"
 	"github.com/pkg/errors"
@@ -66,6 +67,7 @@ type Builder struct {
 	GitRepoFs billy.Filesystem
 
 	Processors *processors.Table
+	extensions *extensions.Host
 
 	log logrus.FieldLogger
 
@@ -82,6 +84,7 @@ func NewBuilder(repo, dir string, s *configuration.ServiceManifest, sshKeyPath s
 		Dir:        dir,
 		Manifest:   s,
 		Processors: processors.New(),
+		extensions: extensions.NewHost(),
 
 		sshKeyPath:  sshKeyPath,
 		accessToken: accessToken,
@@ -102,8 +105,8 @@ func (b *Builder) Run(ctx context.Context, log logrus.FieldLogger) ([]string, er
 	}
 
 	b.log.Info("Fetching dependencies")
-	fetcher := NewFetcher(b.log, b.Manifest, b.sshKeyPath, b.accessToken)
-	fs, manifests, err := fetcher.CreateVFS()
+	fetcher := NewFetcher(b.log, b.Manifest, b.sshKeyPath, b.accessToken, b.extensions)
+	fs, manifests, err := fetcher.CreateVFS(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create vfs")
 	}

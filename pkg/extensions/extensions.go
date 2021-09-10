@@ -15,6 +15,8 @@ import (
 	"github.com/getoutreach/gobox/pkg/updater"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/extensions/github"
+	"github.com/getoutreach/stencil/pkg/functions"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pkg/errors"
 	giturls "github.com/whilp/git-urls"
@@ -36,8 +38,8 @@ func NewHost() *Host {
 }
 
 // GetTemplateFunctions returns a function map from the available
-// plugins.
-func (h *Host) GetTemplateFunctions(ctx context.Context) (template.FuncMap, error) {
+// plugins for a given stencil and template file instance.
+func (h *Host) GetTemplateFunctions(ctx context.Context, s *functions.Stencil, tmpl *functions.RenderedTemplate) (template.FuncMap, error) {
 	funcMap := map[string]interface{}{}
 	for name, ext := range h.extensions {
 		funcs, err := ext.GetTemplateFunctions()
@@ -50,6 +52,10 @@ func (h *Host) GetTemplateFunctions(ctx context.Context) (template.FuncMap, erro
 
 			// create a new function based on the arguments provided
 			// that calls the rpc
+			// TODO: Need to align this out with the actual ExecuteTemplateFunction out. Right now
+			// it's hardcoded to nil. Ideally it should be interface{}, error. Also unsure if
+			// we can send reflect.Type over the wire, if we can't then we will need to write
+			// a mapper.
 			tfunc := reflect.MakeFunc(reflect.FuncOf(f.Arguments, []reflect.Type{nil}, false), func(reflectArgs []reflect.Value) []reflect.Value {
 				args := make([]interface{}, len(reflectArgs))
 				for i, v := range reflectArgs {
@@ -59,7 +65,8 @@ func (h *Host) GetTemplateFunctions(ctx context.Context) (template.FuncMap, erro
 				iresp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
 					Name:      f.Name,
 					Arguments: args,
-					// TODO: Figure out how to inject stencil/file information here
+					Stencil:   s,
+					File:      tmpl,
 				})
 				if err != nil {
 					return []reflect.Value{reflect.ValueOf(nil), reflect.ValueOf(err)}
@@ -84,7 +91,7 @@ func (h *Host) GetTemplateFunctions(ctx context.Context) (template.FuncMap, erro
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
-func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error {
+func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error { //nolint:funlen // Why: OK length.
 	u, err := giturls.Parse(source)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse extension URL")
@@ -94,7 +101,11 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	if u.Scheme == "file" {
 		extPath, err = h.buildFromLocal(ctx, u.Path, name)
 	} else {
-		extPath, err = h.downloadFromRemote(ctx, source, name, version)
+		pathSpl := strings.Split(u.Path, "/")
+		if len(pathSpl) < 2 {
+			return fmt.Errorf("invalid repository, expected org/repo, got %s", u.Path)
+		}
+		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name, version)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to setup extension")
@@ -102,13 +113,18 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Level:      hclog.Trace,
+			Output:     os.Stderr,
+			JSONFormat: true,
+		}),
 		HandshakeConfig: plugin.HandshakeConfig{
 			ProtocolVersion:  apiv1.Version,
 			MagicCookieKey:   apiv1.CookieKey,
 			MagicCookieValue: apiv1.CookieValue,
 		},
 		Plugins: map[string]plugin.Plugin{
-			"extension": &apiv1.ExtensionPlugin{},
+			apiv1.Name: &apiv1.ExtensionPlugin{},
 		},
 		Cmd: exec.CommandContext(ctx, extPath),
 	})
@@ -118,7 +134,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 		return errors.Wrap(err, "failed to create connection to extension")
 	}
 
-	raw, err := rpcClient.Dispense("extension")
+	raw, err := rpcClient.Dispense(apiv1.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to setup extension connection over extension")
 	}
@@ -138,15 +154,15 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 }
 
 // getExtensionPath returns the path to an extension binary
-func (h *Host) getExtensionPath(version string, name string) string {
-	homeDir, _ := os.UserHomeDir()
+func (h *Host) getExtensionPath(version, name string) string {
+	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
 	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, "@v", version, name)
-	os.MkdirAll(path, 0755)
+	os.MkdirAll(path, 0755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
 
 // buildFromLocal copies a local extension to it's stable path
-func (h *Host) buildFromLocal(ctx context.Context, filePath, name string) (string, error) {
+func (h *Host) buildFromLocal(_ context.Context, filePath, name string) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open extension")
@@ -163,13 +179,14 @@ func (h *Host) buildFromLocal(ctx context.Context, filePath, name string) (strin
 }
 
 // downloadFromRemote downloads a release from github and extracts it to disk
-func (h *Host) downloadFromRemote(ctx context.Context, source, name, version string) (string, error) {
+func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
 	token, err := github.GetGHToken()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get github token")
 	}
 
-	gh := updater.NewGithubUpdater(ctx, token, "", "")
+	// TODO: read org/repo from the source URL
+	gh := updater.NewGithubUpdater(ctx, token, org, repo)
 	err = gh.Check(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to validate github client worked")

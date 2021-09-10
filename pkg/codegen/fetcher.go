@@ -1,9 +1,12 @@
 package codegen
 
 import (
+	"context"
+
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/vfs"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/gitauth"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -23,13 +26,15 @@ type Fetcher struct {
 
 	sshKeyPath  string
 	accessToken cfg.SecretData
+	extensions  *extensions.Host
 }
 
-func NewFetcher(log logrus.FieldLogger, m *configuration.ServiceManifest, sshKeyPath string, accessToken cfg.SecretData) *Fetcher {
-	return &Fetcher{log, m, sshKeyPath, accessToken}
+func NewFetcher(log logrus.FieldLogger, m *configuration.ServiceManifest, sshKeyPath string,
+	accessToken cfg.SecretData, extHost *extensions.Host) *Fetcher {
+	return &Fetcher{log, m, sshKeyPath, accessToken, extHost}
 }
 
-func (f *Fetcher) DownloadRepository(r *configuration.TemplateRepository) (billy.Filesystem, error) {
+func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.TemplateRepository) (billy.Filesystem, error) {
 	u, err := giturls.Parse(r.URL)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse url")
@@ -56,7 +61,7 @@ func (f *Fetcher) DownloadRepository(r *configuration.TemplateRepository) (billy
 			opts.SingleBranch = true
 		}
 
-		if _, err := git.Clone(memory.NewStorage(), fs, opts); err != nil {
+		if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
 			return nil, err
 		}
 	}
@@ -79,8 +84,8 @@ func (f *Fetcher) ParseRepositoryManifest(fs billy.Filesystem) (*configuration.T
 // ResolveDependencies resolved the dependencies of a given template repository.
 // It currently only supports one level dependency resolution and doesn't do any
 // smart logic for ordering other than first wins.
-func (f *Fetcher) ResolveDependencies(filesystems map[string]bool,
-	r *configuration.TemplateRepositoryManifest) ([]billy.Filesystem, error) {
+func (f *Fetcher) ResolveDependencies(ctx context.Context, filesystems map[string]bool,
+	r *configuration.TemplateRepositoryManifest) ([]billy.Filesystem, error) { //nolint:funlen // Why: will refactor later
 	depFilesystems := make([]billy.Filesystem, 0)
 	args := make(map[string]configuration.Argument)
 	for _, d := range r.Modules {
@@ -90,7 +95,7 @@ func (f *Fetcher) ResolveDependencies(filesystems map[string]bool,
 			continue
 		}
 
-		fs, err := f.DownloadRepository(d)
+		fs, err := f.DownloadRepository(ctx, d)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to download repository '%s'", d.URL)
 		}
@@ -100,27 +105,52 @@ func (f *Fetcher) ResolveDependencies(filesystems map[string]bool,
 		if err != nil {
 			return nil, err
 		}
+
+		// register an extension if it's found
+		if mf.Type == configuration.TemplateRepositoryTypeExt {
+			//nolint:govet // Why: We're OK shadowing err
+			err := f.extensions.RegisterExtension(ctx, d.URL, mf.Name, d.Version)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to download extension")
+			}
+		}
+
 		for k, v := range mf.Arguments {
 			args[k] = v
 		}
 
-		subDepFilesystems, err := f.ResolveDependencies(filesystems, mf)
+		subDepFilesystems, err := f.ResolveDependencies(ctx, filesystems, mf)
 		if err != nil {
 			return nil, err
 		}
 
-		// append the resolved dependencies of the sub-dependencies to the array of dependencies
-		// of the manifest we're operating on. Be sure to put the filesystem of this dependency after
-		// it's sub-dependencies.
-		depFilesystems = append(depFilesystems, append(subDepFilesystems, fs)...)
+		newFileSystems := make([]billy.Filesystem, 0)
+
+		// only add our filesystem if we're not an extension
+		if mf.Type != configuration.TemplateRepositoryTypeExt {
+			newFileSystems = append(newFileSystems, fs)
+		}
+
+		// lookup our dependencies after ours so that we're able to override their files
+		// I suspect that this will need to be changed to allow modules to selectively
+		// override certain files.
+		if len(subDepFilesystems) > 0 {
+			newFileSystems = append(newFileSystems, subDepFilesystems...)
+		}
+
+		// if we have new filesystems, be sure to append them after our dependencies
+		if len(newFileSystems) > 0 {
+			depFilesystems = append(depFilesystems, newFileSystems...)
+		}
 	}
 
 	return depFilesystems, nil
 }
 
-func (f *Fetcher) CreateVFS() (billy.Filesystem, []*configuration.TemplateRepositoryManifest, error) {
+func (f *Fetcher) CreateVFS(ctx context.Context) (billy.Filesystem,
+	[]*configuration.TemplateRepositoryManifest, error) {
 	// Create a shim template manifest from our service dependencies
-	layers, err := f.ResolveDependencies(make(map[string]bool), &configuration.TemplateRepositoryManifest{
+	layers, err := f.ResolveDependencies(ctx, make(map[string]bool), &configuration.TemplateRepositoryManifest{
 		Modules: f.m.Modules,
 	})
 	if err != nil {
