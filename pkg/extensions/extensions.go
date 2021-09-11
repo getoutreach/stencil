@@ -10,15 +10,14 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"text/template"
 
 	"github.com/getoutreach/gobox/pkg/updater"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/extensions/github"
-	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
 
 	gogithub "github.com/google/go-github/v34/github"
@@ -37,55 +36,89 @@ func NewHost() *Host {
 	}
 }
 
-// GetTemplateFunctions returns a function map from the available
-// plugins for a given stencil and template file instance.
-func (h *Host) GetTemplateFunctions(ctx context.Context, s *functions.Stencil, tmpl *functions.RenderedTemplate) (template.FuncMap, error) {
-	funcMap := map[string]interface{}{}
-	for name, ext := range h.extensions {
+// createFunctionFromTemplateFunction takes a given
+// TemplateFunction and turns it into a callable function
+func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation, fn *apiv1.TemplateFunction) reflect.Value {
+	// convert the arguments from an interface into their reflect.Types
+	argTypes := make([]reflect.Type, len(fn.ArgumentTypes))
+	argTypesStr := make([]string, len(argTypes))
+	for i, v := range fn.ArgumentTypes {
+		argTypes[i] = reflect.TypeOf(v)
+		argTypesStr[i] = argTypes[i].String()
+	}
+
+	// create the return signature of <type>, error
+	returnTypes := []reflect.Type{reflect.TypeOf(fn.ReturnType), reflect.TypeOf((*error)(nil)).Elem()}
+	returnTypesStr := make([]string, len(returnTypes))
+	for i, v := range returnTypes {
+		returnTypesStr[i] = v.String()
+	}
+
+	logrus.WithField("extension.path", extName+"."+fn.Name).WithField("extension.argTypes", argTypesStr).WithField("extension.returnArgTypes", returnTypesStr).
+		Debug("registering extension function")
+
+	// signature: func(<args>) (interface{}, error)
+	generatedFnType := reflect.FuncOf(argTypes, returnTypes, false)
+
+	fmt.Println("generated function with types ", reflect.TypeOf(generatedFnType).String())
+	return reflect.MakeFunc(generatedFnType, func(reflectArgs []reflect.Value) []reflect.Value {
+		args := make([]interface{}, len(reflectArgs))
+		for i, v := range reflectArgs {
+			args[i] = v.Interface()
+		}
+
+		iresp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
+			Name:      fn.Name,
+			Arguments: args,
+		})
+		if err == nil {
+			// ensure that we don't return a zero value when no error is returned
+			return []reflect.Value{reflect.ValueOf(iresp), reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())}
+		}
+
+		// returning nil is a zero value which is invalid when calling a reflect created function
+		// so make a user friendly error
+		if reflect.ValueOf(iresp).IsNil() || reflect.ValueOf(iresp).IsZero() {
+			return []reflect.Value{reflect.New(reflect.TypeOf(fn.ReturnType)), reflect.ValueOf(fmt.Errorf("extension returned a nil response value which is invalid"))}
+		}
+
+		// ensure that we're returning the correct type of zero
+		// value for error if it's nil
+		errRetr := reflect.ValueOf(err)
+		if errRetr.IsNil() || errRetr.IsZero() {
+			errRetr = reflect.New(reflect.TypeOf((*error)(nil)).Elem())
+		}
+
+		// ensure that we don't return a zero value when just an error is returned
+		return []reflect.Value{reflect.ValueOf(iresp), errRetr}
+	})
+}
+
+// GetExtensionCaller returns an extension caller that's
+// aware of all extension functions
+func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error) {
+	// funcMap stores the extension functions discovered
+	funcMap := map[string]map[string]reflect.Value{}
+
+	// Call all extensions to get the template functions provided
+	for extName, ext := range h.extensions {
 		funcs, err := ext.GetTemplateFunctions()
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get template functions from plugin '%s'", name)
+			return nil, errors.Wrapf(err, "failed to get template functions from plugin '%s'", extName)
 		}
 
 		for _, f := range funcs {
-			funcKey := fmt.Sprintf("extensions.%s.%s", name, f.Name)
+			tfunc := h.createFunctionFromTemplateFunction(extName, ext, f)
 
-			// create a new function based on the arguments provided
-			// that calls the rpc
-			// TODO: Need to align this out with the actual ExecuteTemplateFunction out. Right now
-			// it's hardcoded to nil. Ideally it should be interface{}, error. Also unsure if
-			// we can send reflect.Type over the wire, if we can't then we will need to write
-			// a mapper.
-			tfunc := reflect.MakeFunc(reflect.FuncOf(f.Arguments, []reflect.Type{nil}, false), func(reflectArgs []reflect.Value) []reflect.Value {
-				args := make([]interface{}, len(reflectArgs))
-				for i, v := range reflectArgs {
-					args[i] = v.Interface()
-				}
-
-				iresp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
-					Name:      f.Name,
-					Arguments: args,
-					Stencil:   s,
-					File:      tmpl,
-				})
-				if err != nil {
-					return []reflect.Value{reflect.ValueOf(nil), reflect.ValueOf(err)}
-				}
-
-				// convert the response from an interface into reflect.Value
-				// to satisfy MakeFunc
-				resp := make([]reflect.Value, len(iresp))
-				for i, inf := range iresp {
-					resp[i] = reflect.ValueOf(inf)
-				}
-
-				return resp
-			})
-			funcMap[funcKey] = tfunc.Interface()
+			if _, ok := funcMap[extName]; !ok {
+				funcMap[extName] = make(map[string]reflect.Value)
+			}
+			funcMap[extName][f.Name] = tfunc
 		}
 	}
 
-	return funcMap, nil
+	// return the lookup function, used via Call()
+	return &ExtensionCaller{funcMap}, nil
 }
 
 // RegisterExtension registers a ext from a given source
@@ -99,7 +132,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 
 	var extPath string
 	if u.Scheme == "file" {
-		extPath, err = h.buildFromLocal(ctx, u.Path, name)
+		extPath, err = h.buildFromLocal(ctx, filepath.Join(u.Path, name), name)
 	} else {
 		pathSpl := strings.Split(u.Path, "/")
 		if len(pathSpl) < 2 {
@@ -114,9 +147,8 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
-			Level:      hclog.Trace,
-			Output:     os.Stderr,
-			JSONFormat: true,
+			Level:  hclog.Info,
+			Output: os.Stderr,
 		}),
 		HandshakeConfig: plugin.HandshakeConfig{
 			ProtocolVersion:  apiv1.Version,
@@ -157,7 +189,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 func (h *Host) getExtensionPath(version, name string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
 	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, "@v", version, name)
-	os.MkdirAll(path, 0755) //nolint:errcheck // Why: signature doesn't allow it, yet
+	os.MkdirAll(filepath.Dir(path), 0755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
 
@@ -172,6 +204,10 @@ func (h *Host) buildFromLocal(_ context.Context, filePath, name string) (string,
 	nf, err := os.Create(dlPath)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open extension path")
+	}
+	err = nf.Chmod(0755) //nolint:gocritic // Why: this is valid
+	if err != nil {
+		return "", errors.Wrap(err, "failed to chmod dest file")
 	}
 
 	_, err = io.Copy(nf, f)

@@ -1,12 +1,6 @@
 // Package apiv1 implements the extension API for stencil
 package apiv1
 
-import (
-	"reflect"
-
-	"github.com/getoutreach/stencil/pkg/functions"
-)
-
 const (
 	// Version that this extension API implements
 	Version = 1
@@ -30,8 +24,14 @@ type TemplateFunction struct {
 	//  extensions.<extensionLowerName>.<name>
 	Name string
 
-	// Arguments are the arguments that this function expects
-	Arguments []reflect.Type
+	// ArgumentTypes are the argument types that this function
+	// expects. They should be serializable via gob.
+	ArgumentTypes []interface{}
+
+	// ReturnType is the return type for this function, note that
+	// the signature is always (type, error) and that error is already
+	// included in the function signature.
+	ReturnType interface{}
 }
 
 // TemplateFunctionExec executes a template function
@@ -39,14 +39,6 @@ type TemplateFunctionExec struct {
 	// Name is the name of this go-template function. It will be prefixed with the
 	// following format: extensions.<name>.<templateName>
 	Name string
-
-	// File is the file metadata provided by stencil
-	// See: https://github.com/getoutreach/stencil/blob/df20471857be9f8cc60bc538fa54e227c449fe8c/pkg/functions/rendered_template.go#L8
-	File *functions.RenderedTemplate
-
-	// Stencil is the stencil object provided by stencil
-	// See: https://github.com/getoutreach/stencil/blob/df20471857be9f8cc60bc538fa54e227c449fe8c/pkg/functions/stencil.go#L20
-	Stencil *functions.Stencil
 
 	// Arguments are the arbitrary arguments that were passed to this function
 	Arguments []interface{}
@@ -74,5 +66,5 @@ type Implementation interface {
 
 	// ExecuteTemplateFunction executes a provided template function
 	// and returns it's response.
-	ExecuteTemplateFunction(t *TemplateFunctionExec) ([]interface{}, error)
+	ExecuteTemplateFunction(t *TemplateFunctionExec) (interface{}, error)
 }

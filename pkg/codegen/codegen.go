@@ -66,8 +66,9 @@ type Builder struct {
 	Manifest  *configuration.ServiceManifest
 	GitRepoFs billy.Filesystem
 
-	Processors *processors.Table
-	extensions *extensions.Host
+	Processors      *processors.Table
+	extensions      *extensions.Host
+	extensionCaller *extensions.ExtensionCaller
 
 	log logrus.FieldLogger
 
@@ -111,6 +112,12 @@ func (b *Builder) Run(ctx context.Context, log logrus.FieldLogger) ([]string, er
 		return nil, errors.Wrap(err, "failed to create vfs")
 	}
 	b.GitRepoFs = fs
+
+	ec, err := b.extensions.GetExtensionCaller(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get template functions from extensions")
+	}
+	b.extensionCaller = ec
 
 	for _, m := range manifests {
 		b.postRunCommands = append(b.postRunCommands, m.PostRunCommand...)
@@ -446,6 +453,10 @@ func (b *Builder) renderTemplate(fileName, contents string,
 	funcs := functions.Default
 	funcs["stencil"] = func() *functions.Stencil { return st }
 	funcs["file"] = func() *functions.RenderedTemplate { return st.File }
+
+	funcs["extensions"] = func() *extensions.ExtensionCaller {
+		return b.extensionCaller
+	}
 
 	tmpl, err := tmpl.Funcs(sprig.TxtFuncMap()).Funcs(funcs).Parse(contents)
 	if err != nil {

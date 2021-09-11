@@ -23,7 +23,7 @@ func NewExtensionImplementation(impl Implementation) error {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:      hclog.Trace,
 		Output:     os.Stderr,
-		JSONFormat: true,
+		JSONFormat: false,
 	})
 
 	plugin.Serve(&plugin.ServeConfig{

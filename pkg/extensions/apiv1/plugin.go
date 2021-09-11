@@ -6,6 +6,9 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
+// compile time assertion we implement the interface
+var _ Implementation = &ExtensionPluginClient{}
+
 // ExtensionPluginClient implements a client that communicates over RPC
 type ExtensionPluginClient struct{ client *rpc.Client }
 
@@ -23,7 +26,7 @@ func (g *ExtensionPluginClient) GetTemplateFunctions() ([]*TemplateFunction, err
 
 func (g *ExtensionPluginClient) ExecuteTemplateFunction(t *TemplateFunctionExec) (interface{}, error) {
 	var resp interface{}
-	err := g.client.Call("Plugin.ExecuteTemplateFunction", new(interface{}), &resp)
+	err := g.client.Call("Plugin.ExecuteTemplateFunction", t, &resp)
 	return resp, err
 }
 
