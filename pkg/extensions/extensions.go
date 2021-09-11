@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
 
 	gogithub "github.com/google/go-github/v34/github"
@@ -39,6 +38,8 @@ func NewHost() *Host {
 // createFunctionFromTemplateFunction takes a given
 // TemplateFunction and turns it into a callable function
 func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation, fn *apiv1.TemplateFunction) reflect.Value {
+	extPath := extName + "." + fn.Name
+
 	// convert the arguments from an interface into their reflect.Types
 	argTypes := make([]reflect.Type, len(fn.ArgumentTypes))
 	argTypesStr := make([]string, len(argTypes))
@@ -54,43 +55,37 @@ func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Impl
 		returnTypesStr[i] = v.String()
 	}
 
-	logrus.WithField("extension.path", extName+"."+fn.Name).WithField("extension.argTypes", argTypesStr).WithField("extension.returnArgTypes", returnTypesStr).
-		Debug("registering extension function")
-
 	// signature: func(<args>) (interface{}, error)
 	generatedFnType := reflect.FuncOf(argTypes, returnTypes, false)
-
-	fmt.Println("generated function with types ", reflect.TypeOf(generatedFnType).String())
 	return reflect.MakeFunc(generatedFnType, func(reflectArgs []reflect.Value) []reflect.Value {
 		args := make([]interface{}, len(reflectArgs))
 		for i, v := range reflectArgs {
 			args[i] = v.Interface()
 		}
 
-		iresp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
+		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
 			Name:      fn.Name,
 			Arguments: args,
 		})
-		if err == nil {
-			// ensure that we don't return a zero value when no error is returned
-			return []reflect.Value{reflect.ValueOf(iresp), reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())}
-		}
 
-		// returning nil is a zero value which is invalid when calling a reflect created function
-		// so make a user friendly error
-		if reflect.ValueOf(iresp).IsNil() || reflect.ValueOf(iresp).IsZero() {
-			return []reflect.Value{reflect.New(reflect.TypeOf(fn.ReturnType)), reflect.ValueOf(fmt.Errorf("extension returned a nil response value which is invalid"))}
+		// returning nil is a zero value, so create a zero value of the intended value
+		respRetr := reflect.ValueOf(resp)
+		if resp == nil {
+			respRetr = reflect.New(reflect.TypeOf(fn.ReturnType)).Elem()
 		}
 
 		// ensure that we're returning the correct type of zero
 		// value for error if it's nil
-		errRetr := reflect.ValueOf(err)
-		if errRetr.IsNil() || errRetr.IsZero() {
-			errRetr = reflect.New(reflect.TypeOf((*error)(nil)).Elem())
+		var errRetr reflect.Value
+		if err == nil {
+			errRetr = reflect.New(reflect.TypeOf((*error)(nil)).Elem()).Elem()
+		} else {
+			// wrap the error with a friend error message
+			errRetr = reflect.ValueOf(errors.Wrapf(err, "failed to run extension '%s'", extPath))
 		}
 
 		// ensure that we don't return a zero value when just an error is returned
-		return []reflect.Value{reflect.ValueOf(iresp), errRetr}
+		return []reflect.Value{respRetr, errRetr}
 	})
 }
 
