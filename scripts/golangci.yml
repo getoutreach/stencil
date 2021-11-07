@@ -1,3 +1,5 @@
+lintroller:
+  tier: bronze
 linters-settings:
   errcheck:
     check-blank: true
@@ -32,7 +34,7 @@ linters-settings:
     disabled-checks:
       - whyNoLint
   funlen:
-    lines: 50
+    lines: 500
     statements: 50
 
 linters:
@@ -89,12 +91,9 @@ linters:
     - whitespace
 
 issues:
-  # List of regexps of issue texts to exclude, empty list by default.
-  # But independently from this option we use default exclude patterns,
-  # it can be disabled by `exclude-use-default: false`. To list all
-  # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - abcdef
+    # We allow error shadowing
+    - 'declaration of "err" shadows declaration at'
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
