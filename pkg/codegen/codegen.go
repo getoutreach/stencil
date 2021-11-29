@@ -34,6 +34,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/vfs"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/getoutreach/stencil/pkg/processors"
 	"github.com/pkg/errors"
@@ -65,7 +66,9 @@ type Builder struct {
 	Manifest  *configuration.ServiceManifest
 	GitRepoFs billy.Filesystem
 
-	Processors *processors.Table
+	Processors      *processors.Table
+	extensions      *extensions.Host
+	extensionCaller *extensions.ExtensionCaller
 
 	log logrus.FieldLogger
 
@@ -82,6 +85,7 @@ func NewBuilder(repo, dir string, s *configuration.ServiceManifest, sshKeyPath s
 		Dir:        dir,
 		Manifest:   s,
 		Processors: processors.New(),
+		extensions: extensions.NewHost(),
 
 		sshKeyPath:  sshKeyPath,
 		accessToken: accessToken,
@@ -102,12 +106,18 @@ func (b *Builder) Run(ctx context.Context, log logrus.FieldLogger) ([]string, er
 	}
 
 	b.log.Info("Fetching dependencies")
-	fetcher := NewFetcher(b.log, b.Manifest, b.sshKeyPath, b.accessToken)
-	fs, manifests, err := fetcher.CreateVFS()
+	fetcher := NewFetcher(b.log, b.Manifest, b.sshKeyPath, b.accessToken, b.extensions)
+	fs, manifests, err := fetcher.CreateVFS(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create vfs")
 	}
 	b.GitRepoFs = fs
+
+	ec, err := b.extensions.GetExtensionCaller(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get template functions from extensions")
+	}
+	b.extensionCaller = ec
 
 	for _, m := range manifests {
 		b.postRunCommands = append(b.postRunCommands, m.PostRunCommand...)
@@ -443,6 +453,10 @@ func (b *Builder) renderTemplate(fileName, contents string,
 	funcs := functions.Default
 	funcs["stencil"] = func() *functions.Stencil { return st }
 	funcs["file"] = func() *functions.RenderedTemplate { return st.File }
+
+	funcs["extensions"] = func() *extensions.ExtensionCaller {
+		return b.extensionCaller
+	}
 
 	tmpl, err := tmpl.Funcs(sprig.TxtFuncMap()).Funcs(funcs).Parse(contents)
 	if err != nil {
