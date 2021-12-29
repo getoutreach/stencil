@@ -1,3 +1,8 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: API for interacting with stencil.
+
+// Package stencil provides an entry point for interacting with Stencil.
 package stencil
 
 import (

@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
 // Package codegen has code generators for Go projects
 //
 // This is intended for use with stencil but can also be used
@@ -29,6 +33,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/blang/semver/v4"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/cfg"
@@ -37,6 +42,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/getoutreach/stencil/pkg/processors"
+	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -66,7 +72,7 @@ type Builder struct {
 	Manifest  *configuration.ServiceManifest
 	GitRepoFs billy.Filesystem
 
-	Processors      *processors.Table
+	Processors      *processors.Runner
 	extensions      *extensions.Host
 	extensionCaller *extensions.ExtensionCaller
 
@@ -79,12 +85,32 @@ type Builder struct {
 	postRunCommands []*configuration.PostRunCommandSpec
 }
 
-func NewBuilder(repo, dir string, s *configuration.ServiceManifest, sshKeyPath string, accessToken cfg.SecretData) *Builder {
+// NewBuilder returns a new builder
+func NewBuilder(repo, dir string, log logrus.FieldLogger, s *configuration.ServiceManifest,
+	sshKeyPath string, accessToken cfg.SecretData) *Builder {
+	// previousVersion is the previous version of bootstrap last run on this repository.
+	// This will be passed to the builder as nil if this is a fresh repository.
+	var previousVersion *semver.Version
+
+	lock, err := stencil.LoadLockfile("")
+	//nolint:gocritic // Why: case doesn't support errors.Is
+	if err == nil {
+		version, err := semver.ParseTolerant(lock.Version)
+		if err == nil {
+			previousVersion = &version
+			log.WithField("previousVersion", previousVersion.String()).Info("found previous version of bootstrap")
+		}
+	} else if errors.Is(err, os.ErrNotExist) {
+		// noop
+	} else {
+		log.WithError(err).Warn("failed to load lockfile")
+	}
+
 	return &Builder{
 		Repo:       repo,
 		Dir:        dir,
 		Manifest:   s,
-		Processors: processors.New(),
+		Processors: processors.New(logrus.New(), previousVersion),
 		extensions: extensions.NewHost(),
 
 		sshKeyPath:  sshKeyPath,
@@ -98,9 +124,7 @@ func NewBuilder(repo, dir string, s *configuration.ServiceManifest, sshKeyPath s
 // after that GenerateFiles is called to actually walk the filesystem and render
 // the templates. This step also does minimal post-processing of the dependencies
 // manifes.yamls.
-func (b *Builder) Run(ctx context.Context, log logrus.FieldLogger) ([]string, error) {
-	b.log = log
-
+func (b *Builder) Run(ctx context.Context) ([]string, error) {
 	if err := b.processManifest(); err != nil {
 		return nil, errors.Wrap(err, "failed to process service manifest")
 	}
@@ -302,7 +326,9 @@ func (b *Builder) HasDeviations(_ context.Context, filePath string) bool {
 // turning it into a functions.RenderedTemplate. This is then written to disk, or skipped
 // based on the template's function call. Multiple functions.RenderedTemplates can be returned
 // by a single template.
-func (b *Builder) WriteTemplate(ctx context.Context, filePath, contents string, args map[string]interface{}) ([]string, error) { //nolint:funlen,gocyclo,gocritic
+//nolint:funlen,gocyclo,gocritic
+func (b *Builder) WriteTemplate(ctx context.Context, filePath,
+	contents string, args map[string]interface{}) ([]string, error) {
 	// Search for any commands that are inscribed in the file.
 	// Currently we use Block and EndBlock to allow for
 	// arbitrary data payloads to be saved across runs of stencil.
@@ -407,12 +433,14 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath, contents string, 
 		existingFile := processors.NewFile(existingF, filePath)
 		templateFile := processors.NewFile(renderedTemplate, filePath)
 
-		processedFile, err := b.Processors.Process(false, existingFile, templateFile)
-		if err == nil {
-			// Use the processor reader instead
-			renderedTemplate.Reader = processedFile
-		} else if err != nil && err != processors.ErrNotProcessable {
-			return nil, errors.Wrap(err, "failed to process file")
+		if existingF != nil {
+			processedFile, err := b.Processors.RunDuringCodegen(existingFile, templateFile)
+			if err == nil {
+				// Use the processor reader instead
+				renderedTemplate.Reader = processedFile
+			} else if err != nil && err != processors.ErrNotProcessable {
+				return nil, errors.Wrap(err, "failed to process file")
+			}
 		}
 
 		absFilePath := path.Join(b.Dir, filePath)

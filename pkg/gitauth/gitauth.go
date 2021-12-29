@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description.
+
 // Package gitauth provides helpers for setting up auth
 package gitauth
 

@@ -9,12 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/getoutreach/stencil/internal/tests"
 	"github.com/getoutreach/stencil/pkg/codegen"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/getoutreach/stencil/pkg/processors"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -46,7 +44,7 @@ func runTest(input []byte) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to decode test")
 	}
 
-	b := codegen.NewBuilder("my-repo", "", m, "", "")
+	b := codegen.NewBuilder("my-repo", "", logrus.New(), m, "", "")
 	dir, cleanup, err := createRepoDir(b.Repo, m)
 	if cleanup != nil {
 		defer cleanup()
@@ -76,50 +74,9 @@ func runTest(input []byte) error { //nolint:funlen,gocyclo
 		return err
 	}
 
-	_, err = b.Run(context.Background(), logrus.New())
+	_, err = b.Run(context.Background())
 	if err != nil {
 		return err
-	}
-
-	logrus.Info("Running post-processors")
-	err = filepath.Walk(".", func(fp string, _ os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		f, err := os.Open(fp)
-		if err != nil {
-			return errors.Wrapf(err, "open file '%s'", fp)
-		}
-
-		processedFile, err := b.Processors.Process(true, processors.NewFile(f, fp), nil)
-		if err != nil && err != processors.ErrNotProcessable {
-			return errors.Wrap(err, "failed to process file")
-		} else if err == processors.ErrNotProcessable {
-			// Skip file.
-			return nil
-		}
-
-		perms := os.FileMode(0644)
-		if strings.HasSuffix(fp, ".sh") {
-			perms = os.FileMode(0744)
-		}
-
-		data, err := ioutil.ReadAll(processedFile)
-		if err != nil {
-			return errors.Wrap(err, "read processed file")
-		}
-
-		logrus.Infof("Processed file '%s' in post-processing step", fp)
-		if err := ioutil.WriteFile(fp, data, perms); err != nil {
-			return errors.Wrap(err, "failed to write post-processed file")
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "run post-processors on all files")
 	}
 
 	if err := b.FormatFiles(context.Background()); err != nil {
@@ -149,6 +106,7 @@ func createRepoDir(repo string, m *configuration.ServiceManifest) (repodir strin
 	}
 
 	if os.Getenv("CI") != "" {
+		//nolint:lll // Why: This is a long command line
 		cmd = exec.Command("/usr/bin/env", "bash", "-c", "git config --global user.name stencil; git config --global user.email stencil@outreach.io")
 		cmd.Dir = repodir
 		if out, err := cmd.CombinedOutput(); err != nil { //nolint:govet // Why: We're OK shadowing err

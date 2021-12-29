@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description.
+
 // Package configuration implements configuration loading logic
 // for stencil repositories and template repositories
 package configuration

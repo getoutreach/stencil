@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: Implements the extension caller interface for interacting
+// with extensions.
 package extensions
 
 import (

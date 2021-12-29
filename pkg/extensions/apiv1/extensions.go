@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
 // Package apiv1 implements the extension API for stencil
 package apiv1
 

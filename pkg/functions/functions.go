@@ -1,3 +1,8 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: Implements all functions provided to stencil templates.
+
+// Package functions provides funcutions to stencil templates.
 package functions
 
 import (

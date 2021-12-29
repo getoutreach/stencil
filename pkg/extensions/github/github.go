@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: See package description
+
 // Package github implements helpers accessing github
 // via the gh cli
 package github
