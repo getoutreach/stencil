@@ -106,6 +106,7 @@ func createRepoDir(repo string, m *configuration.ServiceManifest) (repodir strin
 	}
 
 	if os.Getenv("CI") != "" {
+		//nolint:lll // Why: This is a long command line
 		cmd = exec.Command("/usr/bin/env", "bash", "-c", "git config --global user.name stencil; git config --global user.email stencil@outreach.io")
 		cmd.Dir = repodir
 		if out, err := cmd.CombinedOutput(); err != nil { //nolint:govet // Why: We're OK shadowing err
