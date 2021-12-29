@@ -101,6 +101,12 @@ workflows:
   build_and_test:
     jobs:
       ###Block(circleWorkflowJobs)
+      - integration:
+          context:
+            - docker-registry
+            - npm-credentials
+            - ghaccesstoken
+            - package-cloud-credentials
       ###EndBlock(circleWorkflowJobs)
       - release:
           context:
@@ -110,7 +116,8 @@ workflows:
             - package-cloud-credentials
           requires:
             - test
-          ###Block(circleReleaseRequires)
+            ###Block(circleReleaseRequires)
+            - integration
           ###EndBlock(circleReleaseRequires)
           filters:
             branches:
