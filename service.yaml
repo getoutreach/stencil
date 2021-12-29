@@ -5,7 +5,7 @@ library: true
 oss: true
 commands:
   - stencil
-reportingTeam: cia-dev-tooling
+reportingTeam: fnd-dtss
 releaseOptions:
   allowMajorVersions: true
 
@@ -14,6 +14,6 @@ arguments:
   library: true
   commands:
     - stencil
-  reportingTeam: cia-dev-tooling
+  reportingTeam: fnd-dtss
   releaseOptions:
     allowMajorVersions: true
