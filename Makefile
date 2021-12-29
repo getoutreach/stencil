@@ -1,4 +1,5 @@
 APP := stencil
+OSS := true
 _ := $(shell ./scripts/bootstrap-lib.sh) 
 
 include .bootstrap/root/Makefile

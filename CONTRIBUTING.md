@@ -1,6 +1,16 @@
 # stencil
 
 <!--- Block(custom) -->
+<!--
+We expect CONTRIBUTING.md to look mostly identical for all bootstrap services.
+
+If your service requires special instructions for developers, you can place
+those instructions in this block. If your service isn't special, it's safe to
+leave this comment here as-is.
+
+If the text you are about to add here applies to many or all bootstrap services,
+consider adding it to the bootstrap template instead.
+-->
 <!--- EndBlock(custom) -->
 
 The following sections of CONTRIBUTING.md were generated with

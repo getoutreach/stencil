@@ -1,3 +1,6 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: Implements the stencil function passed to templates
 package functions
 
 import (

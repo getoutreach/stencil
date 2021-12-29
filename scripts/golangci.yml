@@ -1,3 +1,5 @@
+lintroller:
+  tier: bronze
 linters-settings:
   errcheck:
     check-blank: true
@@ -32,7 +34,7 @@ linters-settings:
     disabled-checks:
       - whyNoLint
   funlen:
-    lines: 50
+    lines: 500
     statements: 50
 
 linters:
@@ -48,7 +50,6 @@ linters:
   # - gomodguard       # Allow and block list linter for direct Go module dependencies.
   # - goprintffuncname # Checks that printf-like functions are named with `f` at the end.
   # - interfacer       # Linter that suggests narrower interface types.
-  # - lll              # Reports long lines.
   # - maligned         # Tool to detect Go structs that would take less memory if their fields were sorted.
   # - noctx            # Finds sending http request without context.Context.
   # - prealloc         # Finds slice declarations that could potentially be preallocated.
@@ -77,6 +78,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - lll
     # - misspell        # The reason we're disabling this right now is because it uses 1/2 of the memory of the run.
     - nakedret
     - staticcheck
@@ -89,12 +91,9 @@ linters:
     - whitespace
 
 issues:
-  # List of regexps of issue texts to exclude, empty list by default.
-  # But independently from this option we use default exclude patterns,
-  # it can be disabled by `exclude-use-default: false`. To list all
-  # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - abcdef
+    # We allow error shadowing
+    - 'declaration of "err" shadows declaration at'
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:

@@ -1,9 +1,8 @@
 name: stencil
-versions:
-  go: 1.17
 
 # Support bootstrap
 library: true
+oss: true
 commands:
   - stencil
 reportingTeam: cia-dev-tooling

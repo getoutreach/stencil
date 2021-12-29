@@ -1,3 +1,7 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: Implements the template repository fetching logic
+
 package codegen
 
 import (

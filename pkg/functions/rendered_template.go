@@ -1,3 +1,6 @@
+// Copyright 2021 Outreach Corporation. All Rights Reserved.
+
+// Description: Holds all context for a rendered template file
 package functions
 
 import (
