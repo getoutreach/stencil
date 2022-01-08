@@ -1,4 +1,4 @@
-// Copyright 2021 Outreach Corporation. All Rights Reserved.
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: See package description
 
@@ -29,6 +29,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -41,7 +42,6 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/functions"
-	"github.com/getoutreach/stencil/pkg/processors"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -56,7 +56,7 @@ var (
 	ErrNoHeadBranch       = errors.New("failed to find a head branch, does one exist?")
 	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
 
-	blockPattern = regexp.MustCompile(`\w*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
+	blockPattern = regexp.MustCompile(`(?:\w+|^)(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
 	headPattern  = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
 
 	// versionPattern ensures versions have at least a major and a minor.
@@ -65,20 +65,22 @@ var (
 	versionPattern = regexp.MustCompile(`^\d+\.\d+[.\d+]*$`)
 )
 
+// Builder is the heart of stencil, running it is akin to running
+// stencil. Builder handles fetching stencil dependencies and running
+// the actual templating engine and writing the results to disk. Also
+// handled is the extension framework
 type Builder struct {
-	Branch    string
-	Repo      string
-	Dir       string
-	Manifest  *configuration.ServiceManifest
-	GitRepoFs billy.Filesystem
+	repo string
+	dir  string
 
-	Processors      *processors.Runner
+	manifest   *configuration.ServiceManifest
+	templateFS billy.Filesystem
+
 	extensions      *extensions.Host
 	extensionCaller *extensions.ExtensionCaller
 
 	log logrus.FieldLogger
 
-	sshKeyPath  string
 	accessToken cfg.SecretData
 
 	// set by Run
@@ -87,7 +89,7 @@ type Builder struct {
 
 // NewBuilder returns a new builder
 func NewBuilder(repo, dir string, log logrus.FieldLogger, s *configuration.ServiceManifest,
-	sshKeyPath string, accessToken cfg.SecretData) *Builder {
+	accessToken cfg.SecretData) *Builder {
 	// previousVersion is the previous version of bootstrap last run on this repository.
 	// This will be passed to the builder as nil if this is a fresh repository.
 	var previousVersion *semver.Version
@@ -107,15 +109,12 @@ func NewBuilder(repo, dir string, log logrus.FieldLogger, s *configuration.Servi
 	}
 
 	return &Builder{
-		Repo:       repo,
-		Dir:        dir,
-		Manifest:   s,
-		Processors: processors.New(logrus.New(), previousVersion),
-		extensions: extensions.NewHost(),
-
-		sshKeyPath:  sshKeyPath,
-		accessToken: accessToken,
-
+		repo:            repo,
+		dir:             dir,
+		manifest:        s,
+		extensions:      extensions.NewHost(),
+		log:             log,
+		accessToken:     accessToken,
 		postRunCommands: make([]*configuration.PostRunCommandSpec, 0),
 	}
 }
@@ -130,12 +129,12 @@ func (b *Builder) Run(ctx context.Context) ([]string, error) {
 	}
 
 	b.log.Info("Fetching dependencies")
-	fetcher := NewFetcher(b.log, b.Manifest, b.sshKeyPath, b.accessToken, b.extensions)
+	fetcher := NewFetcher(b.log, b.manifest, b.accessToken, b.extensions)
 	fs, manifests, err := fetcher.CreateVFS(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create vfs")
 	}
-	b.GitRepoFs = fs
+	b.templateFS = fs
 
 	ec, err := b.extensions.GetExtensionCaller(ctx)
 	if err != nil {
@@ -147,12 +146,51 @@ func (b *Builder) Run(ctx context.Context) ([]string, error) {
 		b.postRunCommands = append(b.postRunCommands, m.PostRunCommand...)
 	}
 
-	return b.GenerateFiles(ctx, fs)
+	warnings, err := b.GenerateFiles(ctx, fs)
+	if err != nil {
+		return nil, err
+	}
+
+	return warnings, b.runPostRunCommands(ctx)
+}
+
+// runPostRunCommands runs the postRunCommands set by
+// dependencies
+func (b *Builder) runPostRunCommands(ctx context.Context) error {
+	b.log.Info("Running post run commands")
+	for _, cmdStr := range b.postRunCommands {
+		b.log.Infof("- %s", cmdStr.Name)
+
+		//nolint:gosec // Why: That's the literal design.
+		cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		if err := cmd.Run(); err != nil {
+			// IDEA(jaredallard): It'd be cool if we exposed which
+			// dependency this was attached to
+			return errors.Wrap(err, "failed to run post run command")
+		}
+	}
+
+	return nil
+}
+
+// setDefaultArguments translates a few manifest values
+// into arguments that can be accessed via stencil.Arg
+func (b *Builder) setDefaultArguments() error {
+	b.manifest.Arguments["name"] = b.manifest.Name
+
+	return nil
 }
 
 // processManifest handles processing any fields in the manifest, i.e validation
 func (b *Builder) processManifest() error {
-	for resource, version := range b.Manifest.Versions {
+	if err := b.setDefaultArguments(); err != nil {
+		return err
+	}
+
+	for resource, version := range b.manifest.Versions {
 		if !versionPattern.MatchString(version) {
 			return fmt.Errorf("resource \"%s\" must have at least a major and minor version (format: MAJOR.MINOR.PATCH)", resource)
 		}
@@ -166,7 +204,7 @@ func (b *Builder) FormatFiles(ctx context.Context) error {
 	for _, prc := range b.postRunCommands {
 		b.log.Infof(" - %s", prc.Name)
 		cmd := exec.CommandContext(ctx, "env", "bash", "-c", prc.Command) //nolint:gosec // Why: We have to
-		cmd.Dir = b.Dir
+		cmd.Dir = b.dir
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -185,6 +223,7 @@ func (b *Builder) GenerateFiles(ctx context.Context, fs billy.Filesystem) ([]str
 		return nil, err
 	}
 
+	b.log.Info("Generating files")
 	warnings := make([]string, 0)
 	return warnings, vfs.Walk(fs, "", func(path string, file os.FileInfo, err error) error {
 		if err != nil {
@@ -200,6 +239,8 @@ func (b *Builder) GenerateFiles(ctx context.Context, fs billy.Filesystem) ([]str
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch template")
 		}
+		// Remove the tpl suffix as the default path for the file
+		path = strings.TrimSuffix(path, ".tpl")
 
 		byt, err := ioutil.ReadAll(contents)
 		if err != nil {
@@ -219,7 +260,7 @@ func (b *Builder) GenerateFiles(ctx context.Context, fs billy.Filesystem) ([]str
 
 // determineHeadBranch determines the remote head branch
 func (b *Builder) determineHeadBranch(ctx context.Context) (string, error) {
-	r, err := git.PlainOpen(b.Dir)
+	r, err := git.PlainOpen(b.dir)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open directory as a repository")
 	}
@@ -241,7 +282,7 @@ func (b *Builder) determineHeadBranch(ctx context.Context) (string, error) {
 
 	// we found an origin reference, figure out the HEAD
 	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin")
-	cmd.Dir = b.Dir
+	cmd.Dir = b.dir
 	out, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to get head branch from remote origin")
@@ -281,45 +322,15 @@ func (b *Builder) makeTemplateParameters(ctx context.Context) (map[string]interf
 
 		"Box": boxConf,
 
-		"Manifest":  b.Manifest,
-		"Arguments": b.Manifest.Arguments,
+		"Manifest":  b.manifest,
+		"Arguments": b.manifest.Arguments,
 	}, nil
 }
 
 // FetchTemplate fetches a template from a git repository
 func (b *Builder) FetchTemplate(ctx context.Context, filePath string) (io.Reader, error) {
-	f, err := b.GitRepoFs.Open(filePath)
+	f, err := b.templateFS.Open(filePath)
 	return f, errors.Wrap(err, filePath)
-}
-
-// HasDeviations looks for deviation blocks in a file, returning true if they exist
-func (b *Builder) HasDeviations(_ context.Context, filePath string) bool {
-	// Search for any commands that are inscribed in the file.
-	// Currently we use Block and EndBlock to allow for
-	// arbitrary data payloads to be saved across runs of stencil.
-	// Eventually we might want to support 3 way merge instead
-	f, err := os.Open(filePath)
-	if err == nil {
-		defer f.Close()
-
-		scanner := bufio.NewScanner(f)
-		for i := 0; scanner.Scan(); i++ {
-			line := scanner.Text()
-			matches := blockPattern.FindStringSubmatch(line)
-
-			// 1: Comment (###|///)
-			// 2: Command
-			// 3: Argument to the command
-			if len(matches) >= 2 {
-				cmd := matches[2]
-				if strings.EqualFold(cmd, "deviation") {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
 }
 
 // WriteTemplate handles parsing commands (e.g. ///Block) and renders a given template by
@@ -332,7 +343,11 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 	// Search for any commands that are inscribed in the file.
 	// Currently we use Block and EndBlock to allow for
 	// arbitrary data payloads to be saved across runs of stencil.
-	// Eventually we might want to support 3 way merge instead
+	//
+	// Note: filepath here should be the file we are writing to,
+	// NOT the template. This allows us to get arbitrary user content
+	// from the existing blocks in that file, that may exist
+	// in the new template as well (and if so, automatically) use.
 	f, err := os.Open(filePath)
 	if err == nil {
 		defer f.Close()
@@ -351,9 +366,17 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 				cmd := matches[2]
 				isCommand = true
 
+				log := b.log.WithField("command.name", cmd)
+				log.Debug("Processing command")
+
 				switch cmd {
 				case "Block":
 					blockName := matches[3]
+
+					log.WithFields(logrus.Fields{
+						"block.name":  blockName,
+						"block.start": filePath + ":" + strconv.Itoa(i),
+					}).Debug("Block started")
 
 					if curBlockName != "" {
 						return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i)
@@ -361,6 +384,11 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 					curBlockName = blockName
 				case "EndBlock":
 					blockName := matches[3]
+
+					log.WithFields(logrus.Fields{
+						"block.name":  blockName,
+						"block.start": filePath + ":" + strconv.Itoa(i),
+					}).Debug("Block ended")
 
 					if blockName != curBlockName {
 						return nil, fmt.Errorf(
@@ -375,6 +403,7 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 
 					curBlockName = ""
 				default:
+					log.Debug("Skipping unknown command")
 					isCommand = false
 				}
 			}
@@ -400,16 +429,15 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 
 	warnings := make([]string, 0)
 
-	if b.HasDeviations(ctx, filePath) {
-		warnings = append(warnings, fmt.Sprintf("SKIPPED: '%s' had deviations and will not be re-generated", filePath))
-		return warnings, nil
-	}
-
 	templates, err := b.renderTemplate(filePath, contents, args)
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO(jaredallard): I think this implementation will break if
+	// a multi-file template has blocks with different contents. Need
+	// to look into this. Possible we'll need to pre-render to
+	// determine which files we're writing to to populate args.
 	for _, renderedTemplate := range templates {
 		if len(renderedTemplate.Warnings) > 0 {
 			warnings = append(warnings, renderedTemplate.Warnings...)
@@ -424,29 +452,10 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 			filePath = renderedTemplate.Path
 		}
 
-		existingF, err := os.Open(filePath)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return nil, errors.Wrap(err, "failed to open existing file")
-		}
-		defer existingF.Close()
-
-		existingFile := processors.NewFile(existingF, filePath)
-		templateFile := processors.NewFile(renderedTemplate, filePath)
-
-		if existingF != nil {
-			processedFile, err := b.Processors.RunDuringCodegen(existingFile, templateFile)
-			if err == nil {
-				// Use the processor reader instead
-				renderedTemplate.Reader = processedFile
-			} else if err != nil && err != processors.ErrNotProcessable {
-				return nil, errors.Wrap(err, "failed to process file")
-			}
-		}
-
-		absFilePath := path.Join(b.Dir, filePath)
+		absFilePath := path.Join(b.dir, filePath)
 
 		action := "Updated"
-		if _, err := os.Stat(absFilePath); os.IsNotExist(err) { // nolint: govet,gocritic
+		if _, err := os.Stat(absFilePath); os.IsNotExist(err) {
 			action = "Created"
 		}
 
@@ -456,7 +465,7 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 		}
 		filePath = strings.TrimSuffix(filePath, ".tpl")
 
-		b.log.Infof("%s file '%s'", action, filePath)
+		b.log.Infof("- %s file '%s'", action, filePath)
 		if err := b.writeFile(filePath, renderedTemplate, perms); err != nil {
 			return nil, errors.Wrapf(err, "error creating file '%s'", absFilePath)
 		}
@@ -471,7 +480,7 @@ func (b *Builder) renderTemplate(fileName, contents string,
 	srcRendered := &functions.RenderedTemplate{}
 
 	tmpl := template.New(fileName)
-	st := functions.NewStencil(tmpl, b.Manifest, srcRendered)
+	st := functions.NewStencil(tmpl, b.manifest, srcRendered)
 
 	nargs := make(map[string]interface{})
 	for k, v := range args {
@@ -498,7 +507,7 @@ func (b *Builder) renderTemplate(fileName, contents string,
 }
 
 func (b *Builder) writeFile(fileName string, tf io.Reader, perm os.FileMode) error {
-	fileName = filepath.Join(b.Dir, fileName)
+	fileName = filepath.Join(b.dir, fileName)
 	err := os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
 	if err != nil {
 		return err

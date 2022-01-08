@@ -1,4 +1,4 @@
-// Copyright 2021 Outreach Corporation. All Rights Reserved.
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: Implements the template repository fetching logic
 
@@ -24,20 +24,25 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Fetcher handles all interactions between dependencies
+// and fetching of dependencies for stencil. This involes
+// creating a vfs, parsing repository manifests, etc.
 type Fetcher struct {
-	log logrus.FieldLogger
-	m   *configuration.ServiceManifest
-
-	sshKeyPath  string
+	log         logrus.FieldLogger
+	m           *configuration.ServiceManifest
 	accessToken cfg.SecretData
 	extensions  *extensions.Host
 }
 
-func NewFetcher(log logrus.FieldLogger, m *configuration.ServiceManifest, sshKeyPath string,
-	accessToken cfg.SecretData, extHost *extensions.Host) *Fetcher {
-	return &Fetcher{log, m, sshKeyPath, accessToken, extHost}
+// NewFetcher creates a new fetcher instance
+func NewFetcher(log logrus.FieldLogger, m *configuration.ServiceManifest, accessToken cfg.SecretData,
+	extHost *extensions.Host) *Fetcher {
+	return &Fetcher{log, m, accessToken, extHost}
 }
 
+// DownloadRepository downloads a remote repository into memory based
+// on the URL provided. If this is a file:// repository fs.New is used
+// instead to "chroot" it.
 func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.TemplateRepository) (billy.Filesystem, error) {
 	u, err := giturls.Parse(r.URL)
 	if err != nil {
@@ -56,7 +61,7 @@ func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.Templ
 			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 			Depth:             1,
 		}
-		if err := gitauth.ConfigureAuth(f.sshKeyPath, f.accessToken, opts, f.log); err != nil {
+		if err := gitauth.ConfigureAuth(f.accessToken, opts, f.log); err != nil {
 			return nil, errors.Wrap(err, "failed to setup git authentication")
 		}
 
@@ -65,6 +70,8 @@ func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.Templ
 			opts.SingleBranch = true
 		}
 
+		// We don't use the git object here because all we care about is
+		// the underlying filesystem object, which was created earlier
 		if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
 			return nil, err
 		}
@@ -73,6 +80,7 @@ func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.Templ
 	return fs, nil
 }
 
+// ParseRepositoryManifest parses a remote repository manifest
 func (f *Fetcher) ParseRepositoryManifest(fs billy.Filesystem) (*configuration.TemplateRepositoryManifest, error) {
 	mf, err := fs.Open("manifest.yaml")
 	if err != nil {
@@ -151,6 +159,12 @@ func (f *Fetcher) ResolveDependencies(ctx context.Context, filesystems map[strin
 	return depFilesystems, nil
 }
 
+// CreateVFS creates a new virtual file system with the dependencies
+// of the top level (service) module inside of it. This filesystem is
+// ordered as such that the top level modules always go first, with
+// the order in that list being preserved. After a VFS is created,
+// all the manifests from said repositories are then parsed and
+// returned to the caller in the order that they were layered.
 func (f *Fetcher) CreateVFS(ctx context.Context) (billy.Filesystem,
 	[]*configuration.TemplateRepositoryManifest, error) {
 	// Create a shim template manifest from our service dependencies

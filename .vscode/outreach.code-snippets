@@ -3,7 +3,7 @@
 		"scope": "go",
 		"prefix": "copyright",
 		"body": [
-			"// Copyright 2021 Outreach Corporation. All Rights Reserved.\n",
+			"// Copyright 2022 Outreach Corporation. All Rights Reserved.\n",
 			"// Description: $0"
 		],
 		"description": "Outreach Copyright and Description"
