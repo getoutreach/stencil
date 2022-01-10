@@ -29,7 +29,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -375,7 +374,7 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 
 					log.WithFields(logrus.Fields{
 						"block.name":  blockName,
-						"block.start": filePath + ":" + strconv.Itoa(i),
+						"block.start": fmt.Sprintf("%s:%d", filePath, i),
 					}).Debug("Block started")
 
 					if curBlockName != "" {
@@ -387,7 +386,7 @@ func (b *Builder) WriteTemplate(ctx context.Context, filePath,
 
 					log.WithFields(logrus.Fields{
 						"block.name":  blockName,
-						"block.start": filePath + ":" + strconv.Itoa(i),
+						"block.start": fmt.Sprintf("%s:%d", filePath, i),
 					}).Debug("Block ended")
 
 					if blockName != curBlockName {
