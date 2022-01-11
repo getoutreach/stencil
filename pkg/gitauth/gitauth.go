@@ -1,4 +1,4 @@
-// Copyright 2021 Outreach Corporation. All Rights Reserved.
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: See package description.
 
@@ -7,9 +7,7 @@ package gitauth
 
 import (
 	"github.com/getoutreach/gobox/pkg/cfg"
-	"github.com/getoutreach/gobox/pkg/sshhelper"
 	"github.com/go-git/go-git/v5"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -45,32 +43,7 @@ func ensureURLIsValidForProtocol(opts *git.CloneOptions, expectedProtocol protoc
 	return nil
 }
 
-func configureSSHAuth(sshKey string, opts *git.CloneOptions, log logrus.FieldLogger) error {
-	a := sshhelper.GetSSHAgent()
-	// if user gave us a key, use that
-	if sshKey != "" {
-		err := sshhelper.AddKeyToAgent(sshKey, a, log)
-		if err != nil {
-			return errors.Wrap(err, "failed to load specified ssh-key")
-		}
-
-		opts.Auth = sshhelper.NewExistingSSHAgentCallback(a)
-		return nil
-	}
-
-	sshKey, err := sshhelper.LoadDefaultKey("github.com", a, log)
-	if err == nil {
-		log.WithField("key", sshKey).Info("using IdentityFile for host github.com")
-		opts.Auth = sshhelper.NewExistingSSHAgentCallback(a)
-		return nil
-	}
-
-	log.WithError(err).Warn("failed to load github ssh key, falling back to ssh-agent")
-	log.Warn("Falling back to ssh-agent authentication")
-
-	return ensureURLIsValidForProtocol(opts, protocolSSH)
-}
-
+// configureAccessTokenAuth sets up Github access token authentication
 func configureAccessTokenAuth(token cfg.SecretData, opts *git.CloneOptions) error {
 	opts.Auth = &githttp.BasicAuth{
 		Username: "x-access-token",
@@ -81,12 +54,13 @@ func configureAccessTokenAuth(token cfg.SecretData, opts *git.CloneOptions) erro
 }
 
 // ConfigureAuth configures the provided git.CloneOptions to be authenticated for
-// Github repository clones.
-func ConfigureAuth(sshKeyPath string, accessToken cfg.SecretData, opts *git.CloneOptions, log logrus.FieldLogger) error {
-	if accessToken != "" {
-		return configureAccessTokenAuth(accessToken, opts)
+// Github repository clones
+func ConfigureAuth(accessToken cfg.SecretData, opts *git.CloneOptions,
+	log logrus.FieldLogger) error {
+	// Don't setup auth if no auth token is set
+	if accessToken == "" {
+		return nil
 	}
 
-	// attempt to use ssh-key, or load the default key
-	return configureSSHAuth(sshKeyPath, opts, log)
+	return configureAccessTokenAuth(accessToken, opts)
 }

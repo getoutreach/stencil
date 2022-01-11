@@ -44,19 +44,19 @@ func runTest(input []byte) error { //nolint:funlen,gocyclo
 		return errors.Wrap(err, "failed to decode test")
 	}
 
-	b := codegen.NewBuilder("my-repo", "", logrus.New(), m, "", "")
-	dir, cleanup, err := createRepoDir(b.Repo, m)
+	dir, cleanup, err := createRepoDir("my-repo", m)
 	if cleanup != nil {
 		defer cleanup()
 	}
 	if err != nil {
 		return err
 	}
-	b.Dir = dir
+
+	b := codegen.NewBuilder("my-repo", dir, logrus.New(), m, "")
 
 	logrus.WithFields(logrus.Fields{
 		"test.name": t.Name,
-		"test.dir":  b.Dir,
+		"test.dir":  dir,
 	}).Info("running stencil test")
 
 	cwd, err := os.Getwd()

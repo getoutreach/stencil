@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  shared: getoutreach/shared@1.40.0
+  shared: getoutreach/shared@1.42.1
 
 # DEPRECATED: Use the devbase orb instead:
 # https://github.com/getoutreach/devbase/tree/main/orbs/shared
@@ -36,6 +36,8 @@ jobs:
   test:
     executor:
       name: shared/testbed-docker
+    ###Block(circleTestOverride)
+    ###EndBlock(circleTestOverride)
     docker:
       - image: gcr.io/outreach-docker/bootstrap/ci:stable
         auth:

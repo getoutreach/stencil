@@ -1,4 +1,4 @@
-// Copyright 2021 Outreach Corporation. All Rights Reserved.
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: Implements the plugin RPC logic for the extension host
 

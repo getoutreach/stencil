@@ -1,4 +1,4 @@
-// Copyright 2021 Outreach Corporation. All Rights Reserved.
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: This file is the entrypoint for the stencil CLI
 // command for stencil.
@@ -24,6 +24,7 @@ import (
 	"github.com/getoutreach/stencil/internal/stencil"
 	"github.com/getoutreach/stencil/pkg/codegen"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions/github"
 	"github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	///EndBlock(imports)
@@ -55,6 +56,11 @@ func main() {
 		Action: func(c *cli.Context) error {
 			log.Infof("stencil %s", oapp.Version)
 
+			if c.Bool("debug") {
+				log.SetLevel(logrus.DebugLevel)
+				log.Debug("Debug logging enabled")
+			}
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return errors.Wrap(err, "failed to get the current working directory")
@@ -78,8 +84,15 @@ func main() {
 				}
 			}
 
-			b := codegen.NewBuilder(filepath.Base(cwd), cwd, log, serviceManifest,
-				c.String("github-ssh-key"), cfg.SecretData(c.String("github-access-token")))
+			accessToken := cfg.SecretData(c.String("github-access-token"))
+			if accessToken == "" {
+				accessToken, err = github.GetGHToken()
+				if err != nil {
+					return err
+				}
+			}
+
+			b := codegen.NewBuilder(filepath.Base(cwd), cwd, log, serviceManifest, accessToken)
 
 			warnings, err := b.Run(ctx)
 			for _, warning := range warnings {
@@ -94,11 +107,6 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "dev",
 			Usage: "Use local manifests instead of remote ones, useful for development",
-		},
-		&cli.StringFlag{
-			Name:    "github-ssh-key",
-			Usage:   "SSH Key to use to download templates with, if not set ~/.ssh/config is read and falls back to ssh-agent",
-			EnvVars: []string{"GITHUB_SSH_KEY"},
 		},
 		&cli.StringFlag{
 			Name:    "github-access-token",
