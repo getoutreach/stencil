@@ -1,19 +1,24 @@
 name: stencil
-
-# Support bootstrap
-library: true
+reportingTeam: fnd-dtss
+description: ""
 oss: true
+slack: ""
+library: true
 commands:
   - stencil
-reportingTeam: fnd-dtss
+releaseType: ""
 releaseOptions:
+  allowPrereleases: false
   allowMajorVersions: true
-
-# Support newer stencil
+deployTo:
+  environments: []
 arguments:
-  library: true
-  commands:
-    - stencil
+  dependencies:
+    optional: []
+    required: []
+  description: ""
   reportingTeam: fnd-dtss
-  releaseOptions:
-    allowMajorVersions: true
+  type: []
+modules:
+  - url: https://github.com/getoutreach/stencil-base
+    version: ""

@@ -110,6 +110,11 @@ issues:
     - linters:
         - gocritic
       text: "commentFormatting: put a space"
+    # This rule incorrectly flags nil references after assert.Assert(t, x != nil)
+    - path: _test\.go
+      text: "SA5011"
+      linters:
+        - staticcheck
 
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration

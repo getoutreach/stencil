@@ -56,8 +56,11 @@ Pulumi.*.yaml
 /cache-version.txt
 
 # DevSpace files
-/.devspace # temp dir
+/.devspace
 /deployments/stencil.yaml
+
+# Documentation output
+/apidocs
 
 ###Block(extras)
 ###EndBlock(extras)
