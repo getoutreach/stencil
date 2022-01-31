@@ -79,8 +79,9 @@ func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.Templ
 				if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
 					return nil, errors.Wrap(err, "failed to find version as branch/tag")
 				}
+			} else {
+				return nil, err
 			}
-			return nil, err
 		}
 	}
 
