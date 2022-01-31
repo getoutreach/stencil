@@ -70,8 +70,9 @@ type TemplateRepository struct {
 	// and manifest.
 	URL string `yaml:"url"`
 
-	// Version is a semantic version of the template repository that should be downloaded
-	// if not set then the latest version is used.
+	// Version is a semantic version or branch of the template repository
+	// that should be downloaded if not set then the latest version is used.
+	// Note: A single commit is currently not supported.
 	Version string `yaml:"version"`
 }
 
