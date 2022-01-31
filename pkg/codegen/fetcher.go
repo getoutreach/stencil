@@ -73,6 +73,13 @@ func (f *Fetcher) DownloadRepository(ctx context.Context, r *configuration.Templ
 		// We don't use the git object here because all we care about is
 		// the underlying filesystem object, which was created earlier
 		if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
+			// if tag not found tray as a branch
+			if errors.Is(err, git.ErrTagNotFound) {
+				opts.ReferenceName = plumbing.NewBranchReferenceName(r.Version)
+				if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
+					return nil, errors.Wrap(err, "failed to find version as branch/tag")
+				}
+			}
 			return nil, err
 		}
 	}
