@@ -53,11 +53,23 @@ func (s *Stencil) ApplyTemplate(name string) (string, error) {
 	return buf.String(), err
 }
 
-// Arg returns an argument from the ServiceManifest
+// Arg returns an argument from the ServiceManifest.
+// Note: Only the top-level arguments are supported.
 //
 //   {{- stencil.Arg "name" }}
 func (s *Stencil) Arg(name string) interface{} {
+	if name == "" {
+		return s.Args()
+	}
+
 	return s.m.Arguments[name]
+}
+
+// Args returns the arguments from the ServiceManifest.
+//
+//   {{- (stencil.Args).name }}
+func (s *Stencil) Args() interface{} {
+	return s.m.Arguments
 }
 
 // InstallFile changes the current active rendered file and writes
