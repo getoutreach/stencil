@@ -15,6 +15,7 @@ import (
 	oapp "github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	gcli "github.com/getoutreach/gobox/pkg/cli"
+	"github.com/getoutreach/gobox/pkg/github"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/getoutreach/stencil/internal/stencil"
 	"github.com/getoutreach/stencil/pkg/codegen"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/getoutreach/stencil/pkg/extensions/github"
 	"github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	///EndBlock(imports)
@@ -86,7 +86,7 @@ func main() {
 
 			accessToken := cfg.SecretData(c.String("github-access-token"))
 			if accessToken == "" {
-				accessToken, err = github.GetGHToken()
+				accessToken, err = github.GetToken()
 				if err != nil {
 					return err
 				}
