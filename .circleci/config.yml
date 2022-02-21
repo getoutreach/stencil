@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  shared: getoutreach/shared@1.42.1
+  shared: getoutreach/shared@1.50.1
 
 # DEPRECATED: Use the devbase orb instead:
 # https://github.com/getoutreach/devbase/tree/main/orbs/shared
@@ -85,7 +85,7 @@ jobs:
           name: Release
           command: ./scripts/shell-wrapper.sh ci/release/release.sh
 
-  trigger_documentation:
+  publish_docs:
     executor:
       name: shared/testbed-docker
       docker_tag: stable
@@ -93,7 +93,7 @@ jobs:
       - shared/setup_environment
       - shared/with_go_cache
       - run:
-          name: Trigger Documentation Update
+          name: Publish Documentation
           command: ./scripts/shell-wrapper.sh ci/release/docs.sh
 
 workflows:
@@ -142,10 +142,13 @@ workflows:
             - ghaccesstoken
             - docker-registry
             - npm-credentials
-      - trigger_documentation:
+            ###Block(circleTestContext)
+            ###EndBlock(circleTestContext)
+      - publish_docs:
           context:
             - ghaccesstoken
             - docker-registry
+            - confluence
           filters:
             branches:
               ignore: /.*/

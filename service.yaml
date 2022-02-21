@@ -1,19 +1,40 @@
 name: stencil
-
-# Support bootstrap
-library: true
+reportingTeam: fnd-dtss
+description: microservice lifecycle manager
 oss: true
+slack: dev-tooling-notifications
+library: true
 commands:
   - stencil
-reportingTeam: fnd-dtss
+circleAPIKey: ""
+releaseType: ""
 releaseOptions:
+  allowPrereleases: false
   allowMajorVersions: true
-
-# Support newer stencil
+deployTo:
+  environments: []
 arguments:
-  library: true
-  commands:
-    - stencil
+  circleAPIKey: ""
+  dependencies:
+    optional: []
+    required: []
+  description: microservice lifecycle manager
+  opslevel:
+    confluenceSpaceKey: DTSS
+    designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+  oss: true
   reportingTeam: fnd-dtss
-  releaseOptions:
-    allowMajorVersions: true
+  type:
+    - library
+modules:
+  - url: https://github.com/getoutreach/stencil-base
+    version: ""
+opsLevel:
+  serviceTier: 0
+  lifecycle: ""
+  confluenceSpaceKey: DTSS
+  pagerDutyLink: ""
+  datadogDashboards:
+    mainLink: ""
+    custom: []
+  designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
