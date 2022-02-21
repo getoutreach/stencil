@@ -28,7 +28,7 @@ var Default = template.FuncMap{
 	},
 	"QuoteJoinStrings": func(elems []string, sep string) string {
 		for i := range elems {
-			elems[i] = fmt.Sprintf("\"%s\"", elems[i])
+			elems[i] = fmt.Sprintf("%q", elems[i])
 		}
 		return strings.Join(elems, sep)
 	},

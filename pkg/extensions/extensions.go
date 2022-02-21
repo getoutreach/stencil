@@ -188,7 +188,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 func (h *Host) getExtensionPath(version, name string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
 	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, "@v", version, name)
-	os.MkdirAll(filepath.Dir(path), 0755) //nolint:errcheck // Why: signature doesn't allow it, yet
+	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
 

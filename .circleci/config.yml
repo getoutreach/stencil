@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  shared: getoutreach/shared@1.42.1
+  shared: getoutreach/shared@1.50.1
 
 # DEPRECATED: Use the devbase orb instead:
 # https://github.com/getoutreach/devbase/tree/main/orbs/shared
@@ -21,7 +21,6 @@ jobs:
     executor:
       name: shared/testbed-docker
       docker_tag: stable
-    parallelism: 10
     resource_class: medium+
     steps:
       - shared/setup_environment
@@ -29,10 +28,9 @@ jobs:
       - run:
           name: Run integration tests
           no_output_timeout: 30m
-          command: |-
-            go run ./tests/generate-tests/generate-tests.go | circleci tests split --split-by=timings --timings-type=classname > generated-tests.txt
-            go run ./tests/runner/runner.go < generated-tests.txt
+          command: echo "Implement me!"
   ###EndBlock(circleJobs)
+
   test:
     executor:
       name: shared/testbed-docker
@@ -85,7 +83,7 @@ jobs:
           name: Release
           command: ./scripts/shell-wrapper.sh ci/release/release.sh
 
-  trigger_documentation:
+  publish_docs:
     executor:
       name: shared/testbed-docker
       docker_tag: stable
@@ -93,7 +91,7 @@ jobs:
       - shared/setup_environment
       - shared/with_go_cache
       - run:
-          name: Trigger Documentation Update
+          name: Publish Documentation
           command: ./scripts/shell-wrapper.sh ci/release/docs.sh
 
 workflows:
@@ -142,10 +140,13 @@ workflows:
             - ghaccesstoken
             - docker-registry
             - npm-credentials
-      - trigger_documentation:
+            ###Block(circleTestContext)
+            ###EndBlock(circleTestContext)
+      - publish_docs:
           context:
             - ghaccesstoken
             - docker-registry
+            - confluence
           filters:
             branches:
               ignore: /.*/
