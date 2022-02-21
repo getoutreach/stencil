@@ -23,7 +23,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -241,7 +240,7 @@ func (b *Builder) GenerateFiles(ctx context.Context, fs billy.Filesystem) ([]str
 		// Remove the tpl suffix as the default path for the file
 		path = strings.TrimSuffix(path, ".tpl")
 
-		byt, err := ioutil.ReadAll(contents)
+		byt, err := io.ReadAll(contents)
 		if err != nil {
 			return errors.Wrap(err, "failed to read file into memory")
 		}

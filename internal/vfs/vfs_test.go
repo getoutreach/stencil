@@ -1,7 +1,7 @@
 package vfs_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -41,7 +41,7 @@ func TestVFSBaseFunctionality(t *testing.T) {
 	// open the files to compare
 	f, err = fs.Open("file1.txt")
 	assert.NilError(t, err, "couldn't read file in ordering test")
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	assert.NilError(t, err, "failed to read contents of file")
 
 	assert.Equal(t, string(b), f1magicStr, "ordering test failed, got %v instead of %s", string(b), f1magicStr)

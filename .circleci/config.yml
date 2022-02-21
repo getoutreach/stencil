@@ -21,7 +21,6 @@ jobs:
     executor:
       name: shared/testbed-docker
       docker_tag: stable
-    parallelism: 10
     resource_class: medium+
     steps:
       - shared/setup_environment
@@ -29,9 +28,7 @@ jobs:
       - run:
           name: Run integration tests
           no_output_timeout: 30m
-          command: |-
-            go run ./tests/generate-tests/generate-tests.go | circleci tests split --split-by=timings --timings-type=classname > generated-tests.txt
-            go run ./tests/runner/runner.go < generated-tests.txt
+          command: echo "Implement me!"
   ###EndBlock(circleJobs)
   test:
     executor:
