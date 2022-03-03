@@ -54,7 +54,7 @@ var (
 	ErrNoHeadBranch       = errors.New("failed to find a head branch, does one exist?")
 	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
 
-	blockPattern = regexp.MustCompile(`(?:\w+|^)(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
+	blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
 	headPattern  = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
 
 	// versionPattern ensures versions have at least a major and a minor.
