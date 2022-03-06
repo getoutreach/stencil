@@ -7,10 +7,14 @@ severity:
   case-sensitive: false
   rules:
     - severity: warning
-      # New rules, add as warning for now
+      # New rule, add as warning for now
       text: "^(redundantSprint|ioutilDeprecated|octalLiteral):"
       linters:
         - gocritic
+    - severity: warning
+      # New rule, add as warning for now
+      linters:
+        - errorlint
 
 # Linter settings
 linters-settings:
@@ -57,6 +61,7 @@ linters:
     - depguard
     - dogsled
     - errcheck
+    - errorlint
     - exhaustive # Checks exhaustiveness of enum switch statements.
     - exportloopref # Checks for pointers to enclosing loop variables.
     - funlen
