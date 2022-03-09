@@ -32,14 +32,13 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/blang/semver/v4"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/gobox/pkg/cfg"
+	"github.com/getoutreach/stencil/internal/functions"
 	"github.com/getoutreach/stencil/internal/vfs"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
-	"github.com/getoutreach/stencil/pkg/functions"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -49,13 +48,26 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+// This block contains error declarations and regexes that are used
+// by the codegen process.
 var (
-	ErrNotAFile           = errors.New("not a file")
-	ErrNoHeadBranch       = errors.New("failed to find a head branch, does one exist?")
+	// ErrNotAFile is an error for ????
+	ErrNotAFile = errors.New("not a file")
+
+	// ErrNoHeadBranch is returned when a repository's HEAD (aka default) branch cannot
+	// be determine
+	ErrNoHeadBranch = errors.New("failed to find a head branch, does one exist?")
+
+	// ErrNoRemoteHeadBranch is returned when a repository's remote  default/HEAD branch
+	// cannot be determined.
 	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
 
+	// blockPattern is the regex used for parsing block commands.
+	// For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
 	blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
-	headPattern  = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
+
+	// headPattern is used to parse git output to determine the head branch
+	headPattern = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
 
 	// versionPattern ensures versions have at least a major and a minor.
 	//
@@ -88,21 +100,8 @@ type Builder struct {
 // NewBuilder returns a new builder
 func NewBuilder(repo, dir string, log logrus.FieldLogger, s *configuration.ServiceManifest,
 	accessToken cfg.SecretData) *Builder {
-	// previousVersion is the previous version of bootstrap last run on this repository.
-	// This will be passed to the builder as nil if this is a fresh repository.
-	var previousVersion *semver.Version
-
-	lock, err := stencil.LoadLockfile("")
-	//nolint:gocritic // Why: case doesn't support errors.Is
-	if err == nil {
-		version, err := semver.ParseTolerant(lock.Version)
-		if err == nil {
-			previousVersion = &version
-			log.WithField("previousVersion", previousVersion.String()).Info("found previous version of bootstrap")
-		}
-	} else if errors.Is(err, os.ErrNotExist) {
-		// noop
-	} else {
+	_, err := stencil.LoadLockfile("")
+	if !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
 	}
 
@@ -126,6 +125,42 @@ func (b *Builder) Run(ctx context.Context) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to process service manifest")
 	}
 
+	// TODO(jaredallard): Path for stencil:
+	//
+	// Using the new module package we wrote we should:
+	//
+	// - Remove CreateVFS()
+	// - Remove aggregated postRunCommands
+	// - Figure out if we can register extensions in the module package
+	// - Merge all of the removed functionality into something that
+	//   that takes a slice of modules in their resolved order and
+	//   use that to process templates/post-run commands.
+	// - When writing a file, always ensure that the module that is
+	//   writing it is attached in some way, e.g. attached to it. This
+	//   will make it easy to tell "who generated what".
+	// - When writing a file, have a "dryrun" mode that doesn't actually
+	//   write the file. This will enable us to print who owns a file, but
+	//   also let us natively determine what would've happened on a change.
+	//   Note: We'll need to think about how this works in the world of formatters.
+	//
+	// Things to consider:
+	// - Do we want to make it more clear how dependencies are loaded? Currently
+	//   it's the "lowest tier" wins, this is to get around how we import dependencies
+	//   from private modules. (Need to think about this more, maybe draw it out)
+	// - How do we handle a dependency writing to the same file as another module? First wins?
+	//   Runtime error?
+	// - Do we let modules register hooks into other templates? Otherwise we have to depend
+	//   on language specific codegen. That doesn't seem optimal. This will probably require
+	//   that we render everything twice. Or, instead, a file that uses a hook is rendered
+	//   at a seprate step. Not super sure, need to come up with a solution here.
+	// - Now that templates can configure where they write to, the filePath argument
+	//   to writeTemplate probably doesn't make much sense. We should consider just setting
+	//   a default path on the template object instead and let it overwrite itself.
+	// - Command parser could be split out into a separate file as well as broken out
+	//   to be inside of a function, e.g. readBlocks() to reduce complexity.
+	//
+	// Things to do:
+	// - Document the lifecycle of a module, how does it all work?
 	b.log.Info("Fetching dependencies")
 	fetcher := NewFetcher(b.log, b.manifest, b.accessToken, b.extensions)
 	fs, manifests, err := fetcher.CreateVFS(ctx)
@@ -191,23 +226,6 @@ func (b *Builder) processManifest() error {
 	for resource, version := range b.manifest.Versions {
 		if !versionPattern.MatchString(version) {
 			return fmt.Errorf("resource \"%s\" must have at least a major and minor version (format: MAJOR.MINOR.PATCH)", resource)
-		}
-	}
-
-	return nil
-}
-
-func (b *Builder) FormatFiles(ctx context.Context) error {
-	b.log.Info("Running post-run commands")
-	for _, prc := range b.postRunCommands {
-		b.log.Infof(" - %s", prc.Name)
-		cmd := exec.CommandContext(ctx, "env", "bash", "-c", prc.Command) //nolint:gosec // Why: We have to
-		cmd.Dir = b.dir
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "failed to run '%s'", prc.Command)
 		}
 	}
 
@@ -310,8 +328,8 @@ func (b *Builder) makeTemplateParameters(ctx context.Context) (map[string]interf
 
 	return map[string]interface{}{
 		"Metadata": map[string]string{
-			"Generator": "stencil",
-			"Version":   app.Version,
+			"Generator": app.Info().Name,
+			"Version":   app.Info().Version,
 		},
 
 		"Repository": map[string]string{

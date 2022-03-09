@@ -8,7 +8,6 @@ package gitauth
 import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/go-git/go-git/v5"
-	"github.com/sirupsen/logrus"
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 
@@ -55,8 +54,7 @@ func configureAccessTokenAuth(token cfg.SecretData, opts *git.CloneOptions) erro
 
 // ConfigureAuth configures the provided git.CloneOptions to be authenticated for
 // Github repository clones
-func ConfigureAuth(accessToken cfg.SecretData, opts *git.CloneOptions,
-	log logrus.FieldLogger) error {
+func ConfigureAuth(accessToken cfg.SecretData, opts *git.CloneOptions) error {
 	// Don't setup auth if no auth token is set
 	if accessToken == "" {
 		return nil

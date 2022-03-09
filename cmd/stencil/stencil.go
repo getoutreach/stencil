@@ -22,8 +22,8 @@ import (
 	// Place any extra imports for your startup code here
 	///Block(imports)
 
+	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/stencil"
-	"github.com/getoutreach/stencil/pkg/codegen"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
