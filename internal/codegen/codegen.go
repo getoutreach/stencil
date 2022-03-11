@@ -18,61 +18,25 @@
 package codegen
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
-	"regexp"
-	"strings"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
-	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/functions"
-	"github.com/getoutreach/stencil/internal/vfs"
+	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/tplfuncs"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-)
-
-// This block contains error declarations and regexes that are used
-// by the codegen process.
-var (
-	// ErrNotAFile is an error for ????
-	ErrNotAFile = errors.New("not a file")
-
-	// ErrNoHeadBranch is returned when a repository's HEAD (aka default) branch cannot
-	// be determine
-	ErrNoHeadBranch = errors.New("failed to find a head branch, does one exist?")
-
-	// ErrNoRemoteHeadBranch is returned when a repository's remote  default/HEAD branch
-	// cannot be determined.
-	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
-
-	// blockPattern is the regex used for parsing block commands.
-	// For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
-	blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
-
-	// headPattern is used to parse git output to determine the head branch
-	headPattern = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
-
-	// versionPattern ensures versions have at least a major and a minor.
-	//
-	// For examples, see https://regex101.com/r/ajHtpK/1
-	versionPattern = regexp.MustCompile(`^\d+\.\d+[.\d+]*$`)
+	"github.com/go-git/go-billy/v5/util"
 )
 
 // Builder is the heart of stencil, running it is akin to running
@@ -80,106 +44,55 @@ var (
 // the actual templating engine and writing the results to disk. Also
 // handled is the extension framework
 type Builder struct {
-	repo string
-	dir  string
+	// dir is the path to write templates to
+	dir string
 
-	manifest   *configuration.ServiceManifest
-	templateFS billy.Filesystem
+	// manifest is the service manifest that is being used
+	// for this template render
+	manifest *configuration.ServiceManifest
 
-	extensions      *extensions.Host
-	extensionCaller *extensions.ExtensionCaller
+	// extensions is the extensions host that handles all extensions
+	// exposed to templates for this builder
+	extensions *extensions.Host
 
+	// log is the logger used for logging output
 	log logrus.FieldLogger
 
-	accessToken cfg.SecretData
-
-	// set by Run
-	postRunCommands []*configuration.PostRunCommandSpec
+	// modules is a list of all modules that this builder is utilizing
+	modules []*modules.Module
 }
 
 // NewBuilder returns a new builder
-func NewBuilder(repo, dir string, log logrus.FieldLogger, s *configuration.ServiceManifest,
-	accessToken cfg.SecretData) *Builder {
+func NewBuilder(dir string, log logrus.FieldLogger, s *configuration.ServiceManifest) *Builder {
 	_, err := stencil.LoadLockfile("")
 	if !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
 	}
 
 	return &Builder{
-		repo:            repo,
-		dir:             dir,
-		manifest:        s,
-		extensions:      extensions.NewHost(),
-		log:             log,
-		accessToken:     accessToken,
-		postRunCommands: make([]*configuration.PostRunCommandSpec, 0),
+		dir:        dir,
+		manifest:   s,
+		extensions: extensions.NewHost(),
+		log:        log,
 	}
 }
 
 // Run fetches dependencies of the root modules and builds the layered filesystem,
 // after that GenerateFiles is called to actually walk the filesystem and render
 // the templates. This step also does minimal post-processing of the dependencies
-// manifes.yamls.
+// manifests
 func (b *Builder) Run(ctx context.Context) ([]string, error) {
 	if err := b.processManifest(); err != nil {
 		return nil, errors.Wrap(err, "failed to process service manifest")
 	}
 
-	// TODO(jaredallard): Path for stencil:
-	//
-	// Using the new module package we wrote we should:
-	//
-	// - Remove CreateVFS()
-	// - Remove aggregated postRunCommands
-	// - Figure out if we can register extensions in the module package
-	// - Merge all of the removed functionality into something that
-	//   that takes a slice of modules in their resolved order and
-	//   use that to process templates/post-run commands.
-	// - When writing a file, always ensure that the module that is
-	//   writing it is attached in some way, e.g. attached to it. This
-	//   will make it easy to tell "who generated what".
-	// - When writing a file, have a "dryrun" mode that doesn't actually
-	//   write the file. This will enable us to print who owns a file, but
-	//   also let us natively determine what would've happened on a change.
-	//   Note: We'll need to think about how this works in the world of formatters.
-	//
-	// Things to consider:
-	// - Do we want to make it more clear how dependencies are loaded? Currently
-	//   it's the "lowest tier" wins, this is to get around how we import dependencies
-	//   from private modules. (Need to think about this more, maybe draw it out)
-	// - How do we handle a dependency writing to the same file as another module? First wins?
-	//   Runtime error?
-	// - Do we let modules register hooks into other templates? Otherwise we have to depend
-	//   on language specific codegen. That doesn't seem optimal. This will probably require
-	//   that we render everything twice. Or, instead, a file that uses a hook is rendered
-	//   at a seprate step. Not super sure, need to come up with a solution here.
-	// - Now that templates can configure where they write to, the filePath argument
-	//   to writeTemplate probably doesn't make much sense. We should consider just setting
-	//   a default path on the template object instead and let it overwrite itself.
-	// - Command parser could be split out into a separate file as well as broken out
-	//   to be inside of a function, e.g. readBlocks() to reduce complexity.
-	//
-	// Things to do:
-	// - Document the lifecycle of a module, how does it all work?
-	b.log.Info("Fetching dependencies")
-	fetcher := NewFetcher(b.log, b.manifest, b.accessToken, b.extensions)
-	fs, manifests, err := fetcher.CreateVFS(ctx)
+	var err error
+	b.modules, err = modules.GetModulesForService(ctx, b.manifest)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create vfs")
-	}
-	b.templateFS = fs
-
-	ec, err := b.extensions.GetExtensionCaller(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get template functions from extensions")
-	}
-	b.extensionCaller = ec
-
-	for _, m := range manifests {
-		b.postRunCommands = append(b.postRunCommands, m.PostRunCommand...)
+		return nil, errors.Wrap(err, "failed to process modules list")
 	}
 
-	warnings, err := b.GenerateFiles(ctx, fs)
+	warnings, err := b.GenerateFiles(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -191,18 +104,23 @@ func (b *Builder) Run(ctx context.Context) ([]string, error) {
 // dependencies
 func (b *Builder) runPostRunCommands(ctx context.Context) error {
 	b.log.Info("Running post run commands")
-	for _, cmdStr := range b.postRunCommands {
-		b.log.Infof("- %s", cmdStr.Name)
+	for _, m := range b.modules {
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return err
+		}
 
-		//nolint:gosec // Why: That's the literal design.
-		cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		if err := cmd.Run(); err != nil {
-			// IDEA(jaredallard): It'd be cool if we exposed which
-			// dependency this was attached to
-			return errors.Wrap(err, "failed to run post run command")
+		for _, cmdStr := range mf.PostRunCommand {
+			b.log.Infof("- %s", cmdStr.Name)
+
+			//nolint:gosec // Why: That's the literal design.
+			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			if err := cmd.Run(); err != nil {
+				return errors.Wrapf(err, "failed to run post run command for module %q", m.Name)
+			}
 		}
 	}
 
@@ -212,8 +130,10 @@ func (b *Builder) runPostRunCommands(ctx context.Context) error {
 // setDefaultArguments translates a few manifest values
 // into arguments that can be accessed via stencil.Arg
 func (b *Builder) setDefaultArguments() error {
+	if b.manifest.Arguments == nil {
+		b.manifest.Arguments = make(map[string]interface{})
+	}
 	b.manifest.Arguments["name"] = b.manifest.Name
-
 	return nil
 }
 
@@ -223,104 +143,101 @@ func (b *Builder) processManifest() error {
 		return err
 	}
 
-	for resource, version := range b.manifest.Versions {
-		if !versionPattern.MatchString(version) {
-			return fmt.Errorf("resource \"%s\" must have at least a major and minor version (format: MAJOR.MINOR.PATCH)", resource)
-		}
-	}
-
 	return nil
 }
 
 // GenerateFiles walks the vfs generated by Run() and renders the templates
-func (b *Builder) GenerateFiles(ctx context.Context, fs billy.Filesystem) ([]string, error) {
+func (b *Builder) GenerateFiles(ctx context.Context) ([]string, error) {
 	data, err := b.makeTemplateParameters(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	st := functions.NewStencil(b.manifest, b.modules)
+
 	b.log.Info("Generating files")
-	warnings := make([]string, 0)
-	return warnings, vfs.Walk(fs, "", func(path string, file os.FileInfo, err error) error {
+	for _, m := range b.modules {
+		fs, err := m.GetFS(ctx)
 		if err != nil {
-			return errors.Wrapf(err, "failed to read %s", path)
+			return nil, errors.Wrapf(err, "failed to read module filesystem %q", m.Name)
 		}
 
-		// Skip files without a .tpl extension
-		if filepath.Ext(path) != ".tpl" {
+		err = util.Walk(fs, "", func(path string, inf os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			// Skip files without a .tpl extension
+			if filepath.Ext(path) != ".tpl" {
+				return nil
+			}
+
+			f, err := fs.Open(path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to open template %q from module %q", path, m.Name)
+			}
+			defer f.Close()
+
+			tplContents, err := io.ReadAll(f)
+			if err != nil {
+				return errors.Wrapf(err, "failed to read template %q from module %q", path, m.Name)
+			}
+
+			tpl, err := functions.NewTemplate(m, path, inf.Mode(), inf.ModTime(), tplContents)
+			if err != nil {
+				return errors.Wrapf(err, "failed to create template %q from module %q", path, m.Name)
+			}
+
+			// Change the current active template
+			st.Template = tpl
+
+			// render the template
+			if err := tpl.Render(tplfuncs.NewFuncMap(tplfuncs.New(b.manifest, st, tpl)), data); err != nil {
+				return errors.Wrapf(err, "failed to render template %q from module %q", path, m.Name)
+			}
+
+			// Append the template to the list of templates as we've rendered
+			// it now.
+			st.Templates = append(st.Templates, tpl)
+
 			return nil
-		}
-
-		contents, err := b.FetchTemplate(ctx, path)
+		})
 		if err != nil {
-			return errors.Wrap(err, "failed to fetch template")
+			return nil, err
 		}
-		// Remove the tpl suffix as the default path for the file
-		path = strings.TrimSuffix(path, ".tpl")
+	}
 
-		byt, err := io.ReadAll(contents)
-		if err != nil {
-			return errors.Wrap(err, "failed to read file into memory")
-		}
-
-		w, err := b.WriteTemplate(ctx, path, string(byt), data)
-		if err != nil {
-			return errors.Wrap(err, "failed to write template")
-		}
-
-		warnings = append(warnings, w...)
-
-		return nil
-	})
+	return nil, b.writeFiles(st)
 }
 
-// determineHeadBranch determines the remote head branch
-func (b *Builder) determineHeadBranch(ctx context.Context) (string, error) {
-	r, err := git.PlainOpen(b.dir)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to open directory as a repository")
-	}
-
-	_, err = r.Remote("origin")
-	if err != nil {
-		// loop through the local branchs
-		candidates := []string{"main", "master"}
-		for _, branch := range candidates {
-			_, err := r.Reference(plumbing.NewBranchReferenceName(branch), true) //nolint:govet
-			if err == nil {
-				return branch, nil
+// writeFiles writes the files to disk
+func (b *Builder) writeFiles(st *functions.Stencil) error {
+	b.log.Infof("Writing template(s) to disk")
+	for _, tpl := range st.Templates {
+		b.log.Debugf(" -> %s (%s)", tpl.Module.Name, tpl.Path)
+		for _, f := range tpl.Files {
+			action := "Created"
+			if f.Deleted {
+				action = "Deleted"
+			} else if f.Skipped {
+				action = "Skipped"
+			} else if _, err := os.Stat(f.Name()); err == nil {
+				action = "Updated"
 			}
+
+			b.log.Infof("  -> %s %s", action, f.Name())
 		}
-
-		// we couldn't find one
-		return "", ErrNoHeadBranch
 	}
 
-	// we found an origin reference, figure out the HEAD
-	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin")
-	cmd.Dir = b.dir
-	out, err := cmd.Output()
-	if err != nil {
-		return "", errors.Wrap(err, "Failed to get head branch from remote origin")
-	}
+	l := st.GenerateLockfile()
+	yaml.NewEncoder(os.Stdout).Encode(l)
 
-	matches := headPattern.FindStringSubmatch(string(out))
-	if len(matches) != 2 {
-		return "", ErrNoRemoteHeadBranch
-	}
-
-	return matches[1], nil
+	return nil
 }
 
 // makeTemplateParameters creates the map to be provided to the templates.
-func (b *Builder) makeTemplateParameters(ctx context.Context) (map[string]interface{}, error) { //nolint:funlen
-	headBranch, err := b.determineHeadBranch(ctx)
-	if err == ErrNoHeadBranch {
-		headBranch = "main"
-	} else if err != nil {
-		return nil, err
-	}
-
+func (b *Builder) makeTemplateParameters(_ context.Context) (map[string]interface{}, error) { //nolint:funlen
+	// TODO: head branch
 	boxConf, err := box.LoadBox()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load box config")
@@ -333,7 +250,7 @@ func (b *Builder) makeTemplateParameters(ctx context.Context) (map[string]interf
 		},
 
 		"Repository": map[string]string{
-			"HeadBranch": headBranch,
+			"HeadBranch": "main",
 		},
 
 		"Box": boxConf,
@@ -341,203 +258,4 @@ func (b *Builder) makeTemplateParameters(ctx context.Context) (map[string]interf
 		"Manifest":  b.manifest,
 		"Arguments": b.manifest.Arguments,
 	}, nil
-}
-
-// FetchTemplate fetches a template from a git repository
-func (b *Builder) FetchTemplate(ctx context.Context, filePath string) (io.Reader, error) {
-	f, err := b.templateFS.Open(filePath)
-	return f, errors.Wrap(err, filePath)
-}
-
-// WriteTemplate handles parsing commands (e.g. ///Block) and renders a given template by
-// turning it into a functions.RenderedTemplate. This is then written to disk, or skipped
-// based on the template's function call. Multiple functions.RenderedTemplates can be returned
-// by a single template.
-//nolint:funlen,gocyclo,gocritic
-func (b *Builder) WriteTemplate(ctx context.Context, filePath,
-	contents string, args map[string]interface{}) ([]string, error) {
-	// Search for any commands that are inscribed in the file.
-	// Currently we use Block and EndBlock to allow for
-	// arbitrary data payloads to be saved across runs of stencil.
-	//
-	// Note: filepath here should be the file we are writing to,
-	// NOT the template. This allows us to get arbitrary user content
-	// from the existing blocks in that file, that may exist
-	// in the new template as well (and if so, automatically) use.
-	f, err := os.Open(filePath)
-	if err == nil {
-		defer f.Close()
-
-		var curBlockName string
-		scanner := bufio.NewScanner(f)
-		for i := 0; scanner.Scan(); i++ {
-			line := scanner.Text()
-			matches := blockPattern.FindStringSubmatch(line)
-			isCommand := false
-
-			// 1: Comment (###|///)
-			// 2: Command
-			// 3: Argument to the command
-			if len(matches) == 4 {
-				cmd := matches[2]
-				isCommand = true
-
-				log := b.log.WithField("command.name", cmd)
-				log.Debug("Processing command")
-
-				switch cmd {
-				case "Block":
-					blockName := matches[3]
-
-					log.WithFields(logrus.Fields{
-						"block.name":  blockName,
-						"block.start": fmt.Sprintf("%s:%d", filePath, i),
-					}).Debug("Block started")
-
-					if curBlockName != "" {
-						return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i)
-					}
-					curBlockName = blockName
-				case "EndBlock":
-					blockName := matches[3]
-
-					log.WithFields(logrus.Fields{
-						"block.name":  blockName,
-						"block.start": fmt.Sprintf("%s:%d", filePath, i),
-					}).Debug("Block ended")
-
-					if blockName != curBlockName {
-						return nil, fmt.Errorf(
-							"invalid EndBlock, found EndBlock with name '%s' while inside of block with name '%s', at %s:%d",
-							blockName, curBlockName, filePath, i,
-						)
-					}
-
-					if curBlockName == "" {
-						return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i)
-					}
-
-					curBlockName = ""
-				default:
-					log.Debug("Skipping unknown command")
-					isCommand = false
-				}
-			}
-
-			// we skip lines that had a recognized command in them, or that
-			// aren't in a block
-			if isCommand || curBlockName == "" {
-				continue
-			}
-
-			// add the line we processed to the current block we're in
-			// and account for having an existing curVal or not. If we
-			// don't then we assign curVal to start with the line we
-			// just found.
-			curVal, ok := args[curBlockName]
-			if ok {
-				args[curBlockName] = curVal.(string) + "\n" + line
-			} else {
-				args[curBlockName] = line
-			}
-		}
-	}
-
-	warnings := make([]string, 0)
-
-	templates, err := b.renderTemplate(filePath, contents, args)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(jaredallard): I think this implementation will break if
-	// a multi-file template has blocks with different contents. Need
-	// to look into this. Possible we'll need to pre-render to
-	// determine which files we're writing to to populate args.
-	for _, renderedTemplate := range templates {
-		if len(renderedTemplate.Warnings) > 0 {
-			warnings = append(warnings, renderedTemplate.Warnings...)
-		}
-		if renderedTemplate.Skipped {
-			return warnings, nil
-		}
-		if renderedTemplate.Deleted {
-			return warnings, os.RemoveAll(renderedTemplate.Path)
-		}
-		if renderedTemplate.Path != "" {
-			filePath = renderedTemplate.Path
-		}
-
-		absFilePath := path.Join(b.dir, filePath)
-
-		action := "Updated"
-		if _, err := os.Stat(absFilePath); os.IsNotExist(err) {
-			action = "Created"
-		}
-
-		perms := os.FileMode(0644)
-		if strings.HasSuffix(filePath, ".sh") {
-			perms = os.FileMode(0744)
-		}
-		filePath = strings.TrimSuffix(filePath, ".tpl")
-
-		b.log.Infof("- %s file '%s'", action, filePath)
-		if err := b.writeFile(filePath, renderedTemplate, perms); err != nil {
-			return nil, errors.Wrapf(err, "error creating file '%s'", absFilePath)
-		}
-	}
-
-	return warnings, nil
-}
-
-//nolint:gocritic,funlen
-func (b *Builder) renderTemplate(fileName, contents string,
-	args map[string]interface{}) ([]*functions.RenderedTemplate, error) {
-	srcRendered := &functions.RenderedTemplate{}
-
-	tmpl := template.New(fileName)
-	st := functions.NewStencil(tmpl, b.manifest, srcRendered)
-
-	nargs := make(map[string]interface{})
-	for k, v := range args {
-		nargs[k] = v
-	}
-
-	funcs := functions.Default
-	funcs["stencil"] = func() *functions.Stencil { return st }
-	funcs["file"] = func() *functions.RenderedTemplate { return st.File }
-
-	funcs["extensions"] = func() *extensions.ExtensionCaller {
-		return b.extensionCaller
-	}
-
-	tmpl, err := tmpl.Funcs(sprig.TxtFuncMap()).Funcs(funcs).Parse(contents)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, nargs)
-	srcRendered.Reader = &buf
-	return append(st.Files, srcRendered), err
-}
-
-func (b *Builder) writeFile(fileName string, tf io.Reader, perm os.FileMode) error {
-	fileName = filepath.Join(b.dir, fileName)
-	err := os.MkdirAll(filepath.Dir(fileName), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	err = f.Chmod(perm)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(f, tf)
-	return err
 }

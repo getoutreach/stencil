@@ -16,7 +16,6 @@ func ValidateName(name string) bool {
 	//
 	// See also:
 	// 	https://golang.org/ref/spec#Identifiers
-	//	https://outreach-io.atlassian.net/wiki/spaces/EN/pages/784237883/Setting+up+a+Go+repo
 	acceptableName := regexp.MustCompile(ValidateNameRegexp)
 	return acceptableName.MatchString(name)
 }

@@ -6,7 +6,9 @@ package modules
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"text/template"
 
 	"github.com/getoutreach/gobox/pkg/github"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -25,9 +27,17 @@ import (
 
 // Module is a stencil module that contains template files.
 type Module struct {
-	// URI is a URI to the module. Currently supported formats are:
-	//   https://<url>
-	//   file://<path>
+	// t is a shared go-template that is used for this module. This is important
+	// because this allows us to call shared templates across a single module.
+	// Note: We don't currently support sharing templates across modules. Instead
+	// the data passing system should be used for cases like this.
+	t *template.Template
+
+	// Name is the name of a module. This should be a valid go
+	// import path. For example: github.com/getoutreach/stencil-base
+	Name string
+
+	// URI is the underlying URI being used to download this module
 	URI string
 
 	// Version is the version of this module
@@ -38,27 +48,23 @@ type Module struct {
 }
 
 // getLatestVersion returns the latest version of a git repository
-// uri should be a valid git URI, e.g. https://github.com/<org>/<repo>
-func getLatestVersion(ctx context.Context, uri string) (string, error) {
-	u, err := giturls.Parse(uri)
-	if err != nil {
-		return "", err
+// name should be a valid go import path, like github.com/<org>/<repo>
+func getLatestVersion(ctx context.Context, name string) (string, error) {
+	paths := strings.Split(name, "/")
+
+	// github.com, getoutreach, stencil-base
+	if len(paths) < 3 {
+		return "", fmt.Errorf("invalid module path %q, expected github.com/<org>/<repo>", name)
 	}
 
-	// file paths don't have a version
-	if u.Scheme == "file" {
-		return "", nil
-	}
-
-	paths := strings.Split(u.Path, "/")
 	gh, err := github.NewClient()
 	if err != nil {
 		return "", err
 	}
 
-	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[0], paths[1])
+	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find the latest release for repo %q", u.Path)
+		return "", errors.Wrapf(err, "failed to find the latest release for module %q", name)
 	}
 
 	return rel.GetTagName(), nil
@@ -70,17 +76,29 @@ func getLatestVersion(ctx context.Context, uri string) (string, error) {
 // version, a range is also acceptable, e.g. ~1.0.0.
 //
 // If the uri is a file:// path, a version must be specified otherwise
-// it will be treated as if it has no version.
-func New(uri, version string) (*Module, error) {
+// it will be treated as if it has no version. If uri is not specified
+// it is default to HTTPS
+func New(name, uri, version string) (*Module, error) {
+	if uri == "" {
+		uri = "https://" + name
+	} else if strings.HasPrefix(uri, "file://") {
+		version = "local"
+	}
+
 	if version == "" {
 		var err error
-		version, err = getLatestVersion(context.TODO(), uri)
+		version, err = getLatestVersion(context.TODO(), name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &Module{uri, version, nil}, nil
+	return &Module{template.New(name), name, uri, version, nil}, nil
+}
+
+// GetTemplate returns the go template for this module
+func (m *Module) GetTemplate() *template.Template {
+	return m.t
 }
 
 // RegisterExtensions registers all extensions provided
@@ -88,12 +106,7 @@ func New(uri, version string) (*Module, error) {
 // URI then extensions will be sourced from the `./bin`
 // directory of the base of the path.
 func (m *Module) RegisterExtensions(ctx context.Context, ext *extensions.Host) error {
-	mf, err := m.Manifest(ctx)
-	if err != nil {
-		return err
-	}
-
-	return ext.RegisterExtension(ctx, m.URI, mf.Name, m.Version)
+	return ext.RegisterExtension(ctx, m.Name, m.Name, m.Version)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed
@@ -111,8 +124,19 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	defer mf.Close()
 
 	var manifest configuration.TemplateRepositoryManifest
-	err = yaml.NewDecoder(mf).Decode(&manifest)
-	return manifest, err
+	if err := yaml.NewDecoder(mf).Decode(&manifest); err != nil {
+		return configuration.TemplateRepositoryManifest{}, err
+	}
+
+	// ensure that the manifest name is equal to the import path
+	if manifest.Name != m.Name {
+		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
+			"Module declares it's import path as %q but was imported as %q",
+			manifest.Name, m.Name,
+		)
+	}
+
+	return manifest, nil
 }
 
 // GetFS returns a billy.Filesystem that contains the contents
@@ -124,11 +148,11 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 
 	u, err := giturls.Parse(m.URI)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse url")
+		return nil, errors.Wrap(err, "failed to parse module URI")
 	}
 
-	if u.Scheme == "file" { // Support local paths
-		m.fs = osfs.New(u.Path)
+	if u.Scheme == "file" {
+		m.fs = osfs.New(strings.TrimPrefix(m.URI, "file://"))
 		return m.fs, nil
 	}
 

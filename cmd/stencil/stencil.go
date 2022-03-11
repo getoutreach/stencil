@@ -10,12 +10,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	oapp "github.com/getoutreach/gobox/pkg/app"
-	"github.com/getoutreach/gobox/pkg/cfg"
 	gcli "github.com/getoutreach/gobox/pkg/cli"
-	"github.com/getoutreach/gobox/pkg/github"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
@@ -25,7 +22,6 @@ import (
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/stencil"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	///EndBlock(imports)
 )
@@ -75,25 +71,7 @@ func main() {
 				return fmt.Errorf("'%s' is not an acceptable package name", serviceManifest.Name)
 			}
 
-			_, err = git.PlainOpen(cwd)
-			if err != nil {
-				log.Info("creating git repository")
-				_, err = git.PlainInit(cwd, false)
-				if err != nil {
-					return errors.Wrap(err, "failed to initialize git repository")
-				}
-			}
-
-			accessToken := cfg.SecretData(c.String("github-access-token"))
-			if accessToken == "" {
-				accessToken, err = github.GetToken()
-				if err != nil {
-					return err
-				}
-			}
-
-			b := codegen.NewBuilder(filepath.Base(cwd), cwd, log, serviceManifest, accessToken)
-
+			b := codegen.NewBuilder(cwd, log, serviceManifest)
 			warnings, err := b.Run(ctx)
 			for _, warning := range warnings {
 				log.Warn(warning)
@@ -105,18 +83,15 @@ func main() {
 	app.Flags = []cli.Flag{
 		///Block(flags)
 		&cli.BoolFlag{
-			Name:  "dev",
-			Usage: "Use local manifests instead of remote ones, useful for development",
-		},
-		&cli.StringFlag{
-			Name:    "github-access-token",
-			Usage:   "Github Access Token (or Personal Access Token) to use for downloading templates",
-			EnvVars: []string{"GITHUB_ACCESS_TOKEN"},
+			Name:    "dry-run",
+			Aliases: []string{"dryrun"},
+			Usage:   "Don't write files to disk",
 		},
 		///EndBlock(flags)
 	}
 	app.Commands = []*cli.Command{
 		///Block(commands)
+		NewDescribeCmd(),
 		///EndBlock(commands)
 	}
 

@@ -4,101 +4,60 @@
 package functions
 
 import (
-	"bytes"
-	"strings"
-	"text/template"
+	"time"
 
+	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/stencil"
 )
 
-// NewStencil creates a new, fully initialized Stencil
-func NewStencil(t *template.Template, m *configuration.ServiceManifest,
-	file *RenderedTemplate) *Stencil {
-	return &Stencil{Template: t, m: m, Files: make([]*RenderedTemplate, 0),
-		File: file}
+// NewStencil creates a new, fully initialized Stencil renderer function
+func NewStencil(m *configuration.ServiceManifest, modules []*modules.Module) *Stencil {
+	return &Stencil{m, modules, nil, nil}
 }
 
 // Stencil provides the basic functions for
 // stencil templates
 type Stencil struct {
-	*template.Template
 	m *configuration.ServiceManifest
 
-	// Files is a list of files that this rendered produced
-	Files []*RenderedTemplate
+	// Modules is a list of modules used in this stencil render
+	Modules []*modules.Module
 
-	// File is the current file that is being rendered by this
+	// Templates is a list of all templates that this renderer rendered.
+	Templates []*Template
+
+	// Template is the current template that is being rendered by this
 	// renderer.
-	File *RenderedTemplate
+	Template *Template
 }
 
-// ApplyTemplate executes a template inside of the current rendered
-// template.
-//
-//   {{- define "command"}}
-//   package main
-//
-//   import "fmt"
-//
-//   func main() {
-//     fmt.Println("hello, world!")
-//   }
-//
-//   {{- end }}
-//
-//   {{- stencil.ApplyTemplate "command" | stencil.InstallFile "cmd/main.go" }}
-func (s *Stencil) ApplyTemplate(name string) (string, error) {
-	var buf bytes.Buffer
-	err := s.Template.ExecuteTemplate(&buf, name, nil)
-	return buf.String(), err
-}
-
-// Arg returns an argument from the ServiceManifest.
-// Note: Only the top-level arguments are supported.
-//
-//   {{- stencil.Arg "name" }}
-func (s *Stencil) Arg(name string) interface{} {
-	if name == "" {
-		return s.Args()
+// GenerateLockfile generates a stencil.Lockfile based
+// on the current state of the renderer.
+func (s *Stencil) GenerateLockfile() *stencil.Lockfile {
+	l := &stencil.Lockfile{
+		Version:   app.Info().Version,
+		Generated: time.Now().UTC(),
 	}
 
-	return s.m.Arguments[name]
-}
-
-// Args returns the arguments from the ServiceManifest.
-//
-//   {{- (stencil.Args).name }}
-func (s *Stencil) Args() interface{} {
-	return s.m.Arguments
-}
-
-// InstallFile changes the current active rendered file and writes
-// the provided contents to it. This changes the scope of the
-// current "File" being rendered.
-//
-//   {{- file.Skip "Virtual file that generates X files" }}
-//   {{- define "command"}}
-//   package main
-//
-//   import "fmt"
-//
-//   func main() {
-//     fmt.Println("hello, world!")
-//   }
-//
-//   {{- end }}
-//
-//
-//   {{- /* Generate X number of files based on arguments.commands list of strings */}}
-//   {{- range (stencil.Arg "commands") }}
-//   {{- stencil.ApplyTemplate "command" | stencil.InstallFile (printf "cmd/%s.go" .) }}
-//   {{- end }}
-func (s *Stencil) InstallFile(name, contents string) string {
-	rt := &RenderedTemplate{
-		Path:   name,
-		Reader: strings.NewReader(contents),
+	for _, tpl := range s.Templates {
+		for _, f := range tpl.Files {
+			l.Files = append(l.Files, &stencil.LockfileFileEntry{
+				Name:     f.Name(),
+				Template: tpl.Path,
+				Module:   tpl.Module.Name,
+			})
+		}
 	}
-	s.Files = append(s.Files, rt)
-	s.File = rt
-	return ""
+
+	for _, m := range s.Modules {
+		l.Modules = append(l.Modules, &stencil.LockfileModuleEntry{
+			Name:    m.Name,
+			URL:     m.URI,
+			Version: m.Version,
+		})
+	}
+
+	return l
 }

@@ -9,16 +9,17 @@ import (
 	"testing"
 
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/pkg/configuration"
 	"gotest.tools/v3/assert"
 )
 
 func TestCanFetchModule(t *testing.T) {
-	m, err := modules.New("git@github.com:getoutreach/stencil-base", "main")
+	m, err := modules.New("github.com/getoutreach/stencil-base", "", "main")
 	assert.NilError(t, err, "failed to call New()")
 
 	manifest, err := m.Manifest(context.Background())
 	assert.NilError(t, err, "failed to call Manifest() on module")
-	assert.Equal(t, manifest.Name, "stencil-base", "failed to validate returned manifest")
+	assert.Equal(t, manifest.Type, configuration.TemplateRepositoryTypeStd, "failed to validate returned manifest")
 
 	fs, err := m.GetFS(context.Background())
 	assert.NilError(t, err, "failed to call GetFS() on module")
@@ -28,6 +29,26 @@ func TestCanFetchModule(t *testing.T) {
 }
 
 func TestCanGetLatestModule(t *testing.T) {
-	_, err := modules.New("git@github.com:getoutreach/stencil-base", "")
+	_, err := modules.New("github.com/getoutreach/stencil-base", "", "")
 	assert.NilError(t, err, "failed to call New()")
+}
+
+func TestReplacementLocalModule(t *testing.T) {
+	sm := &configuration.ServiceManifest{
+		Name: "testing-service",
+		Modules: []*configuration.TemplateRepository{
+			{
+				Name: "github.com/getoutreach/stencil-base",
+			},
+		},
+		Replacements: map[string]string{
+			"github.com/getoutreach/stencil-base": "file://testdata",
+		},
+	}
+
+	mods, err := modules.GetModulesForService(context.Background(), sm)
+	assert.NilError(t, err, "expected GetModulesForService() to not error")
+	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
+	assert.Equal(t, mods[0].URI, sm.Replacements["github.com/getoutreach/stencil-base"],
+		"expected module to use replacement URI")
 }

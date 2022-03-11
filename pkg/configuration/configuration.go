@@ -40,7 +40,7 @@ type ServiceManifest struct {
 
 	// Modules are the template modules that this service depends
 	// on and utilizes
-	Modules []*TemplateRepository `yaml:"modules"`
+	Modules []*TemplateRepository `yaml:"modules,omitempty"`
 
 	// Versions is a map of versions of certain tools, this is used by templates
 	// and will likely be replaced with something better in the future.
@@ -48,6 +48,13 @@ type ServiceManifest struct {
 
 	// Arguments is a map of arbitrary arguments to pass to the generator
 	Arguments map[string]interface{} `yaml:"arguments"`
+
+	// Replacements is a list of module names to replace their URI.
+	// Expected format:
+	// - local file: file://path/to/module
+	// - remote file: https://github.com/getoutreach/stencil-base
+	// - remote file w/ different protocol: git@github.com:getoutreach/stencil-base
+	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
 // TemplateRepositoryType specifies what type of a template
@@ -56,18 +63,22 @@ type TemplateRepositoryType string
 
 const (
 	// TemplateRepositoryTypeExt denotes a repository as being
-	// an extension repository.
+	// an extension repository. This means that it contains
+	// a go extension. This repository may also contain go-templates.
 	TemplateRepositoryTypeExt TemplateRepositoryType = "extension"
 
 	// TemplateRepositoryTypeStd denotes a repository as being a
 	// standard template repository. This is the default
-	TemplateRepositoryTypeStd TemplateRepositoryType = "standard"
+	TemplateRepositoryTypeStd TemplateRepositoryType = ""
 )
 
 // TemplateRepository is a repository of template files.
 type TemplateRepository struct {
-	// URL is the fully qualified URL that is able to access the templates
-	// and manifest.
+	// Name is the name of this module. This should be a valid go import path
+	Name string `yaml:"name"`
+
+	// Deprecated: Use name instead
+	// URL is a full URL for a given module
 	URL string `yaml:"url"`
 
 	// Version is a semantic version or branch of the template repository
@@ -79,7 +90,7 @@ type TemplateRepository struct {
 // TemplateRepositoryManifest is a manifest of a template repository
 type TemplateRepositoryManifest struct {
 	// Name is the name of this template repository.
-	// This is likely to be used in the future.
+	// This must match the import path.
 	Name string `yaml:"name"`
 
 	// Modules are template repositories that this manifest requires
