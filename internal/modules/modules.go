@@ -49,7 +49,7 @@ func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest
 				//nolint:staticcheck // Why: We're implementing compat here.
 				return errors.Wrapf(err, "failed to parse deprecated url module syntax %q as a URL", d.URL)
 			}
-			d.Name = path.Join(u.Host, u.RawPath)
+			d.Name = path.Join(u.Host, u.Path)
 		}
 
 		// If we already used this dependency once, don't fetch it again.
