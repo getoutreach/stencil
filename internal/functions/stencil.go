@@ -13,8 +13,8 @@ import (
 )
 
 // NewStencil creates a new, fully initialized Stencil renderer function
-func NewStencil(m *configuration.ServiceManifest, modules []*modules.Module) *Stencil {
-	return &Stencil{m, modules, nil, nil}
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
+	return &Stencil{m, mods, make([]*Template, 0), nil}
 }
 
 // Stencil provides the basic functions for

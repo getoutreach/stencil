@@ -7,11 +7,11 @@ package functions
 import (
 	"bytes"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/stencil/internal/modules"
 )
 
@@ -51,14 +51,19 @@ func NewTemplate(m *modules.Module, path string, mode os.FileMode, modTime time.
 // Render renders the provided template, the produced files
 // are rendered onto the Files field of the template struct.
 func (t *Template) Render(funcs template.FuncMap, args map[string]interface{}) error {
+	templateName := path.Join(t.Module.Name, t.Path)
+
 	// Add sprig functions
-	if _, err := t.Module.GetTemplate().Funcs(sprig.TxtFuncMap()).
-		Funcs(funcs).Parse(string(t.Contents)); err != nil {
+	if _, err := t.Module.GetTemplate().New(templateName).Funcs(funcs).
+		Parse(string(t.Contents)); err != nil {
 		return err
 	}
 
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Execute(&buf, args); err != nil {
+
+	// Execute a specific file because we're using a shared template, if we attempt to render
+	// the entire template we'll end up just rendering the base templaate (<module>) which is empty
+	if err := t.Module.GetTemplate().ExecuteTemplate(&buf, templateName, args); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ package tplfuncs
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/getoutreach/stencil/internal/functions"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -55,9 +56,20 @@ func (s *Stencil) Args() map[string]interface{} {
 //
 //   {{- end }}
 //
-//   {{- stencil.ApplyTemplate "command" | stencil.InstallFile "cmd/main.go" }}
-func (s *Stencil) ApplyTemplate(name string) (string, error) {
+//   {{- stencil.ApplyTemplate "command" | file.SetContents }}
+func (s *Stencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
+	// We check for dataSli here because we had to set it to a range of arguments
+	// to allow it to be not set.
+	if len(dataSli) > 1 {
+		return "", fmt.Errorf("ApplyTemplate() only takes max two arguments, name and data")
+	}
+
+	var data interface{}
+	if len(dataSli) == 1 {
+		data = dataSli[0]
+	}
+
 	var buf bytes.Buffer
-	err := s.s.Template.Module.GetTemplate().ExecuteTemplate(&buf, name, nil)
+	err := s.s.Template.Module.GetTemplate().ExecuteTemplate(&buf, name, data)
 	return buf.String(), err
 }

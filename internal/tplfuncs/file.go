@@ -82,7 +82,7 @@ func (f *File) Delete() error {
 //
 //   # Generate a "<commandName>.go" file for each command in .arguments.commands
 //   {{- range $_, $commandName := (stencil.Arg "commands") }}
-//   {{- file.Create (prinf "cmd/%s.go" $commandName) }}
+//   {{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
 //   {{- stencil.ApplyTemplate "commands" | file.SetContents }}
 //   {{- end }}
 func (f *File) Create(path string, mode os.FileMode, modTime time.Time) error {

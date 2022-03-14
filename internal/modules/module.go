@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/gobox/pkg/github"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -93,7 +94,15 @@ func New(name, uri, version string) (*Module, error) {
 		}
 	}
 
-	return &Module{template.New(name), name, uri, version, nil}, nil
+	return &Module{template.New(name).Funcs(sprig.TxtFuncMap()), name, uri, version, nil}, nil
+}
+
+// NewWithFS creates a module with the specified file system. This is
+// generally only meant to be used in tests.
+func NewWithFS(name string, fs billy.Filesystem) *Module {
+	m, _ := New(name, "vfs://"+name, "vfs") //nolint:errcheck // Why: No errors
+	m.fs = fs
+	return m
 }
 
 // GetTemplate returns the go template for this module
