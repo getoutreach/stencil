@@ -29,9 +29,6 @@ type LockfileModuleEntry struct {
 	// Name is the name of the module. This usually comes from
 	// the TemplateManifest entry, but is up to the module
 	// package.
-	//
-	// TODO(jaredallard): Combine both Name and URL. Use go-like import
-	// paths.
 	Name string
 
 	// URL is the url of the module that was used.

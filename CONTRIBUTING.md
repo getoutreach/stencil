@@ -1,25 +1,25 @@
 
-# stencil
+# <no value>
 
 <!--- Block(customGeneralInformation) -->
 <!--- EndBlock(customGeneralInformation) -->
 
 ## Prerequisites
 
-<!-- Block(customPrerequisites) -->
-<!-- EndBlock(customPrerequisites) -->
+<!--- Block(customPrerequisites) -->
+<!--- EndBlock(customPrerequisites) -->
 
 ## Building and Testing
 
-<!-- Block(customBuildingAndTesting) -->
-<!-- EndBlock(customBuildingAndTesting) -->
+<!--- Block(customBuildingAndTesting) -->
+<!--- EndBlock(customBuildingAndTesting) -->
 ### Replacing a Remote Version of the Library with Local Version
 
 If you want to test the library exposed in this repository in a project that uses it, you can
 add the following `replace` directive to that project's `go.mod` file:
 
 ```
-replace github.com/getoutreach/stencil => /path/to/local/version/stencil
+replace github.com/getoutreach/<no value> => /path/to/local/version/<no value>
 ```
 
 **_Note_**: This library may have postfixed it's module path with a version, go check the first

@@ -8,7 +8,6 @@ import (
 
 	"github.com/getoutreach/stencil/internal/functions"
 	"github.com/getoutreach/stencil/internal/modules"
-	"github.com/getoutreach/stencil/internal/tplfuncs"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/memfs"
 	"gotest.tools/v3/assert"
@@ -30,7 +29,7 @@ func TestSingleFileRender(t *testing.T) {
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
 	st := functions.NewStencil(sm, []*modules.Module{m})
-	err = tpl.Render(tplfuncs.NewFuncMap(tplfuncs.New(sm, st, tpl)), map[string]interface{}{})
+	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
 }
@@ -48,7 +47,7 @@ func TestMultiFileRender(t *testing.T) {
 	st := functions.NewStencil(sm, []*modules.Module{m})
 	st.Template = tpl
 
-	err = tpl.Render(tplfuncs.NewFuncMap(tplfuncs.New(sm, st, tpl)), map[string]interface{}{})
+	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -70,11 +69,11 @@ func TestMultiFileWithInputRender(t *testing.T) {
 	st := functions.NewStencil(sm, []*modules.Module{m})
 	st.Template = tpl
 
-	err = tpl.Render(tplfuncs.NewFuncMap(tplfuncs.New(sm, st, tpl)), map[string]interface{}{})
+	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
 	for i, f := range tpl.Files {
-		assert.Equal(t, f.String(), (sm.Arguments["commands"].([]string))[i], "rendered template %d contents differred", i)
+		assert.Equal(t, (sm.Arguments["commands"].([]string))[i], f.String(), "rendered template %d contents differred", i)
 	}
 }

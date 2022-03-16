@@ -3,13 +3,13 @@
 // Description: This file implements the file struct passed to
 // templates in Stencil.
 
-package tplfuncs
+package functions
 
 import (
 	"os"
 	"time"
 
-	"github.com/getoutreach/stencil/internal/functions"
+	"gopkg.in/yaml.v3"
 )
 
 // File is the current file we're writing output to in a
@@ -17,12 +17,17 @@ import (
 // to by file.Install. When a template does not call file.SetPath
 // a default file is created that matches the current template path
 // with the extension '.tpl' removed from the path and operated on.
-type File struct {
+type TplFile struct {
 	// f is the current file we're writing to
-	f *functions.File
+	f *File
 
 	// t is the current template
-	t *functions.Template
+	t *Template
+}
+
+func (f *TplFile) Spew() string {
+	b, _ := yaml.Marshal(f.f) //nolint:errcheck
+	return string(b)
 }
 
 // Block returns the contents of a given block
@@ -36,31 +41,31 @@ type File struct {
 //   {{ file.Block "name" }}
 //   {{- end }}
 //   ###EndBlock(name)
-func (f *File) Block(name string) string {
+func (f *TplFile) Block(name string) string {
 	return f.f.Block(name)
 }
 
 // SetPath changes the path of the current file
-func (f *File) SetPath(path string) error {
+func (f *TplFile) SetPath(path string) error {
 	f.f.SetPath(path)
 	return nil
 }
 
 // SetContents sets the contents of the current file
 // to the provided string.
-func (f *File) SetContents(contents string) error {
+func (f *TplFile) SetContents(contents string) error {
 	f.f.SetContents(contents)
 	return nil
 }
 
 // Skip skips the current file
-func (f *File) Skip(_ string) error {
+func (f *TplFile) Skip(_ string) error {
 	f.f.Skipped = true
 	return nil
 }
 
 // Delete deletes the current file
-func (f *File) Delete() error {
+func (f *TplFile) Delete() error {
 	f.f.Deleted = true
 	return nil
 }
@@ -85,16 +90,16 @@ func (f *File) Delete() error {
 //   {{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
 //   {{- stencil.ApplyTemplate "commands" | file.SetContents }}
 //   {{- end }}
-func (f *File) Create(path string, mode os.FileMode, modTime time.Time) error {
+func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) error {
 	var err error
-	f.f, err = functions.NewFile(path, mode, modTime)
+	f.f, err = NewFile(path, mode, modTime)
 	if err != nil {
 		return err
 	}
 
 	// If we have a single file with zero contents, replace it
 	if len(f.t.Files) == 1 && len(f.t.Files[0].Bytes()) == 0 {
-		f.t.Files = []*functions.File{f.f}
+		f.t.Files = []*File{f.f}
 		return nil
 	}
 

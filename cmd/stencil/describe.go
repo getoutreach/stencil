@@ -32,7 +32,7 @@ func NewDescribeCmd() *cli.Command {
 				}
 			}
 
-			return fmt.Errorf("file isn't created by stencil")
+			return fmt.Errorf("file %q isn't created by stencil", fileName)
 		},
 	}
 }

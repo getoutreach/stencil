@@ -12,9 +12,7 @@
       "cwd": "../stencil-test",
       "program": "${workspaceRoot}/cmd/stencil/",
       "buildFlags": "-tags=or_dev",
-      "args": [
-        "--debug"
-      ]
+      "args": ["--debug"]
     }
     ///Block(vscodeLaunchConfigs)
     ///EndBlock(vscodeLaunchConfigs)

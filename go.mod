@@ -22,8 +22,6 @@ require (
 	gotest.tools/v3 v3.1.0
 )
 
-require github.com/davecgh/go-spew v1.1.1
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect

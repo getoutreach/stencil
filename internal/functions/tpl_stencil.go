@@ -3,20 +3,19 @@
 // Description: This file contains the public API for templates
 // for stencil
 
-package tplfuncs
+package functions
 
 import (
 	"bytes"
 	"fmt"
 
-	"github.com/getoutreach/stencil/internal/functions"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
-// Stencil contains the global functions available to a template for
+// TplStencil contains the global functions available to a template for
 // interacting with stencil.
-type Stencil struct {
-	s *functions.Stencil
+type TplStencil struct {
+	s *Stencil
 	m *configuration.ServiceManifest
 }
 
@@ -25,7 +24,7 @@ type Stencil struct {
 // Note: Only the top-level arguments are supported.
 //
 //   {{- stencil.Arg "name" }}
-func (s *Stencil) Arg(path string) interface{} {
+func (s *TplStencil) Arg(path string) interface{} {
 	if path == "" {
 		return s.Args()
 	}
@@ -37,7 +36,7 @@ func (s *Stencil) Arg(path string) interface{} {
 // manifest
 //
 //   {{- (stencil.Args).name }}
-func (s *Stencil) Args() map[string]interface{} {
+func (s *TplStencil) Args() map[string]interface{} {
 	return s.m.Arguments
 }
 
@@ -57,7 +56,7 @@ func (s *Stencil) Args() map[string]interface{} {
 //   {{- end }}
 //
 //   {{- stencil.ApplyTemplate "command" | file.SetContents }}
-func (s *Stencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
+func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
 	// We check for dataSli here because we had to set it to a range of arguments
 	// to allow it to be not set.
 	if len(dataSli) > 1 {
@@ -71,5 +70,9 @@ func (s *Stencil) ApplyTemplate(name string, dataSli ...interface{}) (string, er
 
 	var buf bytes.Buffer
 	err := s.s.Template.Module.GetTemplate().ExecuteTemplate(&buf, name, data)
-	return buf.String(), err
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }

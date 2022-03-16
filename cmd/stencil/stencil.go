@@ -68,7 +68,7 @@ func main() {
 			}
 
 			if !stencil.ValidateName(serviceManifest.Name) {
-				return fmt.Errorf("'%s' is not an acceptable package name", serviceManifest.Name)
+				return fmt.Errorf("%q is not an acceptable package name", serviceManifest.Name)
 			}
 
 			b := codegen.NewBuilder(cwd, log, serviceManifest)

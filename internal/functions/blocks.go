@@ -53,7 +53,7 @@ func parseBlocks(filePath string) (map[string]string, error) {
 				blockName := matches[3]
 				if blockName != curBlockName {
 					return nil, fmt.Errorf(
-						"invalid EndBlock, found EndBlock with name '%s' while inside of block with name '%s', at %s:%d",
+						"invalid EndBlock, found EndBlock with name %q while inside of block with name %q, at %s:%d",
 						blockName, curBlockName, filePath, i,
 					)
 				}
