@@ -120,6 +120,9 @@ func (s *Stencil) makeTemplateParameters() (map[string]interface{}, error) {
 			"Generator": app.Info().Name,
 			"Version":   app.Info().Version,
 		},
+		"App": map[string]string{
+			"Name": s.m.Name,
+		},
 		"Repository": map[string]string{
 			"HeadBranch": "main",
 		},
