@@ -88,7 +88,7 @@ func (f *TplFile) Delete() error {
 //   # Generate a "<commandName>.go" file for each command in .arguments.commands
 //   {{- range $_, $commandName := (stencil.Arg "commands") }}
 //   {{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
-//   {{- stencil.ApplyTemplate "commands" | file.SetContents }}
+//   {{- stencil.ApplyTemplate "command" | file.SetContents }}
 //   {{- end }}
 func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) error {
 	var err error
