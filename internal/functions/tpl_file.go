@@ -90,12 +90,6 @@ func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) error
 		return err
 	}
 
-	// If we have a single file with zero contents, replace it
-	if len(f.t.Files) == 1 && len(f.t.Files[0].Bytes()) == 0 {
-		f.t.Files = []*File{f.f}
-		return nil
-	}
-
 	f.t.Files = append(f.t.Files, f.f)
 	return nil
 }

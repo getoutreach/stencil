@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 
-	pubstencil "github.com/getoutreach/stencil/pkg/stencil"
+	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -19,7 +19,7 @@ func NewDescribeCmd() *cli.Command {
 		Name:        "describe",
 		Description: "Print information about a known file rendered by a template",
 		Action: func(c *cli.Context) error {
-			l, err := pubstencil.LoadLockfile("")
+			l, err := stencil.LoadLockfile("")
 			if err != nil {
 				return errors.Wrap(err, "failed to load lockfile")
 			}

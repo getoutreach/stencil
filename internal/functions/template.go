@@ -89,8 +89,16 @@ func (t *Template) Render(st *Stencil, args map[string]interface{}) error {
 
 	// If we're writing only a single file, and the contents is empty
 	// then we should write the output of the rendered template.
+	//
+	// This ensures that templates don't need to call file.Create
+	// by default, only when they want to customize the output
 	if len(t.Files) == 1 && len(t.Files[0].Bytes()) == 0 {
 		t.Files[0].SetContents(buf.String())
+	} else if len(t.Files) > 1 {
+		// otherwise, remove the first file that was created when
+		// we constructed the template. It's only used when we have
+		// no calls to file.Create
+		t.Files = t.Files[1:len(t.Files)]
 	}
 
 	return nil
