@@ -8,11 +8,9 @@ package functions
 import (
 	"os"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
-// File is the current file we're writing output to in a
+// TplFile is the current file we're writing output to in a
 // template. This can be changed via file.SetPath and written
 // to by file.Install. When a template does not call file.SetPath
 // a default file is created that matches the current template path
@@ -23,11 +21,6 @@ type TplFile struct {
 
 	// t is the current template
 	t *Template
-}
-
-func (f *TplFile) Spew() string {
-	b, _ := yaml.Marshal(f.f) //nolint:errcheck
-	return string(b)
 }
 
 // Block returns the contents of a given block

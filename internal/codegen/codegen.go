@@ -122,11 +122,11 @@ func (b *Builder) GenerateFiles(ctx context.Context) ([]string, error) {
 	st := functions.NewStencil(b.manifest, b.modules)
 
 	b.log.Info("Rendering templates")
-	if err := st.Render(ctx); err != nil {
+	tpls, err := st.Render(ctx)
+	if err != nil {
 		return nil, err
 	}
-
-	return nil, b.writeFiles(st)
+	return nil, b.writeFiles(st, tpls)
 }
 
 func (b *Builder) writeFile(f *functions.File) error {
@@ -156,9 +156,9 @@ func (b *Builder) writeFile(f *functions.File) error {
 }
 
 // writeFiles writes the files to disk
-func (b *Builder) writeFiles(st *functions.Stencil) error {
+func (b *Builder) writeFiles(st *functions.Stencil, tpls []*functions.Template) error {
 	b.log.Infof("Writing template(s) to disk")
-	for _, tpl := range st.Templates {
+	for _, tpl := range tpls {
 		b.log.Debugf(" -> %s (%s)", tpl.Module.Name, tpl.Path)
 		for _, f := range tpl.Files {
 			if err := b.writeFile(f); err != nil {
@@ -167,7 +167,7 @@ func (b *Builder) writeFiles(st *functions.Stencil) error {
 		}
 	}
 
-	l := st.GenerateLockfile()
+	l := st.GenerateLockfile(tpls)
 	f, err := os.Create(stencil.LockfileName)
 	if err != nil {
 		return errors.Wrap(err, "failed to create lockfile")

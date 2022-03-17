@@ -1,4 +1,4 @@
-package functions_test
+package functions
 
 import (
 	"testing"
@@ -6,7 +6,6 @@ import (
 
 	_ "embed"
 
-	"github.com/getoutreach/stencil/internal/functions"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -22,13 +21,13 @@ var multiFileInputTemplate string
 func TestSingleFileRender(t *testing.T) {
 	m := modules.NewWithFS("testing", memfs.New())
 
-	tpl, err := functions.NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"))
+	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"))
 	assert.NilError(t, err, "failed to create basic template")
 	assert.Equal(t, len(tpl.Files), 1, "expected NewTemplate() to create first file")
 
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
-	st := functions.NewStencil(sm, []*modules.Module{m})
+	st := NewStencil(sm, []*modules.Module{m})
 	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
@@ -37,16 +36,14 @@ func TestSingleFileRender(t *testing.T) {
 func TestMultiFileRender(t *testing.T) {
 	m := modules.NewWithFS("testing", memfs.New())
 
-	tpl, err := functions.NewTemplate(m, "multi-file.tpl", 0o644, time.Now(), []byte(multiFileTemplate))
+	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644, time.Now(), []byte(multiFileTemplate))
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := functions.NewStencil(sm, []*modules.Module{m})
-	st.Template = tpl
-
+	st := NewStencil(sm, []*modules.Module{m})
 	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
@@ -59,16 +56,14 @@ func TestMultiFileRender(t *testing.T) {
 func TestMultiFileWithInputRender(t *testing.T) {
 	m := modules.NewWithFS("testing", memfs.New())
 
-	tpl, err := functions.NewTemplate(m, "multi-file-input.tpl", 0o644, time.Now(), []byte(multiFileInputTemplate))
+	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644, time.Now(), []byte(multiFileInputTemplate))
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := functions.NewStencil(sm, []*modules.Module{m})
-	st.Template = tpl
-
+	st := NewStencil(sm, []*modules.Module{m})
 	err = tpl.Render(st, map[string]interface{}{})
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")

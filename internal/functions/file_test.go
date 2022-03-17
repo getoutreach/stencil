@@ -30,3 +30,11 @@ func TestFile_Size(t *testing.T) {
 	mockF := &File{contents: data}
 	assert.Equal(t, mockF.Size(), inf.Size(), "(File).Size() was not equal to memory fs (os.FileInfo).Size()")
 }
+
+func TestFileBasic(t *testing.T) {
+	cnts := "hello, world"
+	f := &File{}
+	f.SetContents(cnts)
+	assert.Equal(t, cnts, string(f.contents), "expected SetContents() to set contents")
+	assert.Equal(t, cnts, f.String(), "expected String() to return proper contents")
+}

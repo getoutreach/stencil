@@ -8,15 +8,16 @@ package functions
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
 // TplStencil contains the global functions available to a template for
 // interacting with stencil.
 type TplStencil struct {
+	// s is the underlying stencil object that this is attached to
 	s *Stencil
-	m *configuration.ServiceManifest
+
+	// t is the current template in the context of our render
+	t *Template
 }
 
 // Arg returns the value of an argument in the service's
@@ -29,7 +30,7 @@ func (s *TplStencil) Arg(path string) interface{} {
 		return s.Args()
 	}
 
-	return s.m.Arguments[path]
+	return s.s.m.Arguments[path]
 }
 
 // Args returns all arguments passed to stencil from the service's
@@ -37,7 +38,7 @@ func (s *TplStencil) Arg(path string) interface{} {
 //
 //   {{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {
-	return s.m.Arguments
+	return s.s.m.Arguments
 }
 
 // ApplyTemplate executes a template inside of the current module
@@ -69,7 +70,7 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string,
 	}
 
 	var buf bytes.Buffer
-	err := s.s.Template.Module.GetTemplate().ExecuteTemplate(&buf, name, data)
+	err := s.t.Module.GetTemplate().ExecuteTemplate(&buf, name, data)
 	if err != nil {
 		return "", err
 	}

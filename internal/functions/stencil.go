@@ -21,7 +21,7 @@ import (
 
 // NewStencil creates a new, fully initialized Stencil renderer function
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
-	return &Stencil{m, mods, make([]*Template, 0), nil}
+	return &Stencil{m, mods}
 }
 
 // Stencil provides the basic functions for
@@ -29,26 +29,19 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stenc
 type Stencil struct {
 	m *configuration.ServiceManifest
 
-	// Modules is a list of modules used in this stencil render
-	Modules []*modules.Module
-
-	// Templates is a list of all templates that this renderer rendered.
-	Templates []*Template
-
-	// Template is the current template that is being rendered by this
-	// renderer.
-	Template *Template
+	// modules is a list of modules used in this stencil render
+	modules []*modules.Module
 }
 
 // GenerateLockfile generates a stencil.Lockfile based
-// on the current state of the renderer.
-func (s *Stencil) GenerateLockfile() *stencil.Lockfile {
+// on a list of templates.
+func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 	l := &stencil.Lockfile{
 		Version:   app.Info().Version,
 		Generated: time.Now().UTC(),
 	}
 
-	for _, tpl := range s.Templates {
+	for _, tpl := range tpls {
 		for _, f := range tpl.Files {
 			l.Files = append(l.Files, &stencil.LockfileFileEntry{
 				Name:     f.Name(),
@@ -58,7 +51,7 @@ func (s *Stencil) GenerateLockfile() *stencil.Lockfile {
 		}
 	}
 
-	for _, m := range s.Modules {
+	for _, m := range s.modules {
 		l.Modules = append(l.Modules, &stencil.LockfileModuleEntry{
 			Name:    m.Name,
 			URL:     m.URI,
@@ -70,41 +63,40 @@ func (s *Stencil) GenerateLockfile() *stencil.Lockfile {
 }
 
 // Render renders all templates using the ServiceManifest that was
-// provided to stencil at creation time. The rendered templates are
-// available at Templates on the Stencil struct.
-// TODO(jaredallard): Do we want to just return []*Template?
-func (s *Stencil) Render(ctx context.Context) error {
+// provided to stencil at creation time, returned is the templates
+// that were produced and their associated files.
+func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
 	args, err := s.makeTemplateParameters()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	tpls, err := s.getTemplates(ctx)
+	tplfiles, err := s.getTemplates(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	tpls := make([]*Template, 0)
+
 	// Add the templates to their modules template to allow them to be able to access
 	// functions declared in the same module
-	for _, t := range tpls {
+	for _, t := range tplfiles {
 		if err := t.Parse(s); err != nil {
-			return errors.Wrapf(err, "failed to parse template %q", t.ImportPath())
+			return nil, errors.Wrapf(err, "failed to parse template %q", t.ImportPath())
 		}
 	}
 
 	// Now we render each file
-	for _, t := range tpls {
-		// change the active template
-		s.Template = t
-
+	for _, t := range tplfiles {
 		if err := t.Render(s, args); err != nil {
-			return errors.Wrapf(err, "failed to render template %q", t.ImportPath())
+			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
 
 		// append the rendered template to our list of templates processed
-		s.Templates = append(s.Templates, t)
+		tpls = append(tpls, t)
 	}
 
-	return nil
+	return tpls, nil
 }
 
 // makeTemplateParameters creates the map to be provided to the templates.
@@ -134,7 +126,7 @@ func (s *Stencil) makeTemplateParameters() (map[string]interface{}, error) {
 // struct and returns all templates exposed by it.
 func (s *Stencil) getTemplates(ctx context.Context) ([]*Template, error) {
 	tpls := make([]*Template, 0)
-	for _, m := range s.Modules {
+	for _, m := range s.modules {
 		fs, err := m.GetFS(ctx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read module filesystem %q", m.Name)

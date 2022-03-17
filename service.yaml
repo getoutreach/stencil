@@ -13,6 +13,9 @@ releaseOptions:
   allowMajorVersions: true
 deployTo:
   environments: []
+versions:
+  # we use the latest text/template additions
+  go: 1.18
 arguments:
   circleAPIKey: ""
   dependencies:

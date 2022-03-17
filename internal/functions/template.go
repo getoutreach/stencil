@@ -57,16 +57,10 @@ func (t *Template) ImportPath() string {
 // Parse parses the provided template and makes it available to be Rendered
 // in the context of the current module.
 func (t *Template) Parse(st *Stencil) error {
-	// Return stub types to make the 'compiler' happy, we pass
-	// the real values in render.
-	funcs := Default
-	funcs["stencil"] = func() *TplStencil { return nil }
-	funcs["file"] = func() *TplFile { return nil }
-
 	// Add the current template to the template object on the module that we're
 	// attached to. This enables us to call functions in other templates within our
 	// 'module context'.
-	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(funcs).
+	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(NewFuncMap(nil, nil)).
 		Parse(string(t.Contents)); err != nil {
 		return err
 	}
@@ -86,21 +80,10 @@ func (t *Template) Render(st *Stencil, args map[string]interface{}) error {
 		}
 	}
 
-	// Create global stencil/file objects that will be mutated by
-	// any templates rendered during the render context of this template.
-	tplst := &TplStencil{st, st.m}
-	tplf := &TplFile{t.Files[0], t}
-
-	// Note: We "overwrite" the stub functions that were used during Parse()
-	// time.
-	funcs := Default
-	funcs["stencil"] = func() *TplStencil { return tplst }
-	funcs["file"] = func() *TplFile { return tplf }
-
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Funcs(funcs).ExecuteTemplate(&buf, t.ImportPath(), funcs); err != nil {
+	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t)).ExecuteTemplate(&buf, t.ImportPath(), args); err != nil {
 		return err
 	}
 
