@@ -1,27 +1,29 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: Implements the stencil function passed to templates
-package functions
+package codegen
 
 import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
-	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // NewStencil creates a new, fully initialized Stencil renderer function
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
-	return &Stencil{m, mods}
+	return &Stencil{m, extensions.NewHost(), mods}
 }
 
 // Stencil provides the basic functions for
@@ -29,8 +31,22 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stenc
 type Stencil struct {
 	m *configuration.ServiceManifest
 
+	ext *extensions.Host
+
 	// modules is a list of modules used in this stencil render
 	modules []*modules.Module
+}
+
+// RegisterExtensions registers all extensions on the currently loaded
+// modules.
+func (s *Stencil) RegisterExtensions(ctx context.Context) error {
+	for _, m := range s.modules {
+		if err := m.RegisterExtensions(ctx, s.ext); err != nil {
+			return errors.Wrapf(err, "failed to load extensions from module %q", m.Name)
+		}
+	}
+
+	return nil
 }
 
 // GenerateLockfile generates a stencil.Lockfile based
@@ -66,16 +82,12 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 // provided to stencil at creation time, returned is the templates
 // that were produced and their associated files.
 func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
-	args, err := s.makeTemplateParameters()
-	if err != nil {
-		return nil, err
-	}
-
 	tplfiles, err := s.getTemplates(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	vals := NewValues(ctx, s.m)
 	tpls := make([]*Template, 0)
 
 	// Add the templates to their modules template to allow them to be able to access
@@ -88,7 +100,7 @@ func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
 
 	// Now we render each file
 	for _, t := range tplfiles {
-		if err := t.Render(s, args); err != nil {
+		if err := t.Render(s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
 
@@ -99,27 +111,30 @@ func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
 	return tpls, nil
 }
 
-// makeTemplateParameters creates the map to be provided to the templates.
-func (s *Stencil) makeTemplateParameters() (map[string]interface{}, error) {
-	// TODO(jaredallard): head branch
-	boxConf, err := box.LoadBox()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to load box config")
+// PostRun runs all post run commands specified in the modules that
+// this service depends on
+func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
+	log.Info("Running post-run command(s)")
+	for _, m := range s.modules {
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, cmdStr := range mf.PostRunCommand {
+			log.Info(" - %s", cmdStr.Name)
+			//nolint:gosec // Why: This is by design
+			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			if err := cmd.Run(); err != nil {
+				return errors.Wrapf(err, "failed to run post run command for module %q", m.Name)
+			}
+		}
 	}
 
-	return map[string]interface{}{
-		"Metadata": map[string]string{
-			"Generator": app.Info().Name,
-			"Version":   app.Info().Version,
-		},
-		"App": map[string]string{
-			"Name": s.m.Name,
-		},
-		"Repository": map[string]string{
-			"HeadBranch": "main",
-		},
-		"Box": boxConf,
-	}, nil
+	return nil
 }
 
 // getTemplates takes all modules attached to this stencil

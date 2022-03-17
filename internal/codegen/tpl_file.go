@@ -3,7 +3,7 @@
 // Description: This file implements the file struct passed to
 // templates in Stencil.
 
-package functions
+package codegen
 
 import (
 	"os"

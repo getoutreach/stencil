@@ -3,7 +3,7 @@
 // Description: This file contains the public API for templates
 // for stencil
 
-package functions
+package codegen
 
 import (
 	"bytes"

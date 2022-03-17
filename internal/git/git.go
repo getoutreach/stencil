@@ -42,7 +42,7 @@ func GetDefaultBranch(ctx context.Context, path string) (string, error) {
 		// loop through the local branchs
 		candidates := []string{"main", "master"}
 		for _, branch := range candidates {
-			_, err := r.Reference(plumbing.NewBranchReferenceName(branch), true) //nolint:govet
+			_, err := r.Reference(plumbing.NewBranchReferenceName(branch), true)
 			if err == nil {
 				return branch, nil
 			}

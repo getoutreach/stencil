@@ -1,4 +1,8 @@
-package functions
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: Contains tests for the functions file
+
+package codegen
 
 import (
 	"fmt"

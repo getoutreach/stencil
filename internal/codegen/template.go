@@ -2,7 +2,7 @@
 
 // Description: This file contains the logic and type for a template
 // that is being rendered by stencil.
-package functions
+package codegen
 
 import (
 	"bytes"
@@ -72,7 +72,7 @@ func (t *Template) Parse(st *Stencil) error {
 
 // Render renders the provided template, the produced files
 // are rendered onto the Files field of the template struct.
-func (t *Template) Render(st *Stencil, args map[string]interface{}) error {
+func (t *Template) Render(st *Stencil, vals *Values) error {
 	// Parse the template if we haven't already
 	if !t.parsed {
 		if err := t.Parse(st); err != nil {
@@ -83,7 +83,8 @@ func (t *Template) Render(st *Stencil, args map[string]interface{}) error {
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t)).ExecuteTemplate(&buf, t.ImportPath(), args); err != nil {
+	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t)).
+		ExecuteTemplate(&buf, t.ImportPath(), vals); err != nil {
 		return err
 	}
 

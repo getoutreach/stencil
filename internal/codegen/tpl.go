@@ -3,7 +3,7 @@
 // Description: This file contains helpers for creating
 // functions exposed to stencil codegen files.
 
-package functions
+package codegen
 
 import "text/template"
 

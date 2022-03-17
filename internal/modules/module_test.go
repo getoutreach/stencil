@@ -14,14 +14,15 @@ import (
 )
 
 func TestCanFetchModule(t *testing.T) {
-	m, err := modules.New("github.com/getoutreach/stencil-base", "", "main")
+	ctx := context.Background()
+	m, err := modules.New(ctx, "github.com/getoutreach/stencil-base", "", "main")
 	assert.NilError(t, err, "failed to call New()")
 
-	manifest, err := m.Manifest(context.Background())
+	manifest, err := m.Manifest(ctx)
 	assert.NilError(t, err, "failed to call Manifest() on module")
 	assert.Equal(t, manifest.Type, configuration.TemplateRepositoryTypeStd, "failed to validate returned manifest")
 
-	fs, err := m.GetFS(context.Background())
+	fs, err := m.GetFS(ctx)
 	assert.NilError(t, err, "failed to call GetFS() on module")
 
 	_, err = fs.Stat("manifest.yaml")
@@ -29,7 +30,7 @@ func TestCanFetchModule(t *testing.T) {
 }
 
 func TestCanGetLatestModule(t *testing.T) {
-	_, err := modules.New("github.com/getoutreach/stencil-base", "", "")
+	_, err := modules.New(context.Background(), "github.com/getoutreach/stencil-base", "", "")
 	assert.NilError(t, err, "failed to call New()")
 }
 

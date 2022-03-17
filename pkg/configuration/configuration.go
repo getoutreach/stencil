@@ -7,10 +7,15 @@
 package configuration
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v2"
 )
+
+// ValidateNameRegexp is the regex used to validate the service's name
+const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
 
 // NewServiceManifest reads a service manifest from disk at the
 // specified path, parses it, and returns the output.
@@ -22,8 +27,15 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 	defer f.Close()
 
 	var s *ServiceManifest
-	err = yaml.NewDecoder(f).Decode(&s)
-	return s, err
+	if err := yaml.NewDecoder(f).Decode(&s); err != nil {
+		return nil, err
+	}
+
+	if !ValidateName(s.Name) {
+		return nil, fmt.Errorf("name field in %q was invalid", path)
+	}
+
+	return s, nil
 }
 
 // NewDefaultServiceManifest returns a parsed service manifest
@@ -61,6 +73,7 @@ type ServiceManifest struct {
 // repository a repository is.
 type TemplateRepositoryType string
 
+// This block contains all of the TemplateRepositoryType values
 const (
 	// TemplateRepositoryTypeExt denotes a repository as being
 	// an extension repository. This means that it contains
@@ -118,6 +131,8 @@ type PostRunCommandSpec struct {
 	Command string `yaml:"command"`
 }
 
+// Argument is a user-input argument that can be passed to
+// templates
 type Argument struct {
 	// Required denotes this argument as required.
 	Required bool `yaml:"required"`
@@ -132,4 +147,17 @@ type Argument struct {
 
 	// Description is a description of this argument. Optional.
 	Description string `yaml:"description"`
+}
+
+// ValidateName ensures that the name of a service in the manifest
+// fits the criteria we require.
+func ValidateName(name string) bool {
+	// This is more restrictive than the actual spec.  We're artificially
+	// restricting ourselves to non-Unicode names because (in practice) we
+	// probably don't support international characters very well, either.
+	//
+	// See also:
+	// 	https://golang.org/ref/spec#Identifiers
+	acceptableName := regexp.MustCompile(ValidateNameRegexp)
+	return acceptableName.MatchString(name)
 }

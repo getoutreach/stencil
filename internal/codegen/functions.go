@@ -2,8 +2,8 @@
 
 // Description: Implements all functions provided to stencil templates.
 
-// Package functions provides funcutions to stencil templates.
-package functions
+// package codegen provides funcutions to stencil templates.
+package codegen
 
 import (
 	"fmt"

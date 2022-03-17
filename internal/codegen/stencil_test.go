@@ -1,4 +1,4 @@
-package functions
+package codegen
 
 import (
 	"context"
@@ -12,21 +12,22 @@ import (
 
 func TestBasicE2ERender(t *testing.T) {
 	fs := memfs.New()
+	ctx := context.Background()
 
 	// create a stub template
 	f, err := fs.Create("test-template.tpl")
 	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte("{{ .App.Name }}"))
+	f.Write([]byte("{{ .Config.Name }}"))
 	f.Close()
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
 		Arguments: map[string]interface{}{},
 	}, []*modules.Module{
-		modules.NewWithFS("testing", fs),
+		modules.NewWithFS(ctx, "testing", fs),
 	})
 
-	tpls, err := st.Render(context.Background())
+	tpls, err := st.Render(ctx)
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpls), 1, "expected Render() to return a single template")
 	assert.Equal(t, len(tpls[0].Files), 1, "expected Render() template to return a single file")

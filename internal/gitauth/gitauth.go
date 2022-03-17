@@ -14,10 +14,15 @@ import (
 	giturls "github.com/whilp/git-urls"
 )
 
+// protocol is a protocol for Git
 type protocol string
 
+// This block contains valid protocols
 const (
-	protocolSSH   protocol = "SSH"
+	// protocolSSH is for accessing over SSH
+	protocolSSH protocol = "SSH"
+
+	// protocolHTTPS is for accessing over HTTPS
 	protocolHTTPS protocol = "HTTPS"
 )
 

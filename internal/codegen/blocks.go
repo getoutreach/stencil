@@ -2,7 +2,7 @@
 
 // Description: This file handles parsing of files
 
-package functions
+package codegen
 
 import (
 	"bufio"

@@ -79,7 +79,7 @@ func getLatestVersion(ctx context.Context, name string) (string, error) {
 // If the uri is a file:// path, a version must be specified otherwise
 // it will be treated as if it has no version. If uri is not specified
 // it is default to HTTPS
-func New(name, uri, version string) (*Module, error) {
+func New(ctx context.Context, name, uri, version string) (*Module, error) {
 	if uri == "" {
 		uri = "https://" + name
 	} else if strings.HasPrefix(uri, "file://") {
@@ -88,7 +88,7 @@ func New(name, uri, version string) (*Module, error) {
 
 	if version == "" {
 		var err error
-		version, err = getLatestVersion(context.TODO(), name)
+		version, err = getLatestVersion(ctx, name)
 		if err != nil {
 			return nil, err
 		}
@@ -99,8 +99,8 @@ func New(name, uri, version string) (*Module, error) {
 
 // NewWithFS creates a module with the specified file system. This is
 // generally only meant to be used in tests.
-func NewWithFS(name string, fs billy.Filesystem) *Module {
-	m, _ := New(name, "vfs://"+name, "vfs") //nolint:errcheck // Why: No errors
+func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
+	m, _ := New(ctx, name, "vfs://"+name, "vfs") //nolint:errcheck // Why: No errors
 	m.fs = fs
 	return m
 }

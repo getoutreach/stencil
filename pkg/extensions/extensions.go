@@ -226,8 +226,6 @@ func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version 
 		return "", errors.Wrap(err, "failed to validate github client worked")
 	}
 
-	// TODO(jaredallard): Switch to using the gobox/pkg/github client
-	// instead.
 	var rel *gogithub.RepositoryRelease
 	if version == "" {
 		rel, err = gh.GetLatestVersion(ctx, "v0.0.0", false)

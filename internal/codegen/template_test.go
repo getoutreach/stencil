@@ -1,6 +1,11 @@
-package functions
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: Contains tests for the template file
+
+package codegen
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -19,7 +24,7 @@ var multiFileTemplate string
 var multiFileInputTemplate string
 
 func TestSingleFileRender(t *testing.T) {
-	m := modules.NewWithFS("testing", memfs.New())
+	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
 	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"))
 	assert.NilError(t, err, "failed to create basic template")
@@ -28,13 +33,13 @@ func TestSingleFileRender(t *testing.T) {
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
 	st := NewStencil(sm, []*modules.Module{m})
-	err = tpl.Render(st, map[string]interface{}{})
+	err = tpl.Render(st, NewValues(context.Background(), sm))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
 }
 
 func TestMultiFileRender(t *testing.T) {
-	m := modules.NewWithFS("testing", memfs.New())
+	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
 	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644, time.Now(), []byte(multiFileTemplate))
 	assert.NilError(t, err, "failed to create template")
@@ -44,7 +49,7 @@ func TestMultiFileRender(t *testing.T) {
 	}}
 
 	st := NewStencil(sm, []*modules.Module{m})
-	err = tpl.Render(st, map[string]interface{}{})
+	err = tpl.Render(st, NewValues(context.Background(), sm))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -54,7 +59,7 @@ func TestMultiFileRender(t *testing.T) {
 }
 
 func TestMultiFileWithInputRender(t *testing.T) {
-	m := modules.NewWithFS("testing", memfs.New())
+	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
 	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644, time.Now(), []byte(multiFileInputTemplate))
 	assert.NilError(t, err, "failed to create template")
@@ -64,7 +69,7 @@ func TestMultiFileWithInputRender(t *testing.T) {
 	}}
 
 	st := NewStencil(sm, []*modules.Module{m})
-	err = tpl.Render(st, map[string]interface{}{})
+	err = tpl.Render(st, NewValues(context.Background(), sm))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 

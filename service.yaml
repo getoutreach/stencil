@@ -4,6 +4,7 @@ description: microservice lifecycle manager
 oss: true
 slack: dev-tooling-notifications
 library: true
+lintroller: platinum
 commands:
   - stencil
 circleAPIKey: ""
