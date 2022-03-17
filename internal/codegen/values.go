@@ -105,14 +105,14 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest) *Values {
 
 		// Add HEAD information
 		if pref, err := r.Head(); err == nil {
-			vals.Git.Ref = pref.Hash().String()
-			vals.Git.Commit = pref.String()
+			vals.Git.Ref = pref.Name().String()
+			vals.Git.Commit = pref.Hash().String()
 		}
 
 		// Check if the worktree is clean
 		if wrk, err := r.Worktree(); err == nil {
 			if stat, err := wrk.Status(); err == nil {
-				vals.Git.Dirty = stat.IsClean()
+				vals.Git.Dirty = !stat.IsClean()
 			}
 		}
 	}
