@@ -1,9 +1,9 @@
-version: v1.4.0-6-g145ca3a
-generated: 2022-03-16T05:56:25.57017Z
+version: v1.4.0-13-g555d45c
+generated: 2022-03-17T05:37:47.707009Z
 modules:
     - name: github.com/getoutreach/stencil-base
-      url: https://github.com/getoutreach/stencil-base
-      version: v0.0.1
+      url: file://../stencil-base
+      version: local
 files:
     - name: .github/CODEOWNERS
       template: .github/CODEOWNERS.tpl

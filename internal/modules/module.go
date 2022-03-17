@@ -115,6 +115,16 @@ func (m *Module) GetTemplate() *template.Template {
 // URI then extensions will be sourced from the `./bin`
 // directory of the base of the path.
 func (m *Module) RegisterExtensions(ctx context.Context, ext *extensions.Host) error {
+	mf, err := m.Manifest(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Only register extensions if we're a extension repository
+	if mf.Type != configuration.TemplateRepositoryTypeExt {
+		return nil
+	}
+
 	return ext.RegisterExtension(ctx, m.Name, m.Name, m.Version)
 }
 

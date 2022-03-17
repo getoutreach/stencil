@@ -42,3 +42,5 @@ opsLevel:
     mainLink: ""
     custom: []
   designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+replacements:
+  github.com/getoutreach/stencil-base: file://../stencil-base

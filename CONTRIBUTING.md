@@ -1,5 +1,5 @@
 
-# <no value>
+# stencil
 
 <!--- Block(customGeneralInformation) -->
 <!--- EndBlock(customGeneralInformation) -->
@@ -19,7 +19,7 @@ If you want to test the library exposed in this repository in a project that use
 add the following `replace` directive to that project's `go.mod` file:
 
 ```
-replace github.com/getoutreach/<no value> => /path/to/local/version/<no value>
+replace github.com/getoutreach/stencil => /path/to/local/version/stencil
 ```
 
 **_Note_**: This library may have postfixed it's module path with a version, go check the first

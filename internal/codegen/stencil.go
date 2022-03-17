@@ -122,7 +122,7 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 		}
 
 		for _, cmdStr := range mf.PostRunCommand {
-			log.Info(" - %s", cmdStr.Name)
+			log.Infof(" - %s", cmdStr.Name)
 			//nolint:gosec // Why: This is by design
 			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
 			cmd.Stdin = os.Stdin
