@@ -30,10 +30,13 @@ type Command struct {
 
 	// log is the logger used for logging output
 	log logrus.FieldLogger
+
+	// dryRun denotes if we should write files to disk or not
+	dryRun bool
 }
 
 // NewCommand creates a new stencil command
-func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest) *Command {
+func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun bool) *Command {
 	_, err := stencil.LoadLockfile("")
 	if !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
@@ -42,6 +45,7 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest) *Comma
 	return &Command{
 		manifest: s,
 		log:      log,
+		dryRun:   dryRun,
 	}
 }
 
@@ -65,6 +69,11 @@ func (c *Command) Run(ctx context.Context) error {
 	tpls, err := st.Render(ctx)
 	if err != nil {
 		return err
+	}
+
+	// Below options mutate, so we shallow return
+	if c.dryRun {
+		return nil
 	}
 
 	if err := c.writeFiles(st, tpls); err != nil {

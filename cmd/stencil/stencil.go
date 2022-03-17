@@ -60,7 +60,7 @@ func main() {
 				return errors.Wrap(err, "failed to parse service.yaml")
 			}
 
-			cmd := stencil.NewCommand(log, serviceManifest)
+			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"))
 			return errors.Wrap(cmd.Run(ctx), "run codegen")
 		},
 		///EndBlock(app)
