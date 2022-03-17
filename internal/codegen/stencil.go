@@ -81,8 +81,8 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 // Render renders all templates using the ServiceManifest that was
 // provided to stencil at creation time, returned is the templates
 // that were produced and their associated files.
-func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
-	tplfiles, err := s.getTemplates(ctx)
+func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
+	tplfiles, err := s.getTemplates(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +93,7 @@ func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
 	// Add the templates to their modules template to allow them to be able to access
 	// functions declared in the same module
 	for _, t := range tplfiles {
+		log.Debugf("Parsing template %s", t.ImportPath())
 		if err := t.Parse(s); err != nil {
 			return nil, errors.Wrapf(err, "failed to parse template %q", t.ImportPath())
 		}
@@ -100,6 +101,7 @@ func (s *Stencil) Render(ctx context.Context) ([]*Template, error) {
 
 	// Now we render each file
 	for _, t := range tplfiles {
+		log.Debugf("Rendering template %s", t.ImportPath())
 		if err := t.Render(s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
@@ -139,14 +141,16 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 
 // getTemplates takes all modules attached to this stencil
 // struct and returns all templates exposed by it.
-func (s *Stencil) getTemplates(ctx context.Context) ([]*Template, error) {
+func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
 	tpls := make([]*Template, 0)
 	for _, m := range s.modules {
+		log.Debugf("Fetching module %q", m.Name)
 		fs, err := m.GetFS(ctx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read module filesystem %q", m.Name)
 		}
 
+		log.Debugf("Discovering templates from module %q", m.Name)
 		err = util.Walk(fs, "", func(path string, inf os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -168,6 +172,7 @@ func (s *Stencil) getTemplates(ctx context.Context) ([]*Template, error) {
 				return errors.Wrapf(err, "failed to read template %q from module %q", path, m.Name)
 			}
 
+			log.Debugf("Discovered template %q", path)
 			tpl, err := NewTemplate(m, path, inf.Mode(), inf.ModTime(), tplContents)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create template %q from module %q", path, m.Name)

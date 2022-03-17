@@ -7,6 +7,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -27,7 +28,7 @@ func TestBasicE2ERender(t *testing.T) {
 		modules.NewWithFS(ctx, "testing", fs),
 	})
 
-	tpls, err := st.Render(ctx)
+	tpls, err := st.Render(ctx, logrus.New())
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpls), 1, "expected Render() to return a single template")
 	assert.Equal(t, len(tpls[0].Files), 1, "expected Render() template to return a single file")

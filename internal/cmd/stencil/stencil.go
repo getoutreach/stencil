@@ -66,7 +66,7 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	c.log.Info("Rendering templates")
-	tpls, err := st.Render(ctx)
+	tpls, err := st.Render(ctx, c.log)
 	if err != nil {
 		return err
 	}
