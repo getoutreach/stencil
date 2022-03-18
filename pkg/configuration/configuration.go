@@ -118,24 +118,6 @@ type TemplateRepositoryManifest struct {
 
 	// Arguments are a declaration of arguments to the template generator
 	Arguments map[string]Argument
-
-	// ModuleBlocks contains all of the module to module blocks that
-	// this module provides to other modules
-	ModuleBlocks struct {
-		// Provides is a list of module blocks that this module provides
-		// as an injection point for other templates
-		Provides []*ModuleBlock `yaml:"provides"`
-	} `yaml:"moduleBlocks"`
-}
-
-// ModuleBlock is a module block that modules can provide or inject into
-type ModuleBlock struct {
-	// Name is the name of a module block. This is unique to a module.
-	Name string `yaml:"name"`
-
-	// Type defines the type, in Go, that this
-	// block should be.
-	Type string `yaml:"type"`
 }
 
 // PostRunCommandSpec is the spec of a command to be ran and its

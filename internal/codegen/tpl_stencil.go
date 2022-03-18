@@ -24,14 +24,14 @@ type TplStencil struct {
 	t *Template
 }
 
-// GetModuleBlock returns a module block in the scope of this
+// GetModuleHook returns a module block in the scope of this
 // module
-func (s *TplStencil) GetModuleBlock(name string) interface{} {
+func (s *TplStencil) GetModuleHook(name string) interface{} {
 	return s.s.sharedData[path.Join(s.t.Module.Name, name)]
 }
 
-// AddToModuleBlock adds to a block in another module
-func (s *TplStencil) AddToModuleBlock(module, name string, data interface{}) (string, error) {
+// AddToModuleHook adds to a hook in another module
+func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (string, error) {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return "", nil

@@ -59,7 +59,7 @@ func TestBasicE2ERender(t *testing.T) {
 	})
 }
 
-func TestModuleToModuleBlockRender(t *testing.T) {
+func TestModuleHookRender(t *testing.T) {
 	m1fs := memfs.New()
 	m2fs := memfs.New()
 	ctx := context.Background()
@@ -67,12 +67,12 @@ func TestModuleToModuleBlockRender(t *testing.T) {
 	// create a stub template
 	f, err := m1fs.Create("test-template.tpl")
 	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte(`{{ file.Skip "virtual file" }}{{ stencil.AddToModuleBlock "testing2" "coolthing" (list "a") }}`))
+	f.Write([]byte(`{{ file.Skip "virtual file" }}{{ stencil.AddToModuleHook "testing2" "coolthing" (list "a") }}`))
 	f.Close()
 
 	f, err = m2fs.Create("test-template.tpl")
 	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte(`{{ index (stencil.GetModuleBlock "coolthing") 0 }}`))
+	f.Write([]byte(`{{ index (stencil.GetModuleHook "coolthing") 0 }}`))
 	f.Close()
 
 	st := NewStencil(&configuration.ServiceManifest{
