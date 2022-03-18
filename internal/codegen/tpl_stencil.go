@@ -7,10 +7,12 @@ package codegen
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"path"
 	"reflect"
 
+	"github.com/getoutreach/stencil/internal/dotnotation"
 	"github.com/imdario/mergo"
 )
 
@@ -62,16 +64,44 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (str
 // Note: Only the top-level arguments are supported.
 //
 //   {{- stencil.Arg "name" }}
-func (s *TplStencil) Arg(pth string) interface{} {
+func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	if pth == "" {
-		return s.Args()
+		return s.Args(), nil
 	}
 
-	return s.s.m.Arguments[pth]
+	mf, err := s.t.Module.Manifest(context.TODO())
+	if err != nil {
+		// In theory this should never happen because we've
+		// already parsed the manifest. But, just in case
+		// we handle this here.
+		return nil, err
+	}
+
+	if _, ok := mf.Arguments[pth]; !ok {
+		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in it's manifest", s.t.Module.Name, pth)
+	}
+
+	// if not set then we return a default value based on the denoted type
+	v, err := dotnotation.Get(s.s.m.Arguments, pth)
+	if err != nil {
+		switch mf.Arguments[pth].Type {
+		case "list":
+			v = []string{}
+		case "boolean":
+			v = false
+		case "string":
+			v = ""
+		default:
+			return "", fmt.Errorf("module %q argument %q has invalid type %q", s.t.Module.Name, pth, mf.Arguments[pth].Type)
+		}
+	}
+
+	return v, nil
 }
 
 // Args returns all arguments passed to stencil from the service's
-// manifest
+// manifest. Note: This doesn't set default values and is instead
+// representative of _all_ data passed in it's raw form.
 //
 //   {{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {
