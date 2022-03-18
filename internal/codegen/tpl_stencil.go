@@ -8,6 +8,10 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"path"
+	"reflect"
+
+	"github.com/imdario/mergo"
 )
 
 // TplStencil contains the global functions available to a template for
@@ -20,17 +24,50 @@ type TplStencil struct {
 	t *Template
 }
 
+// GetModuleBlock returns a module block in the scope of this
+// module
+func (s *TplStencil) GetModuleBlock(name string) interface{} {
+	return s.s.sharedData[path.Join(s.t.Module.Name, name)]
+}
+
+// AddToModuleBlock adds to a block in another module
+func (s *TplStencil) AddToModuleBlock(module, name string, data interface{}) (string, error) {
+	// Only modify on first pass
+	if !s.s.isFirstPass {
+		return "", nil
+	}
+
+	v := reflect.ValueOf(data)
+	if !v.IsValid() {
+		return "", fmt.Errorf("third parameter, data, must be set")
+	}
+
+	// we only allow slices or maps to allow multiple templates to
+	// write to the same block
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Map {
+		return "", fmt.Errorf("unsupported module block data type %q, supported types are slice and map", v.Kind())
+	}
+
+	k := path.Join(module, name)
+	if _, ok := s.s.sharedData[k]; !ok {
+		s.s.sharedData[k] = data
+		return "", nil
+	}
+
+	return "", mergo.Merge(s.s.sharedData[k], data, mergo.WithAppendSlice)
+}
+
 // Arg returns the value of an argument in the service's
 // manifest.
 // Note: Only the top-level arguments are supported.
 //
 //   {{- stencil.Arg "name" }}
-func (s *TplStencil) Arg(path string) interface{} {
-	if path == "" {
+func (s *TplStencil) Arg(pth string) interface{} {
+	if pth == "" {
 		return s.Args()
 	}
 
-	return s.s.m.Arguments[path]
+	return s.s.m.Arguments[pth]
 }
 
 // Args returns all arguments passed to stencil from the service's

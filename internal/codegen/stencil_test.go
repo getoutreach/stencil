@@ -34,3 +34,34 @@ func TestBasicE2ERender(t *testing.T) {
 	assert.Equal(t, len(tpls[0].Files), 1, "expected Render() template to return a single file")
 	assert.Equal(t, tpls[0].Files[0].String(), "test", "expected Render() to return correct output")
 }
+
+func TestModuleToModuleBlockRender(t *testing.T) {
+	m1fs := memfs.New()
+	m2fs := memfs.New()
+	ctx := context.Background()
+
+	// create a stub template
+	f, err := m1fs.Create("test-template.tpl")
+	assert.NilError(t, err, "failed to create stub template")
+	f.Write([]byte(`{{ file.Skip "virtual file" }}{{ stencil.AddToModuleBlock "testing2" "coolthing" (list "a") }}`))
+	f.Close()
+
+	f, err = m2fs.Create("test-template.tpl")
+	assert.NilError(t, err, "failed to create stub template")
+	f.Write([]byte(`{{ index (stencil.GetModuleBlock "coolthing") 0 }}`))
+	f.Close()
+
+	st := NewStencil(&configuration.ServiceManifest{
+		Name:      "test",
+		Arguments: map[string]interface{}{},
+	}, []*modules.Module{
+		modules.NewWithFS(ctx, "testing1", m1fs),
+		modules.NewWithFS(ctx, "testing2", m2fs),
+	})
+
+	tpls, err := st.Render(ctx, logrus.New())
+	assert.NilError(t, err, "expected Render() to not fail")
+	assert.Equal(t, len(tpls), 2, "expected Render() to return a single template")
+	assert.Equal(t, len(tpls[1].Files), 1, "expected Render() template to return a single file")
+	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
+}
