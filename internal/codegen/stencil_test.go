@@ -2,10 +2,14 @@ package codegen
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -33,6 +37,26 @@ func TestBasicE2ERender(t *testing.T) {
 	assert.Equal(t, len(tpls), 1, "expected Render() to return a single template")
 	assert.Equal(t, len(tpls[0].Files), 1, "expected Render() template to return a single file")
 	assert.Equal(t, tpls[0].Files[0].String(), "test", "expected Render() to return correct output")
+
+	lock := st.GenerateLockfile(tpls)
+	assert.DeepEqual(t, lock, &stencil.Lockfile{
+		Version:   app.Info().Version,
+		Generated: lock.Generated,
+		Modules: []*stencil.LockfileModuleEntry{
+			{
+				Name:    "testing",
+				URL:     "vfs://testing",
+				Version: "vfs",
+			},
+		},
+		Files: []*stencil.LockfileFileEntry{
+			{
+				Name:     "test-template",
+				Template: "test-template.tpl",
+				Module:   "testing",
+			},
+		},
+	})
 }
 
 func TestModuleToModuleBlockRender(t *testing.T) {
@@ -64,4 +88,31 @@ func TestModuleToModuleBlockRender(t *testing.T) {
 	assert.Equal(t, len(tpls), 2, "expected Render() to return a single template")
 	assert.Equal(t, len(tpls[1].Files), 1, "expected Render() template to return a single file")
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
+}
+
+func ExampleStencil_PostRun() {
+	fs := memfs.New()
+	ctx := context.Background()
+
+	// create a stub template
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing\npostRunCommand:\n- command: echo \"hello\""))
+	f.Close()
+
+	nullLog := logrus.New()
+	logrus.SetOutput(io.Discard)
+
+	st := NewStencil(&configuration.ServiceManifest{
+		Name:      "test",
+		Arguments: map[string]interface{}{},
+	}, []*modules.Module{
+		modules.NewWithFS(ctx, "testing", fs),
+	})
+	err := st.PostRun(ctx, nullLog)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Output:
+	// hello
 }
