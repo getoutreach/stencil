@@ -100,7 +100,7 @@ func ExampleStencil_PostRun() {
 	f.Close()
 
 	nullLog := logrus.New()
-	logrus.SetOutput(io.Discard)
+	nullLog.SetOutput(io.Discard)
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
