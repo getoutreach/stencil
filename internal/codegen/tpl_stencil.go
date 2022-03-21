@@ -61,7 +61,6 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (str
 
 // Arg returns the value of an argument in the service's
 // manifest.
-// Note: Only the top-level arguments are supported.
 //
 //   {{- stencil.Arg "name" }}
 func (s *TplStencil) Arg(pth string) (interface{}, error) {
