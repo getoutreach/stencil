@@ -43,6 +43,11 @@ func quotejoinstrings(elems []string, sep string) string {
 // based on:
 // https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L83
 func toYAML(v interface{}) (string, error) {
+	// If no data, return an empty string
+	if v == nil {
+		return "", nil
+	}
+
 	data, err := yaml.Marshal(v)
 	if err != nil {
 		return "", err

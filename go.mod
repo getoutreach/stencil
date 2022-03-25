@@ -13,6 +13,7 @@ require (
 	github.com/google/go-github/v43 v43.0.0
 	github.com/hashicorp/go-hclog v1.0.0
 	github.com/hashicorp/go-plugin v1.4.3
+	github.com/imdario/mergo v0.3.12
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.3.0
@@ -20,11 +21,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	gotest.tools/v3 v3.1.0
+	sigs.k8s.io/yaml v1.3.0
 )
-
-require sigs.k8s.io/yaml v1.3.0
-
-require github.com/imdario/mergo v0.3.12
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2 // indirect

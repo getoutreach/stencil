@@ -38,7 +38,7 @@ type Command struct {
 // NewCommand creates a new stencil command
 func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun bool) *Command {
 	_, err := stencil.LoadLockfile("")
-	if !errors.Is(err, os.ErrNotExist) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
 	}
 
