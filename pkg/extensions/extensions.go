@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	giturls "github.com/whilp/git-urls"
 
-	gogithub "github.com/google/go-github/v34/github"
+	gogithub "github.com/google/go-github/v43/github"
 )
 
 // Host implements an extension host that handles
@@ -220,7 +220,6 @@ func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version 
 		return "", errors.Wrap(err, "failed to get github token")
 	}
 
-	// TODO: read org/repo from the source URL
 	gh := updater.NewGithubUpdater(ctx, token, org, repo)
 	err = gh.Check(ctx)
 	if err != nil {

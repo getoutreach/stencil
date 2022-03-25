@@ -5,6 +5,8 @@
 // Package apiv1 implements the extension API for stencil
 package apiv1
 
+// This block contains the constants for the go-plugin
+// implementation.
 const (
 	// Version that this extension API implements
 	Version = 1

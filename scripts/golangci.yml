@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://json.schemastore.org/golangci-lint
 lintroller:
-  tier: "bronze"
+  tier: platinum
 
 severity:
   default-severity: error

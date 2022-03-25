@@ -7,10 +7,15 @@
 package configuration
 
 import (
+	"fmt"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v2"
 )
+
+// ValidateNameRegexp is the regex used to validate the service's name
+const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
 
 // NewServiceManifest reads a service manifest from disk at the
 // specified path, parses it, and returns the output.
@@ -22,8 +27,15 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 	defer f.Close()
 
 	var s *ServiceManifest
-	err = yaml.NewDecoder(f).Decode(&s)
-	return s, err
+	if err := yaml.NewDecoder(f).Decode(&s); err != nil {
+		return nil, err
+	}
+
+	if !ValidateName(s.Name) {
+		return nil, fmt.Errorf("name field in %q was invalid", path)
+	}
+
+	return s, nil
 }
 
 // NewDefaultServiceManifest returns a parsed service manifest
@@ -40,7 +52,7 @@ type ServiceManifest struct {
 
 	// Modules are the template modules that this service depends
 	// on and utilizes
-	Modules []*TemplateRepository `yaml:"modules"`
+	Modules []*TemplateRepository `yaml:"modules,omitempty"`
 
 	// Versions is a map of versions of certain tools, this is used by templates
 	// and will likely be replaced with something better in the future.
@@ -48,26 +60,38 @@ type ServiceManifest struct {
 
 	// Arguments is a map of arbitrary arguments to pass to the generator
 	Arguments map[string]interface{} `yaml:"arguments"`
+
+	// Replacements is a list of module names to replace their URI.
+	// Expected format:
+	// - local file: file://path/to/module
+	// - remote file: https://github.com/getoutreach/stencil-base
+	// - remote file w/ different protocol: git@github.com:getoutreach/stencil-base
+	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
 // TemplateRepositoryType specifies what type of a template
 // repository a repository is.
 type TemplateRepositoryType string
 
+// This block contains all of the TemplateRepositoryType values
 const (
 	// TemplateRepositoryTypeExt denotes a repository as being
-	// an extension repository.
+	// an extension repository. This means that it contains
+	// a go extension. This repository may also contain go-templates.
 	TemplateRepositoryTypeExt TemplateRepositoryType = "extension"
 
 	// TemplateRepositoryTypeStd denotes a repository as being a
 	// standard template repository. This is the default
-	TemplateRepositoryTypeStd TemplateRepositoryType = "standard"
+	TemplateRepositoryTypeStd TemplateRepositoryType = ""
 )
 
 // TemplateRepository is a repository of template files.
 type TemplateRepository struct {
-	// URL is the fully qualified URL that is able to access the templates
-	// and manifest.
+	// Name is the name of this module. This should be a valid go import path
+	Name string `yaml:"name"`
+
+	// Deprecated: Use name instead
+	// URL is a full URL for a given module
 	URL string `yaml:"url"`
 
 	// Version is a semantic version or branch of the template repository
@@ -79,7 +103,7 @@ type TemplateRepository struct {
 // TemplateRepositoryManifest is a manifest of a template repository
 type TemplateRepositoryManifest struct {
 	// Name is the name of this template repository.
-	// This is likely to be used in the future.
+	// This must match the import path.
 	Name string `yaml:"name"`
 
 	// Modules are template repositories that this manifest requires
@@ -107,6 +131,8 @@ type PostRunCommandSpec struct {
 	Command string `yaml:"command"`
 }
 
+// Argument is a user-input argument that can be passed to
+// templates
 type Argument struct {
 	// Required denotes this argument as required.
 	Required bool `yaml:"required"`
@@ -121,4 +147,17 @@ type Argument struct {
 
 	// Description is a description of this argument. Optional.
 	Description string `yaml:"description"`
+}
+
+// ValidateName ensures that the name of a service in the manifest
+// fits the criteria we require.
+func ValidateName(name string) bool {
+	// This is more restrictive than the actual spec.  We're artificially
+	// restricting ourselves to non-Unicode names because (in practice) we
+	// probably don't support international characters very well, either.
+	//
+	// See also:
+	// 	https://golang.org/ref/spec#Identifiers
+	acceptableName := regexp.MustCompile(ValidateNameRegexp)
+	return acceptableName.MatchString(name)
 }

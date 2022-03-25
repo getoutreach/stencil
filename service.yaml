@@ -4,6 +4,7 @@ description: microservice lifecycle manager
 oss: true
 slack: dev-tooling-notifications
 library: true
+lintroller: platinum
 commands:
   - stencil
 circleAPIKey: ""
@@ -13,6 +14,9 @@ releaseOptions:
   allowMajorVersions: true
 deployTo:
   environments: []
+versions:
+  # we use the latest text/template additions
+  go: 1.18
 arguments:
   circleAPIKey: ""
   dependencies:
@@ -38,3 +42,5 @@ opsLevel:
     mainLink: ""
     custom: []
   designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+replacements:
+  github.com/getoutreach/stencil-base: file://../stencil-base

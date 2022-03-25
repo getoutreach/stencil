@@ -8,11 +8,11 @@
       "name": "Launch Debug Server",
       "type": "go",
       "request": "launch",
-      "mode": "debug",
-      "envFile": "${workspaceRoot}/.vscode/private.env",
-      "go.testEnvFile": "${workspaceRoot}/.vscode/private.env",
+      "mode": "auto",
+      "cwd": "../stencil-test",
       "program": "${workspaceRoot}/cmd/stencil/",
-      "buildFlags": "-tags=or_dev"
+      "buildFlags": "-tags=or_dev",
+      "args": ["--debug"]
     }
     ///Block(vscodeLaunchConfigs)
     ///EndBlock(vscodeLaunchConfigs)
