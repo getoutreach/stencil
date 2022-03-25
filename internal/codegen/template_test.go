@@ -39,7 +39,12 @@ func TestSingleFileRender(t *testing.T) {
 }
 
 func TestMultiFileRender(t *testing.T) {
-	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
+	fs := memfs.New()
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
+	f.Close()
+
+	m := modules.NewWithFS(context.Background(), "testing", fs)
 
 	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644, time.Now(), []byte(multiFileTemplate))
 	assert.NilError(t, err, "failed to create template")
@@ -59,7 +64,12 @@ func TestMultiFileRender(t *testing.T) {
 }
 
 func TestMultiFileWithInputRender(t *testing.T) {
-	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
+	fs := memfs.New()
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
+	f.Close()
+
+	m := modules.NewWithFS(context.Background(), "testing", fs)
 
 	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644, time.Now(), []byte(multiFileInputTemplate))
 	assert.NilError(t, err, "failed to create template")

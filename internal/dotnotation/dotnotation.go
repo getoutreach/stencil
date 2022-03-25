@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 )
+
 // Get looks up an entry in data by parsing the "key" into deeply nested keys, traversing it by "dots" in the key name.
 func Get(data map[string]interface{}, key string) (interface{}, error) {
 	return get(data, key)

@@ -94,7 +94,7 @@ func ExampleStencil_PostRun() {
 	fs := memfs.New()
 	ctx := context.Background()
 
-	// create a stub template
+	// create a stub manifest
 	f, _ := fs.Create("manifest.yaml")
 	f.Write([]byte("name: testing\npostRunCommand:\n- command: echo \"hello\""))
 	f.Close()
