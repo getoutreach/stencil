@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 	"text/template"
+
+	"sigs.k8s.io/yaml"
 )
 
 // dereference dereferences a pointer returning the
@@ -36,10 +38,24 @@ func quotejoinstrings(elems []string, sep string) string {
 	return strings.Join(elems, sep)
 }
 
+// toYAML is a clone of the helm toYaml function, which takes
+// an interface{} and turns it into yaml
+// based on:
+// https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L83
+func toYAML(v interface{}) (string, error) {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSuffix(string(data), "\n"), nil
+}
+
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead
 var Default = template.FuncMap{
 	"Dereference":      dereference,
 	"QuoteJoinStrings": quotejoinstrings,
+	"toYaml":           toYAML,
 }

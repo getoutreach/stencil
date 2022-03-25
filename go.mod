@@ -22,6 +22,8 @@ require (
 	gotest.tools/v3 v3.1.0
 )
 
+require sigs.k8s.io/yaml v1.3.0
+
 require github.com/imdario/mergo v0.3.12
 
 require (
