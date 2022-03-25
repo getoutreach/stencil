@@ -23,7 +23,7 @@ import (
 
 // NewStencil creates a new, fully initialized Stencil renderer function
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
-	return &Stencil{m, extensions.NewHost(), mods}
+	return &Stencil{m, extensions.NewHost(), mods, true, make(map[string]interface{})}
 }
 
 // Stencil provides the basic functions for
@@ -35,6 +35,13 @@ type Stencil struct {
 
 	// modules is a list of modules used in this stencil render
 	modules []*modules.Module
+
+	// isFirstPass denotes if the renderer is currently in first
+	// pass mode
+	isFirstPass bool
+
+	// sharedData stores data that is injected by templates from modules
+	sharedData map[string]interface{}
 }
 
 // RegisterExtensions registers all extensions on the currently loaded
@@ -87,6 +94,17 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 		return nil, err
 	}
 
+	// IDEA(jaredallard): Consider sharing this somehow, it's going
+	// to be pretty memory inefficient
+	//
+	// copy the templates into a separate slice for the first pass
+	// to prevent extra mutations
+	firstPass := make([]*Template, len(tplfiles))
+	for i, t := range tplfiles {
+		nt := *t
+		firstPass[i] = &nt
+	}
+
 	vals := NewValues(ctx, s.m)
 	tpls := make([]*Template, 0)
 
@@ -99,9 +117,17 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 		}
 	}
 
-	// Now we render each file
+	// Render the first pass, this is used to populate shared data
+	for _, t := range firstPass {
+		log.Debugf("First pass render of template %s", t.ImportPath())
+		if err := t.Render(s, vals); err != nil {
+			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
+		}
+	}
+	s.isFirstPass = false
+
 	for _, t := range tplfiles {
-		log.Debugf("Rendering template %s", t.ImportPath())
+		log.Debugf("Second pass render of template %s", t.ImportPath())
 		if err := t.Render(s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
