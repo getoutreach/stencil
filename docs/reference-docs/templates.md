@@ -1,6 +1,6 @@
 # Templates
 
-A template is a `<filename>.ext.tpl` in a stencil module. 
+A template is a `<filename>.<extension>.tpl` in a stencil module. 
 
 ## Render Behavior
 
