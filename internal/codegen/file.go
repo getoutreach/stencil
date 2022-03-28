@@ -82,6 +82,11 @@ func (f *File) SetPath(path string) {
 	f.path = path
 }
 
+// SetMode updates the mode of the file
+func (f *File) SetMode(mode os.FileMode) {
+	f.mode = mode
+}
+
 // SetContents updates the contents of the current file
 func (f *File) SetContents(contents string) {
 	f.contents = []byte(contents)
