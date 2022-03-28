@@ -7,7 +7,7 @@ that defines the template repository.
 ## So what is `manifest.yaml`?
 
 ```yaml
-name: my-first-template-repository
+name: github.com/getoutreach/my-template-repository
 modules: []
 arguments:
   my-argument:
@@ -16,10 +16,9 @@ arguments:
     description: Do a cool thing! 
 ```
 
-The most important, and required, is `name`. This should match the repository name and represents what stencil refers
+The most important, and required, is `name`. This is essentially a git import path and represents what stencil refers
 to your module as. Right below that is `modules`. This is a list of modules, like in `service.yaml` that your repository
-depends on. These will be applied (in the virtual filesystem) before your module is, allowing you to overwrite files
-that that module created.
+depends on. These modules are things that your module depends on.
 
 Next we have the `arguments` map. This is a simple hash map that allows you to specify arguments that your module has/wants.
 `required` denotes that an arguments is required while `type` specifies the type that the argument should be, e.g. `list`, `string`, so forth.
@@ -42,7 +41,7 @@ git remote add origin <your-git-url>
 Then create your `manifest.yaml`:
 
 ```
-name: my-first-template-repository
+name: github.com/getoutreach/my-first-template-repository
 modules: []
 arguments: {}
 ```
@@ -57,6 +56,6 @@ modules:
 - url: <your-git-url> 
 ```
 
-**Note**: For information on the modules spec, see the [documentation](https://pkg.go.dev/github.com/getoutreach/stencil@v1.1.1/pkg/configuration#TemplateRepository)
+**Note**: For information on the modules spec, see the [documentation](https://pkg.go.dev/github.com/getoutreach/stencil@v1.5.0/pkg/configuration#TemplateRepository)
 
 Now if you run `stencil` you'll use your new repository! :tada:
