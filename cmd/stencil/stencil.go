@@ -77,6 +77,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		///Block(commands)
 		NewDescribeCmd(),
+		NewCreateCommand(),
 		///EndBlock(commands)
 	}
 
