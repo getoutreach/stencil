@@ -192,7 +192,7 @@ func (h *Host) getExtensionPath(version, name string) string {
 	return path
 }
 
-// buildFromLocal copies a local extension to it's stable path
+// buildFromLocal copies a local extension to its stable path
 func (h *Host) buildFromLocal(_ context.Context, filePath, name string) (string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
