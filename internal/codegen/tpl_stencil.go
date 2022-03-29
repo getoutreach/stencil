@@ -77,7 +77,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	}
 
 	if _, ok := mf.Arguments[pth]; !ok {
-		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in it's manifest", s.t.Module.Name, pth)
+		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in its manifest", s.t.Module.Name, pth)
 	}
 
 	mapInf := make(map[interface{}]interface{})
@@ -105,7 +105,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 
 // Args returns all arguments passed to stencil from the service's
 // manifest. Note: This doesn't set default values and is instead
-// representative of _all_ data passed in it's raw form.
+// representative of _all_ data passed in its raw form.
 //
 //   {{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {

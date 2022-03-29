@@ -22,7 +22,7 @@ depends on. These modules are things that your module depends on.
 
 Next we have the `arguments` map. This is a simple hash map that allows you to specify arguments that your module has/wants.
 `required` denotes that an arguments is required while `type` specifies the type that the argument should be, e.g. `list`, `string`, so forth.
-`description` is a user-friendly description of the argument and it's purpose and is required.
+`description` is a required user-friendly description of the argument and its purpose.
 
 That's the core of it! Be sure to checkout the [documentation](https://pkg.go.dev/github.com/getoutreach/stencil@v1.1.1/pkg/configuration#TemplateRepositoryManifest)
 for more information.

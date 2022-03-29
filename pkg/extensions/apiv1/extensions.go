@@ -66,11 +66,11 @@ type Implementation interface {
 
 	// GetTemplateFunctions returns all go-template functions this ext
 	// implements, when a function is called, it's transparently passed over to
-	// the actual extension and called there instead, it's output being
+	// the actual extension and called there instead, its output being
 	// returned.
 	GetTemplateFunctions() ([]*TemplateFunction, error)
 
 	// ExecuteTemplateFunction executes a provided template function
-	// and returns it's response.
+	// and returns its response.
 	ExecuteTemplateFunction(t *TemplateFunctionExec) (interface{}, error)
 }
