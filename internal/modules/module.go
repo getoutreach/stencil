@@ -150,7 +150,7 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	// ensure that the manifest name is equal to the import path
 	if manifest.Name != m.Name {
 		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
-			"module declares it's import path as %q but was imported as %q",
+			"module declares its import path as %q but was imported as %q",
 			manifest.Name, m.Name,
 		)
 	}
