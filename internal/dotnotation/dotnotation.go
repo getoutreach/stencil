@@ -14,15 +14,15 @@ import (
 )
 
 // Get looks up an entry in data by parsing the "key" into deeply nested keys, traversing it by "dots" in the key name.
-func Get(data map[string]interface{}, key string) (interface{}, error) {
+func Get(data map[interface{}]interface{}, key string) (interface{}, error) {
 	return get(data, key)
 }
 
-// get is a recursize function to get a field from a map[string]interface{}
+// get is a recursize function to get a field from a map[interface{}]interface{}
 // this is done by splitting the key on "." and using the first part of the
 // split, if there is anymore parts of the key then get() is called with
 // the non processed part
-func get(data map[string]interface{}, key string) (interface{}, error) {
+func get(data map[interface{}]interface{}, key string) (interface{}, error) {
 	spl := strings.Split(key, ".")
 
 	partialKey := spl[0]
@@ -33,7 +33,7 @@ func get(data map[string]interface{}, key string) (interface{}, error) {
 
 	// check if we have more "keys"
 	if len(spl) > 1 {
-		subData, ok := subDataInf.(map[string]interface{})
+		subData, ok := subDataInf.(map[interface{}]interface{})
 		if !ok {
 			return nil, fmt.Errorf("unsupported type %q on key %q", reflect.ValueOf(subDataInf).Type(), partialKey)
 		}

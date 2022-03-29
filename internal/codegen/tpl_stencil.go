@@ -80,8 +80,13 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in it's manifest", s.t.Module.Name, pth)
 	}
 
+	mapInf := make(map[interface{}]interface{})
+	for k, v := range s.s.m.Arguments {
+		mapInf[k] = v
+	}
+
 	// if not set then we return a default value based on the denoted type
-	v, err := dotnotation.Get(s.s.m.Arguments, pth)
+	v, err := dotnotation.Get(mapInf, pth)
 	if err != nil {
 		switch mf.Arguments[pth].Type {
 		case "list":
