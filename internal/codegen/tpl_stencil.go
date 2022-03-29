@@ -90,7 +90,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	if err != nil {
 		switch mf.Arguments[pth].Type {
 		case "list":
-			v = []string{}
+			v = []interface{}{}
 		case "boolean":
 			v = false
 		case "string":
