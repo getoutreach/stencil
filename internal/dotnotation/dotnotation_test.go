@@ -14,7 +14,7 @@ import (
 
 func TestGet(t *testing.T) {
 	type args struct {
-		data map[string]interface{}
+		data map[interface{}]interface{}
 		key  string
 	}
 	tests := []struct {
@@ -27,8 +27,8 @@ func TestGet(t *testing.T) {
 			name: "should handle basic depths",
 			args: args{
 				key: "hello.world",
-				data: map[string]interface{}{
-					"hello": map[string]interface{}{
+				data: map[interface{}]interface{}{
+					"hello": map[interface{}]interface{}{
 						"world": "hello, world!",
 					},
 				},
@@ -40,7 +40,7 @@ func TestGet(t *testing.T) {
 			name: "should fail on invalid keys",
 			args: args{
 				key:  "hello.world",
-				data: map[string]interface{}{},
+				data: map[interface{}]interface{}{},
 			},
 			want:    nil,
 			wantErr: true,
@@ -62,7 +62,7 @@ func TestGet(t *testing.T) {
 
 func Test_get(t *testing.T) {
 	type args struct {
-		data map[string]interface{}
+		data map[interface{}]interface{}
 		key  string
 	}
 	tests := []struct {
