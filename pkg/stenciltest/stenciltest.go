@@ -114,11 +114,3 @@ func (t *Template) Run(save bool) {
 	})
 }
 
-// func TestCanRender(t *testing.T) {
-// 	st := stenciltest.New("README.md.tpl")
-// 	st.Args(map[string]interface{
-// 		"name": "do a thing",
-// 	})
-
-// 	st.Run(t)
-// }
