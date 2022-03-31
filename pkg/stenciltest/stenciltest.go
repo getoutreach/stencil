@@ -32,8 +32,7 @@ type Template struct {
 	// but not to snapshot.
 	additionalTemplates []string
 
-	// manifestPath is the path to the manifest file.
-	// IDEA(jaredallard): We should try to find this automatically
+	// m is the template repository manifest for this test
 	m *configuration.TemplateRepositoryManifest
 
 	// t is a testing object.
