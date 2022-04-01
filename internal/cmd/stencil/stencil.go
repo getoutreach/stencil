@@ -147,6 +147,11 @@ func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) erro
 		}
 	}
 
+	// Don't generate a lockfile in dry-run mode
+	if c.dryRun {
+		return nil
+	}
+
 	l := st.GenerateLockfile(tpls)
 	f, err := os.Create(stencil.LockfileName)
 	if err != nil {

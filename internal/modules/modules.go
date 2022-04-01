@@ -64,7 +64,7 @@ func GetModulesForService(ctx context.Context, m *configuration.ServiceManifest,
 	// create a map of modules, this is used to avoid downloading the same module twice
 	// as well as only ever including one version of a module
 	modules := make(map[string]*Module)
-	if err := getModulesForService(ctx, m, m.Modules, modules, l); err != nil {
+	if err := getModulesForService(ctx, m, m.Modules, modules); err != nil {
 		return nil, errors.Wrap(err, "failed to fetch modules")
 	}
 
@@ -80,7 +80,7 @@ func GetModulesForService(ctx context.Context, m *configuration.ServiceManifest,
 // this is done by iterating over all dependencies and then recursively calling ourself
 // to download their dependencies.
 func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest,
-	deps []*configuration.TemplateRepository, modules map[string]*Module, l *stencil.Lockfile) error {
+	deps []*configuration.TemplateRepository, modules map[string]*Module) error {
 	for _, d := range deps {
 		// Convert d.URL -> d.Name
 		//nolint:staticcheck // Why: We're implementing compat here.
@@ -114,7 +114,7 @@ func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest
 
 		// if we have dependencies, download those now
 		if len(mf.Modules) != 0 {
-			if err := getModulesForService(ctx, sm, mf.Modules, modules, l); err != nil {
+			if err := getModulesForService(ctx, sm, mf.Modules, modules); err != nil {
 				return errors.Wrapf(err, "failed to process dependency of %q", d.Name)
 			}
 		}
