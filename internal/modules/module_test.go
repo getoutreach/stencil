@@ -10,7 +10,6 @@ import (
 
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/getoutreach/stencil/pkg/stencil"
 	"gotest.tools/v3/assert"
 )
 
@@ -48,7 +47,7 @@ func TestReplacementLocalModule(t *testing.T) {
 		},
 	}
 
-	mods, err := modules.GetModulesForService(context.Background(), sm, false, nil)
+	mods, err := modules.GetModulesForService(context.Background(), sm)
 	assert.NilError(t, err, "expected GetModulesForService() to not error")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	assert.Equal(t, mods[0].URI, sm.Replacements["github.com/getoutreach/stencil-base"],
@@ -65,32 +64,8 @@ func TestCanFetchDeprecatedModule(t *testing.T) {
 		},
 	}
 
-	mods, err := modules.GetModulesForService(context.Background(), sm, false, nil)
+	mods, err := modules.GetModulesForService(context.Background(), sm)
 	assert.NilError(t, err, "expected GetModulesForService() to not error")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	assert.Equal(t, mods[0].Name, "github.com/getoutreach/stencil-base")
-}
-
-func TestFrozenLockfile(t *testing.T) {
-	sm := &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				URL: "https://github.com/getoutreach/stencil-base",
-			},
-		},
-	}
-
-	mods, err := modules.GetModulesForService(context.Background(), sm, true, &stencil.Lockfile{
-		Modules: []*stencil.LockfileModuleEntry{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Version: "v0.0.7",
-			},
-		},
-	})
-	assert.NilError(t, err, "expected GetModulesForService() to not error")
-	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
-	assert.Equal(t, mods[0].Name, "github.com/getoutreach/stencil-base")
-	assert.Equal(t, mods[0].Version, "v0.0.7", "expected stencil-base version to be locked")
 }
