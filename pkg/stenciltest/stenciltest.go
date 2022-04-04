@@ -21,6 +21,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"gotest.tools/v3/assert"
 )
 
 // Template is a template that is being tested by the stenciltest framework.
@@ -40,6 +41,14 @@ type Template struct {
 
 	// args are the arguments to the template.
 	args map[string]interface{}
+
+	// errStr is the string an error should contain, if this is set then the template
+	// MUST error.
+	errStr string
+
+	// persist denotes if we should save a snapshot or not
+	// This is meant for tests.
+	persist bool
 }
 
 // New creates a new test for a given template.
@@ -47,18 +56,18 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 	// GOMOD: <module path>/go.mod
 	b, err := exec.Command("go", "env", "GOMOD").Output()
 	if err != nil {
-		t.Errorf("failed to determine path to manifest: %v", err)
+		t.Fatalf("failed to determine path to manifest: %v", err)
 	}
 	basepath := strings.TrimSuffix(strings.TrimSpace(string(b)), "/go.mod")
 
 	b, err = os.ReadFile(filepath.Join(basepath, "manifest.yaml"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	var m configuration.TemplateRepositoryManifest
 	if err := yaml.Unmarshal(b, &m); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	return &Template{
@@ -66,6 +75,7 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 		m:                   &m,
 		path:                templatePath,
 		additionalTemplates: additionalTemplates,
+		persist:             true,
 	}
 }
 
@@ -75,12 +85,20 @@ func (t *Template) Args(args map[string]interface{}) *Template {
 	return t
 }
 
+// ErrorContains denotes that this test run should fail, and the message
+// should contain the provided string.
+//
+//   t.ErrorContains("i am an error")
+func (t *Template) ErrorContains(msg string) {
+	t.errStr = msg
+}
+
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
 		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, append([]string{t.path}, t.additionalTemplates...)...)
 		if err != nil {
-			got.Errorf("failed to create module from template %q", t.path)
+			got.Fatalf("failed to create module from template %q", t.path)
 		}
 
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
@@ -89,7 +107,16 @@ func (t *Template) Run(save bool) {
 
 		tpls, err := st.Render(context.Background(), logrus.New())
 		if err != nil {
-			got.Errorf("failed to render: %v", err)
+			if t.errStr != "" {
+				// if t.errStr was set then we expected an error, since that
+				// was set via t.ErrorContains()
+				if err == nil {
+					got.Fatal("expected error, got nil")
+				}
+				assert.ErrorContains(t.t, err, t.errStr, "expected render to fail with error containing %q", t.errStr)
+			} else {
+				got.Fatalf("failed to render: %v", err)
+			}
 		}
 
 		for _, tpl := range tpls {
@@ -99,12 +126,17 @@ func (t *Template) Run(save bool) {
 			}
 
 			for _, f := range tpl.Files {
+				// skip the snapshot
+				if !t.persist {
+					continue
+				}
+
 				success := got.Run(f.Name(), func(got *testing.T) {
 					snapshot := cupaloy.New(cupaloy.ShouldUpdate(func() bool { return save }), cupaloy.CreateNewAutomatically(true))
 					snapshot.SnapshotT(got, f)
 				})
 				if !success {
-					got.Errorf("Generated file %q did not match snapshot", f.Name())
+					got.Fatalf("Generated file %q did not match snapshot", f.Name())
 				}
 			}
 
