@@ -11,15 +11,22 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/blang/semver/v4"
+	"github.com/charmbracelet/glamour"
+	"github.com/getoutreach/gobox/pkg/github"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
+	giturls "github.com/whilp/git-urls"
+	"gopkg.in/yaml.v2"
 )
 
 // Command is a thin wrapper around the codegen package that
@@ -64,10 +71,20 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 // the templates. This step also does minimal post-processing of the dependencies
 // manifests
 func (c *Command) Run(ctx context.Context) error {
+	if c.frozenLockfile {
+		if err := c.useModulesFromLock(); err != nil {
+			return errors.Wrap(err, "failed to use lockfile for modules")
+		}
+	}
+
 	c.log.Info("Fetching dependencies")
-	mods, err := modules.GetModulesForService(ctx, c.manifest, c.frozenLockfile, c.lock)
+	mods, err := modules.GetModulesForService(ctx, c.manifest)
 	if err != nil {
 		return errors.Wrap(err, "failed to process modules list")
+	}
+
+	if err := c.checkForMajorVersions(ctx, mods); err != nil {
+		return errors.Wrap(err, "failed to handle major version upgrade")
 	}
 
 	for _, m := range mods {
@@ -98,6 +115,136 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	return st.PostRun(ctx, c.log)
+}
+
+// useModulesFromLock uses the modules from the lockfile instead
+// of the latest versions, or manually supplied versions in the
+// service manifest.
+func (c *Command) useModulesFromLock() error {
+	if c.lock == nil {
+		return fmt.Errorf("frozen lockfile requires a lockfile to exist")
+	}
+
+	for _, m := range c.manifest.Modules {
+		// Convert m.URL -> m.Name
+		//nolint:staticcheck // Why: We're implementing compat here.
+		if m.URL != "" {
+			u, err := giturls.Parse(m.URL) //nolint:staticcheck // Why: We're implementing compat here.
+			if err != nil {
+				//nolint:staticcheck // Why: We're implementing compat here.
+				return errors.Wrapf(err, "failed to parse deprecated url module syntax %q as a URL", m.URL)
+			}
+			m.Name = path.Join(u.Host, u.Path)
+		}
+
+		for _, l := range c.lock.Modules {
+			if m.Name == l.Name {
+				if strings.HasPrefix(l.URL, "file://") {
+					return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
+				}
+
+				m.Version = l.Version
+				break
+			}
+		}
+		if m.Version == "" {
+			return fmt.Errorf("frozen lockfile, but no version found for module %q", m.Name)
+		}
+	}
+
+	return nil
+}
+
+// checkForMajorVersions checks to see if a major version bump has occurred,
+// if it is, we report it to the user before progressing.
+func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Module) error {
+	// skip if no lockfile
+	if c.lock == nil {
+		return nil
+	}
+
+	lastUsedMods := make(map[string]*stencil.LockfileModuleEntry)
+	for _, l := range c.lock.Modules {
+		lastUsedMods[l.Name] = l
+	}
+
+	for _, m := range mods {
+		// skip unknown modules
+		lastm, ok := lastUsedMods[m.Name]
+		if !ok {
+			continue
+		}
+
+		lastV, err := semver.ParseTolerant(lastm.Version)
+		if err != nil {
+			continue
+		}
+
+		newV, err := semver.ParseTolerant(m.Version)
+		if err != nil {
+			continue
+		}
+
+		// skip major versions that are less or equal to our last version
+		if newV.Major <= lastV.Major {
+			continue
+		}
+
+		if err := c.promptMajorVersion(ctx, m, lastm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// promptMajorVersion prompts the user to upgrade their templates
+func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
+	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
+
+	gh, err := github.NewClient()
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch release notes (create github client)")
+	}
+
+	spl := strings.Split(m.Name, "/")
+	if len(spl) < 3 {
+		return fmt.Errorf("unsupported major version upgrade for module %q", m.Name)
+	}
+
+	rel, _, err := gh.Repositories.GetReleaseByTag(ctx, spl[1], spl[2], m.Version)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch release notes")
+	}
+
+	out := rel.GetBody()
+	r, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	if err == nil {
+		out, err = r.Render(rel.GetBody())
+		if err != nil {
+			c.log.WithError(err).Warn("Failed to render release notes, using raw release notes")
+		}
+	} else if err != nil {
+		c.log.WithError(err).Warn("Failed to create markdown render, using raw release notes")
+	}
+
+	fmt.Println(out)
+
+	var proceed bool
+	if err := survey.Ask([]*survey.Question{{
+		Name: "proceed",
+		Prompt: &survey.Confirm{
+			Message: fmt.Sprintf("Proceed with upgrade for module %q (%s -> %s)?", m.Name, lastm.Version, m.Version),
+			Default: true,
+		},
+	}}, &proceed); err != nil {
+		return err
+	}
+	if !proceed {
+		return fmt.Errorf("Not updating, re-run with --frozen-lockfile to proceed")
+	}
+
+	return nil
 }
 
 // writeFile writes a codegen.File to disk based on its current state
