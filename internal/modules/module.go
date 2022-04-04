@@ -83,7 +83,7 @@ func New(ctx context.Context, name, uri, version string) (*Module, error) {
 	if uri == "" {
 		uri = "https://" + name
 	} else if strings.HasPrefix(uri, "file://") {
-		version = "local"
+		version = "local-" + strings.TrimPrefix(uri, "file://")
 	}
 
 	if version == "" {
