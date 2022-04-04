@@ -96,7 +96,7 @@ type TemplateRepository struct {
 
 	// Version is a semantic version or branch of the template repository
 	// that should be downloaded if not set then the latest version is used.
-	// Note: A single commit is currently not supported.
+	// Note: Setting this equates to pinning the versions, this is not recommended.
 	Version string `yaml:"version"`
 }
 

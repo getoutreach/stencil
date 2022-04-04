@@ -9,6 +9,7 @@ package stencil
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -24,6 +25,9 @@ import (
 // Command is a thin wrapper around the codegen package that
 // implements the "stencil" command.
 type Command struct {
+	// lock is the current stencil lockfile at command creation time
+	lock *stencil.Lockfile
+
 	// manifest is the service manifest that is being used
 	// for this template render
 	manifest *configuration.ServiceManifest
@@ -33,19 +37,25 @@ type Command struct {
 
 	// dryRun denotes if we should write files to disk or not
 	dryRun bool
+
+	// frozenLockfile denotes if we should use versions from the lockfile
+	// or not
+	frozenLockfile bool
 }
 
 // NewCommand creates a new stencil command
-func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun bool) *Command {
-	_, err := stencil.LoadLockfile("")
+func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen bool) *Command {
+	l, err := stencil.LoadLockfile("")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
 	}
 
 	return &Command{
-		manifest: s,
-		log:      log,
-		dryRun:   dryRun,
+		lock:           l,
+		manifest:       s,
+		log:            log,
+		dryRun:         dryRun,
+		frozenLockfile: frozen,
 	}
 }
 
@@ -54,10 +64,16 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 // the templates. This step also does minimal post-processing of the dependencies
 // manifests
 func (c *Command) Run(ctx context.Context) error {
-	mods, err := modules.GetModulesForService(ctx, c.manifest)
+	c.log.Info("Fetching dependencies")
+	mods, err := modules.GetModulesForService(ctx, c.manifest, c.frozenLockfile, c.lock)
 	if err != nil {
 		return errors.Wrap(err, "failed to process modules list")
 	}
+
+	for _, m := range mods {
+		c.log.Infof(" -> %s %s", m.Name, m.Version)
+	}
+
 	st := codegen.NewStencil(c.manifest, mods)
 
 	c.log.Info("Loading native extensions")
@@ -71,13 +87,14 @@ func (c *Command) Run(ctx context.Context) error {
 		return err
 	}
 
-	// Below options mutate, so we shallow return
-	if c.dryRun {
-		return nil
-	}
-
 	if err := c.writeFiles(st, tpls); err != nil {
 		return err
+	}
+
+	// Can't dry run post run yet
+	if c.dryRun {
+		c.log.Info("Skipping post-run commands, dry-run")
+		return nil
 	}
 
 	return st.PostRun(ctx, c.log)
@@ -88,7 +105,10 @@ func (c *Command) writeFile(f *codegen.File) error {
 	action := "Created"
 	if f.Deleted {
 		action = "Deleted"
-		os.Remove(f.Name())
+
+		if !c.dryRun {
+			os.Remove(f.Name())
+		}
 	} else if f.Skipped {
 		action = "Skipped"
 	} else if _, err := os.Stat(f.Name()); err == nil {
@@ -96,16 +116,22 @@ func (c *Command) writeFile(f *codegen.File) error {
 	}
 
 	if action == "Created" || action == "Updated" {
-		if err := os.MkdirAll(filepath.Dir(f.Name()), 0o755); err != nil {
-			return errors.Wrapf(err, "failed to ensure directory for %q existed", f.Name())
-		}
+		if !c.dryRun {
+			if err := os.MkdirAll(filepath.Dir(f.Name()), 0o755); err != nil {
+				return errors.Wrapf(err, "failed to ensure directory for %q existed", f.Name())
+			}
 
-		if err := os.WriteFile(f.Name(), f.Bytes(), f.Mode()); err != nil {
-			return errors.Wrapf(err, "failed to create %q", f.Name())
+			if err := os.WriteFile(f.Name(), f.Bytes(), f.Mode()); err != nil {
+				return errors.Wrapf(err, "failed to create %q", f.Name())
+			}
 		}
 	}
 
-	c.log.Infof("  -> %s %s", action, f.Name())
+	msg := fmt.Sprintf("  -> %s %s", action, f.Name())
+	if c.dryRun {
+		msg += " (dry-run)"
+	}
+	c.log.Info(msg)
 	return nil
 }
 
@@ -119,6 +145,11 @@ func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) erro
 				return err
 			}
 		}
+	}
+
+	// Don't generate a lockfile in dry-run mode
+	if c.dryRun {
+		return nil
 	}
 
 	l := st.GenerateLockfile(tpls)

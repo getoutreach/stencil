@@ -60,7 +60,7 @@ func main() {
 				return errors.Wrap(err, "failed to parse service.yaml")
 			}
 
-			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"))
+			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"), c.Bool("frozen-lockfile"))
 			return errors.Wrap(cmd.Run(ctx), "run codegen")
 		},
 		///EndBlock(app)
@@ -71,6 +71,10 @@ func main() {
 			Name:    "dry-run",
 			Aliases: []string{"dryrun"},
 			Usage:   "Don't write files to disk",
+		},
+		&cli.BoolFlag{
+			Name:  "frozen-lockfile",
+			Usage: "Use versions from the lockfile instead of the latest",
 		},
 		///EndBlock(flags)
 	}
