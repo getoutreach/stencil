@@ -198,7 +198,7 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 	return nil
 }
 
-// promptForMajorVersion prompts the user to upgrade their templates
+// promptMajorVersion prompts the user to upgrade their templates
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
 	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
 
