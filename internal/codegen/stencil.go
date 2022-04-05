@@ -177,7 +177,14 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 		}
 
 		log.Debugf("Discovering templates from module %q", m.Name)
-		err = util.Walk(fs, "", func(path string, inf os.FileInfo, err error) error {
+		baseDir := ""
+
+		// use templates/ if present
+		if inf, err := fs.Stat("templates"); err == nil && inf.IsDir() {
+			baseDir = "templates"
+		}
+
+		err = util.Walk(fs, baseDir, func(path string, inf os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
