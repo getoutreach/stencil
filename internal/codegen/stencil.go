@@ -182,6 +182,8 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 		// use templates/ if present
 		if inf, err := fs.Stat("templates"); err == nil && inf.IsDir() {
 			baseDir = "templates"
+		} else {
+			log.Warn("Module %q has templates outside of templates/ directory, this is not recommended and is deprecated", m.Name)
 		}
 
 		err = util.Walk(fs, baseDir, func(path string, inf os.FileInfo, err error) error {
