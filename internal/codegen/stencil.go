@@ -177,12 +177,12 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 		}
 
 		log.Debugf("Discovering templates from module %q", m.Name)
-		baseDir := ""
 
-		// use templates/ if present
-		if inf, err := fs.Stat("templates"); err == nil && inf.IsDir() {
-			baseDir = "templates"
-		} else {
+		// default to templates/, but if it's not present fallback to
+		// the root w/ a warning
+		baseDir := "templates"
+		if inf, err := fs.Stat("templates"); err != nil || !inf.IsDir() {
+			baseDir = ""
 			log.Warn("Module %q has templates outside of templates/ directory, this is not recommended and is deprecated", m.Name)
 		}
 
