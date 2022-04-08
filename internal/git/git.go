@@ -30,7 +30,7 @@ var (
 // GetDefaultBranch determines the default/HEAD branch for a given git
 // repository.
 func GetDefaultBranch(ctx context.Context, path string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin", "-n")
+	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin")
 	cmd.Dir = path
 	out, err := cmd.Output()
 	if err != nil {
