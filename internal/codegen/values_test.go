@@ -42,8 +42,8 @@ func TestValues(t *testing.T) {
 	assert.NilError(t, err, "expected worktree.Commit() not to fail")
 
 	err = wrk.Checkout(&gogit.CheckoutOptions{
-		//Create: true,
-		Branch: plumbing.NewBranchReferenceName("master"),
+		Create: true,
+		Branch: plumbing.NewBranchReferenceName("main"),
 	})
 	assert.NilError(t, err, "expected worktree.Checkout() not to fail")
 
@@ -56,7 +56,7 @@ func TestValues(t *testing.T) {
 	vals := NewValues(context.Background(), sm)
 	assert.DeepEqual(t, &Values{
 		Git: &git{
-			Ref:           plumbing.NewBranchReferenceName("master").String(),
+			Ref:           plumbing.NewBranchReferenceName("main").String(),
 			Commit:        cmt.String(),
 			Dirty:         false,
 			DefaultBranch: "main",
