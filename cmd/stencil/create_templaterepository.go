@@ -5,11 +5,13 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
 
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
@@ -22,7 +24,7 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 		Description: "Creates a templaterepository with the provided name in the current directory",
 		ArgsUsage:   "create templaterepository <name>",
 		Action: func(c *cli.Context) error {
-			var manifestFileName = "manifest.yaml"
+			var manifestFileName = "service.yaml"
 
 			// ensure we have a name
 			if c.NArg() != 1 {
@@ -50,8 +52,11 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 				}
 			}
 
-			tm := &configuration.TemplateRepositoryManifest{
-				Name: c.Args().Get(0),
+			tm := &configuration.ServiceManifest{
+				Name: path.Base(c.Args().Get(0)),
+				Modules: []*configuration.TemplateRepository{{
+					Name: "github.com/getoutreach/stencil-template-base",
+				}},
 			}
 
 			if _, err := os.Stat(manifestFileName); err == nil {
@@ -65,9 +70,19 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 			defer f.Close()
 
 			enc := yaml.NewEncoder(f)
-			defer enc.Close()
+			if err := enc.Encode(tm); err != nil {
+				return err
+			}
+			if err := enc.Close(); err != nil {
+				return err
+			}
 
-			return enc.Encode(tm)
+			//nolint:gosec // Why: intentional
+			cmd := exec.CommandContext(c.Context, os.Args[0])
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Stdin = os.Stdin
+			return errors.Wrap(cmd.Run(), "failed ot run stancil")
 		},
 	}
 }

@@ -92,12 +92,12 @@ type TemplateRepository struct {
 
 	// Deprecated: Use name instead
 	// URL is a full URL for a given module
-	URL string `yaml:"url"`
+	URL string `yaml:"url,omitempty"`
 
 	// Version is a semantic version or branch of the template repository
 	// that should be downloaded if not set then the latest version is used.
 	// Note: Setting this equates to pinning the versions, this is not recommended.
-	Version string `yaml:"version"`
+	Version string `yaml:"version,omitempty"`
 }
 
 // TemplateRepositoryManifest is a manifest of a template repository
@@ -110,14 +110,14 @@ type TemplateRepositoryManifest struct {
 	Modules []*TemplateRepository `yaml:"modules"`
 
 	// Type is the type of repository this is
-	Type TemplateRepositoryType `yaml:"type"`
+	Type TemplateRepositoryType `yaml:"type,omitempty"`
 
 	// PostRunCommand is a command to be ran after rendering and post-processors
 	// have been ran on the project
-	PostRunCommand []*PostRunCommandSpec `yaml:"postRunCommand"`
+	PostRunCommand []*PostRunCommandSpec `yaml:"postRunCommand,omitempty"`
 
 	// Arguments are a declaration of arguments to the template generator
-	Arguments map[string]Argument
+	Arguments map[string]Argument `yaml:"arguments,omitempty"`
 }
 
 // PostRunCommandSpec is the spec of a command to be ran and its
