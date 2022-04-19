@@ -93,3 +93,7 @@ func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) error
 	f.t.Files = append(f.t.Files, f.f)
 	return nil
 }
+
+func (f *TplFile) Exists() bool {
+	return f.f.Exists
+}

@@ -8,6 +8,8 @@ package codegen
 import (
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // _ ensures that we implement the os.FileInfo interface
@@ -45,6 +47,8 @@ type File struct {
 	// true then f.contents should not be used.
 	Skipped bool
 
+	Exists bool
+
 	// Warnings is an array of warnings that were created
 	// while rendering this template
 	Warnings []string
@@ -59,7 +63,17 @@ func NewFile(path string, mode os.FileMode, modTime time.Time) (*File, error) {
 		return nil, err
 	}
 
-	return &File{path: path, mode: mode, modTime: modTime, blocks: blocks}, nil
+	_, err = os.Stat(path)
+	exists := false
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	} else {
+		exists = true
+	}
+
+	return &File{path: path, mode: mode, modTime: modTime, blocks: blocks, Exists: exists}, nil
 }
 
 // Block returns the contents of a given block.
