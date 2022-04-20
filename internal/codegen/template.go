@@ -19,6 +19,9 @@ type Template struct {
 	// parsed denotes if this template has been parsed or not
 	parsed bool
 
+	// args are the arguments passed to the template
+	args *Values
+
 	// Module is the underlying module that's creating this template
 	Module *modules.Module
 
@@ -79,6 +82,8 @@ func (t *Template) Render(st *Stencil, vals *Values) error {
 			return err
 		}
 	}
+
+	t.args = vals
 
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty

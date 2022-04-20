@@ -31,3 +31,26 @@ func Example_quotejoinstrings() {
 	// Output:
 	// "a" "b" "c"
 }
+
+func Example_toYaml() {
+	example := map[string]interface{}{
+		"a": "b",
+		"c": "d",
+	}
+	fmt.Println(toYAML(example))
+
+	// Output:
+	// a: b
+	// c: d <nil>
+}
+
+func Example_fromYaml() {
+	example := `
+a: b
+c: d
+`
+	fmt.Println(fromYAML(example))
+
+	// Output:
+	// map[a:b c:d] <nil>
+}

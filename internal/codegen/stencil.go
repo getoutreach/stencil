@@ -105,7 +105,10 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 		firstPass[i] = &nt
 	}
 
+	log.Debug("Creating values for template")
 	vals := NewValues(ctx, s.m)
+	log.Debug("Finished creating values")
+
 	tpls := make([]*Template, 0)
 
 	// Add the templates to their modules template to allow them to be able to access
@@ -224,6 +227,8 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 			return nil, err
 		}
 	}
+
+	log.Debug("Finished discovering templates")
 
 	return tpls, nil
 }

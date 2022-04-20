@@ -60,6 +60,9 @@ type git struct {
 type config struct {
 	// Name is the name of this repository
 	Name string
+
+	// Versions are versions of applications to be used over baked in defaults
+	Versions map[string]string
 }
 
 // IDEA(jaredallard): Allow extensions to provide values here? Or
@@ -88,7 +91,8 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest) *Values {
 			GeneratorVersion: app.Info().Version,
 		},
 		Config: &config{
-			Name: sm.Name,
+			Name:     sm.Name,
+			Versions: sm.Versions,
 		},
 	}
 

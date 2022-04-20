@@ -34,6 +34,11 @@ type TplFile struct {
 //   {{ file.Block "name" }}
 //   {{- end }}
 //   ###EndBlock(name)
+//
+//   ###Block(name)
+//   {{ - /* Short hand syntax, but adds newline if no contents */}}
+//   {{ file.Block "name" }}
+//   ###ndBlock(name)
 func (f *TplFile) Block(name string) string {
 	return f.f.Block(name)
 }
@@ -60,6 +65,16 @@ func (f *TplFile) Skip(_ string) error {
 // Delete deletes the current file
 func (f *TplFile) Delete() error {
 	f.f.Deleted = true
+	return nil
+}
+
+// Static marks the current file as static
+func (f *TplFile) Static() error {
+	// if the file already exists, skip it
+	if _, err := os.Stat(f.f.path); err == nil {
+		return f.Skip("Static file, output already exists")
+	}
+
 	return nil
 }
 

@@ -40,7 +40,8 @@ func quotejoinstrings(elems []string, sep string) string {
 
 // toYAML is a clone of the helm toYaml function, which takes
 // an interface{} and turns it into yaml
-// based on:
+//
+// Based on:
 // https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L83
 func toYAML(v interface{}) (string, error) {
 	// If no data, return an empty string
@@ -56,6 +57,21 @@ func toYAML(v interface{}) (string, error) {
 	return strings.TrimSuffix(string(data), "\n"), nil
 }
 
+// fromYAML converts a YAML document into a map[string]interface{}.
+//
+// This is not a general-purpose YAML parser, and will not parse all valid
+// YAML documents.
+//
+// Based on: https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L98
+func fromYAML(str string) (map[string]interface{}, error) {
+	m := map[string]interface{}{}
+
+	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead
@@ -63,4 +79,5 @@ var Default = template.FuncMap{
 	"Dereference":      dereference,
 	"QuoteJoinStrings": quotejoinstrings,
 	"toYaml":           toYAML,
+	"fromYaml":         fromYAML,
 }
