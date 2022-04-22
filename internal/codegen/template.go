@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/sirupsen/logrus"
 )
 
 // Template is a file that has been processed by stencil
@@ -21,6 +22,17 @@ type Template struct {
 
 	// args are the arguments passed to the template
 	args *Values
+
+	// log is the logger to use for debug logging
+	log logrus.FieldLogger
+
+	// mode is the os file mode of the template, this is used
+	// for the default file if not modified during render time
+	mode os.FileMode
+
+	// modTime is the modification time of the template, this is used
+	// for the default file if not modified during render time
+	modTime time.Time
 
 	// Module is the underlying module that's creating this template
 	Module *modules.Module
@@ -37,17 +49,15 @@ type Template struct {
 
 // NewTemplate creates a new Template with the current file being the same name
 // with the extension .tpl being removed.
-func NewTemplate(m *modules.Module, fpath string, mode os.FileMode, modTime time.Time, contents []byte) (*Template, error) {
-	f, err := NewFile(strings.TrimSuffix(fpath, ".tpl"), mode, modTime)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTemplate(m *modules.Module, fpath string, mode os.FileMode,
+	modTime time.Time, contents []byte, log logrus.FieldLogger) (*Template, error) {
 	return &Template{
+		log:      log,
+		mode:     mode,
+		modTime:  modTime,
 		Module:   m,
 		Path:     fpath,
 		Contents: contents,
-		Files:    []*File{f},
 	}, nil
 }
 
@@ -63,7 +73,7 @@ func (t *Template) Parse(st *Stencil) error {
 	// Add the current template to the template object on the module that we're
 	// attached to. This enables us to call functions in other templates within our
 	// 'module context'.
-	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(NewFuncMap(nil, nil)).
+	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(NewFuncMap(nil, nil, t.log)).
 		Parse(string(t.Contents)); err != nil {
 		return err
 	}
@@ -76,6 +86,14 @@ func (t *Template) Parse(st *Stencil) error {
 // Render renders the provided template, the produced files
 // are rendered onto the Files field of the template struct.
 func (t *Template) Render(st *Stencil, vals *Values) error {
+	if len(t.Files) == 0 {
+		f, err := NewFile(strings.TrimSuffix(t.Path, ".tpl"), t.mode, t.modTime)
+		if err != nil {
+			return err
+		}
+		t.Files = []*File{f}
+	}
+
 	// Parse the template if we haven't already
 	if !t.parsed {
 		if err := t.Parse(st); err != nil {
@@ -88,7 +106,7 @@ func (t *Template) Render(st *Stencil, vals *Values) error {
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t)).
+	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t, t.log)).
 		ExecuteTemplate(&buf, t.ImportPath(), vals); err != nil {
 		return err
 	}

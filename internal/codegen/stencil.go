@@ -23,7 +23,7 @@ import (
 
 // NewStencil creates a new, fully initialized Stencil renderer function
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
-	return &Stencil{m, extensions.NewHost(), mods, true, make(map[string]interface{})}
+	return &Stencil{m, extensions.NewHost(), mods, true, make(map[string][]interface{})}
 }
 
 // Stencil provides the basic functions for
@@ -41,7 +41,7 @@ type Stencil struct {
 	isFirstPass bool
 
 	// sharedData stores data that is injected by templates from modules
-	sharedData map[string]interface{}
+	sharedData map[string][]interface{}
 }
 
 // RegisterExtensions registers all extensions on the currently loaded
@@ -94,22 +94,9 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 		return nil, err
 	}
 
-	// IDEA(jaredallard): Consider sharing this somehow, it's going
-	// to be pretty memory inefficient
-	//
-	// copy the templates into a separate slice for the first pass
-	// to prevent extra mutations
-	firstPass := make([]*Template, len(tplfiles))
-	for i, t := range tplfiles {
-		nt := *t
-		firstPass[i] = &nt
-	}
-
 	log.Debug("Creating values for template")
 	vals := NewValues(ctx, s.m)
 	log.Debug("Finished creating values")
-
-	tpls := make([]*Template, 0)
 
 	// Add the templates to their modules template to allow them to be able to access
 	// functions declared in the same module
@@ -121,14 +108,18 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	}
 
 	// Render the first pass, this is used to populate shared data
-	for _, t := range firstPass {
+	for _, t := range tplfiles {
 		log.Debugf("First pass render of template %s", t.ImportPath())
 		if err := t.Render(s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
+
+		// Remove the files, we're just using this to populate the shared data.
+		t.Files = nil
 	}
 	s.isFirstPass = false
 
+	tpls := make([]*Template, 0)
 	for _, t := range tplfiles {
 		log.Debugf("Second pass render of template %s", t.ImportPath())
 		if err := t.Render(s, vals); err != nil {
@@ -215,7 +206,7 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 			}
 
 			log.Debugf("Discovered template %q", path)
-			tpl, err := NewTemplate(m, path, inf.Mode(), inf.ModTime(), tplContents)
+			tpl, err := NewTemplate(m, path, inf.Mode(), inf.ModTime(), tplContents, log)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create template %q from module %q", path, m.Name)
 			}

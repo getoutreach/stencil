@@ -12,8 +12,9 @@ import (
 	"path"
 	"reflect"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/getoutreach/stencil/internal/dotnotation"
-	"github.com/imdario/mergo"
+	"github.com/sirupsen/logrus"
 )
 
 // TplStencil contains the global functions available to a template for
@@ -24,39 +25,58 @@ type TplStencil struct {
 
 	// t is the current template in the context of our render
 	t *Template
+
+	log logrus.FieldLogger
 }
 
 // GetModuleHook returns a module block in the scope of this
 // module
-func (s *TplStencil) GetModuleHook(name string) interface{} {
-	return s.s.sharedData[path.Join(s.t.Module.Name, name)]
+func (s *TplStencil) GetModuleHook(name string) []interface{} {
+	k := path.Join(s.t.Module.Name, name)
+	v := s.s.sharedData[k]
+
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		WithField("data", spew.Sdump(v)).Debug("getting module hook")
+	return v
 }
 
 // AddToModuleHook adds to a hook in another module
-func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (string, error) {
+func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) error {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
-		return "", nil
+		return nil
 	}
+
+	// key is <module>/<name>
+	k := path.Join(module, name)
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		WithField("data", spew.Sdump(data)).Debug("adding to module hook")
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {
-		return "", fmt.Errorf("third parameter, data, must be set")
+		return fmt.Errorf("third parameter, data, must be set")
 	}
 
 	// we only allow slices or maps to allow multiple templates to
 	// write to the same block
-	if v.Kind() != reflect.Slice && v.Kind() != reflect.Map {
-		return "", fmt.Errorf("unsupported module block data type %q, supported types are slice and map", v.Kind())
+	if v.Kind() != reflect.Slice {
+		return fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
 	}
 
-	k := path.Join(module, name)
-	if _, ok := s.s.sharedData[k]; !ok {
-		s.s.sharedData[k] = data
-		return "", nil
+	// convert the slice into a []interface{}
+	interfaceSlice := make([]interface{}, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
-	return "", mergo.Merge(s.s.sharedData[k], data, mergo.WithAppendSlice)
+	// if set, append, otherwise assign
+	if _, ok := s.s.sharedData[k]; ok {
+		s.s.sharedData[k] = append(s.s.sharedData[k], interfaceSlice...)
+	} else {
+		s.s.sharedData[k] = interfaceSlice
+	}
+
+	return nil
 }
 
 // Arg returns the value of an argument in the service's
@@ -144,8 +164,7 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string,
 	}
 
 	var buf bytes.Buffer
-	err := s.t.Module.GetTemplate().ExecuteTemplate(&buf, name, data)
-	if err != nil {
+	if err := s.t.Module.GetTemplate().ExecuteTemplate(&buf, name, data); err != nil {
 		return "", err
 	}
 

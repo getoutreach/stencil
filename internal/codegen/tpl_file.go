@@ -8,6 +8,8 @@ package codegen
 import (
 	"os"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // TplFile is the current file we're writing output to in a
@@ -21,6 +23,9 @@ type TplFile struct {
 
 	// t is the current template
 	t *Template
+
+	// log is the logger to use for debugging
+	log logrus.FieldLogger
 }
 
 // Block returns the contents of a given block
@@ -38,15 +43,14 @@ type TplFile struct {
 //   ###Block(name)
 //   {{ - /* Short hand syntax, but adds newline if no contents */}}
 //   {{ file.Block "name" }}
-//   ###ndBlock(name)
+//   ###EndBlock(name)
 func (f *TplFile) Block(name string) string {
 	return f.f.Block(name)
 }
 
 // SetPath changes the path of the current file
 func (f *TplFile) SetPath(path string) error {
-	f.f.SetPath(path)
-	return nil
+	return f.f.SetPath(path)
 }
 
 // SetContents sets the contents of the current file
@@ -76,6 +80,14 @@ func (f *TplFile) Static() error {
 	}
 
 	return nil
+}
+
+// Path returns the current path of the file we're
+// writing to.
+//
+//   {{ file.Path }}
+func (f *TplFile) Path() string {
+	return f.f.path
 }
 
 // Create creates a new file that is rendered by the current

@@ -12,7 +12,8 @@
       "envFile": "${workspaceRoot}/.vscode/private.env",
       "go.testEnvFile": "${workspaceRoot}/.vscode/private.env",
       "program": "${workspaceRoot}/cmd/stencil/",
-      "buildFlags": "-tags=or_dev"
+      "buildFlags": "-tags=or_dev",
+      "cwd": "../oats"
     },
     {
       "name": "Attach to dev container",

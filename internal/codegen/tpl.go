@@ -5,10 +5,14 @@
 
 package codegen
 
-import "text/template"
+import (
+	"text/template"
+
+	"github.com/sirupsen/logrus"
+)
 
 // NewFuncMap returns the standard func map for a template
-func NewFuncMap(st *Stencil, t *Template) template.FuncMap {
+func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncMap {
 	// We allow tplst & tplf to be nil in the case of
 	// .Parse() of a template, where they need to be present
 	// but aren't actually executed by the template
@@ -16,10 +20,10 @@ func NewFuncMap(st *Stencil, t *Template) template.FuncMap {
 	var tplst *TplStencil
 	var tplf *TplFile
 	if st != nil {
-		tplst = &TplStencil{st, t}
+		tplst = &TplStencil{st, t, log}
 	}
 	if t != nil {
-		tplf = &TplFile{t.Files[0], t}
+		tplf = &TplFile{t.Files[0], t, log}
 	}
 
 	// build the function map
