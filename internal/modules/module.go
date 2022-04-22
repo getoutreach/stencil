@@ -11,7 +11,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/getoutreach/gobox/pkg/github"
+	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"

@@ -1,6 +1,6 @@
 # Blocks
 
-Blocks are a unique aspect of Stencil, blocks enable you to store output between each run of stencil. 
+Blocks are a unique aspect of Stencil, blocks enable you to store output between each run of stencil.
 
 ## Basic Block
 
@@ -20,7 +20,6 @@ Service {{ .Config.Name }} does a cool thing!
 
 When stencil is ran the first time, it will output:
 
-
 ```md
 # my-service
 
@@ -33,14 +32,15 @@ Service my-service does a cool thing!
 Pretty basic templating, right. However, if a user adds input within the `<!--- Block(customDocumentation) --->` the next
 time stencil is ran, something magical happens:
 
-
 ```md
 # my-service
 
 Service my-service does a cool thing!
 
 <!--- Block(customDocumentation) --->
+
 My custom input
+
 <!--- EndBlock(customDocumentation) --->
 ```
 
@@ -68,7 +68,9 @@ This results in:
 Service my-service does a cool thing! It does even cooler things!
 
 <!--- Block(customDocumentation) --->
+
 My custom input
+
 <!--- EndBlock(customDocumentation) --->
 
 ## License
@@ -96,7 +98,9 @@ The first time this is ran it would output:
 
 ```md
 <!--- Block(customDocumentation) --->
+
 Fill out this section!
+
 <!--- EndBlock(customDocumentation) --->
 ```
 

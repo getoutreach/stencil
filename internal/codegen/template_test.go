@@ -23,6 +23,9 @@ var multiFileTemplate string
 //go:embed testdata/multi-file-input.tpl
 var multiFileInputTemplate string
 
+//go:embed testdata/apply-template-passthrough.tpl
+var applyTemplatePassthroughTemplate string
+
 func TestSingleFileRender(t *testing.T) {
 	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
@@ -86,4 +89,27 @@ func TestMultiFileWithInputRender(t *testing.T) {
 	for i, f := range tpl.Files {
 		assert.Equal(t, (sm.Arguments["commands"].([]string))[i], f.String(), "rendered template %d contents differred", i)
 	}
+}
+
+func TestApplyTemplateArgumentPassthrough(t *testing.T) {
+	fs := memfs.New()
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
+	f.Close()
+
+	m := modules.NewWithFS(context.Background(), "testing", fs)
+
+	tpl, err := NewTemplate(m, "apply-template-passthrough.tpl", 0o644, time.Now(), []byte(applyTemplatePassthroughTemplate))
+	assert.NilError(t, err, "failed to create template")
+
+	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
+		"commands": []string{"hello", "world", "command"},
+	}}
+
+	st := NewStencil(sm, []*modules.Module{m})
+	err = tpl.Render(st, NewValues(context.Background(), sm))
+	assert.NilError(t, err, "expected Render() to not fail")
+	assert.Equal(t, len(tpl.Files), 1, "expected Render() to create 1 files")
+
+	assert.Equal(t, "testing", tpl.Files[0].String(), "rendered template contents differred")
 }

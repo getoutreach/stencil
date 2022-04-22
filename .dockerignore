@@ -1,0 +1,12 @@
+.git/
+
+# Node modules
+
+node_modules/
+
+# Temorary files
+.devspace/
+bin/
+
+###Block(extras)
+###EndBlock(extras)

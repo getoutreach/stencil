@@ -1,7 +1,8 @@
-
 # stencil
+
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/getoutreach/stencil)
 [![Generated via Bootstrap](https://img.shields.io/badge/Outreach-Bootstrap-%235951ff)](https://github.com/getoutreach/bootstrap)
+[![Coverage Status](https://coveralls.io/repos/github/getoutreach/stencil/badge.svg?branch=main)](https://coveralls.io/github//getoutreach/stencil?branch=main)
 
 microservice lifecycle manager
 
@@ -12,4 +13,5 @@ Please read the [CONTRIBUTING.md](CONTRIBUTING.md) document for guidelines on de
 ## High-level Overview
 
 <!--- Block(overview) -->
+
 <!--- EndBlock(overview) -->

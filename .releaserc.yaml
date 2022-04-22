@@ -1,6 +1,5 @@
 preset: conventionalcommits
 branches:
-  - name: master
   - name: main
 plugins:
   - - "@semantic-release/commit-analyzer"

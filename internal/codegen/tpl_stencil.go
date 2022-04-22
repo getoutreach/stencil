@@ -138,6 +138,9 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string,
 	var data interface{}
 	if len(dataSli) == 1 {
 		data = dataSli[0]
+	} else {
+		// If no data was passed, pass through the values of the parent template
+		data = s.t.args
 	}
 
 	var buf bytes.Buffer
