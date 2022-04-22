@@ -42,7 +42,6 @@ func getFieldOnMap(data interface{}, key string) (interface{}, error) {
 
 		// quick hack to convert all types to string :(
 		strK := fmt.Sprintf("%v", k.Interface())
-		fmt.Printf("%q ===	%q\n", strK, key)
 		if strK == key {
 			return v.Interface(), nil
 		}
