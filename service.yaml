@@ -4,10 +4,10 @@ description: microservice lifecycle manager
 oss: true
 slack: dev-tooling-notifications
 library: true
-lintroller: platinum
 commands:
   - stencil
 circleAPIKey: ""
+lintroller: platinum
 releaseType: ""
 releaseOptions:
   allowPrereleases: false
@@ -15,24 +15,30 @@ releaseOptions:
 deployTo:
   environments: []
 versions:
-  # we use the latest text/template additions
-  go: 1.18
+  go: 1.18.1
 arguments:
   circleAPIKey: ""
+  commands:
+    - stencil
   dependencies:
     optional: []
     required: []
   description: microservice lifecycle manager
+  grpcClients: []
   opslevel:
     confluenceSpaceKey: DTSS
+    datadogDashboards:
+      mainLink: ""
     designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
   oss: true
+  releaseOptions:
+    allowMajorVersions: true
+    enablePrereleases: false
   reportingTeam: fnd-dtss
   type:
     - library
 modules:
-  - url: https://github.com/getoutreach/stencil-base
-    version: ""
+  - name: github.com/getoutreach/stencil-base
 opsLevel:
   serviceTier: 0
   lifecycle: ""

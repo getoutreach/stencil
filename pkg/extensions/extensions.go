@@ -15,7 +15,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/getoutreach/gobox/pkg/github"
+	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/updater"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/hashicorp/go-hclog"

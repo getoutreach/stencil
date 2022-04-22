@@ -18,7 +18,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/blang/semver/v4"
 	"github.com/charmbracelet/glamour"
-	"github.com/getoutreach/gobox/pkg/github"
+	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"

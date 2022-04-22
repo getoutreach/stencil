@@ -1,6 +1,6 @@
 # Creating a Template Repository
 
-A template repository is the heart of Stencil. Templates are housed here and, optionally, plugins to interact with stencil. 
+A template repository is the heart of Stencil. Templates are housed here and, optionally, plugins to interact with stencil.
 A template repository consists of a simple `manifest.yaml` ([documentation](https://pkg.go.dev/github.com/getoutreach/stencil@v1.1.1/pkg/configuration#TemplateRepositoryManifest))
 that defines the template repository.
 
@@ -13,7 +13,7 @@ arguments:
   my-argument:
     required: true
     type: string
-    description: Do a cool thing! 
+    description: Do a cool thing!
 ```
 
 The most important, and required, is `name`. This is essentially a git import path and represents what stencil refers
@@ -53,7 +53,7 @@ Now, in your service just add a block to your `service.yaml`:
 ```yaml
 # Add modules if it doesn't exist, if it does append this
 modules:
-- url: <your-git-url> 
+  - url: <your-git-url>
 ```
 
 **Note**: For information on the modules spec, see the [documentation](https://pkg.go.dev/github.com/getoutreach/stencil@v1.5.0/pkg/configuration#TemplateRepository)

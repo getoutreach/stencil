@@ -17,7 +17,7 @@ start using it by adding it to `modules`:
 
 ```yaml
 modules:
-- name: github.com/getoutreach/stencil-base
+  - name: github.com/getoutreach/stencil-base
 ```
 
 Next time you run stencil, you'll get the templates from that repository!
@@ -29,7 +29,7 @@ easily do that by adding the module to the `replacements` key in the `service.ya
 
 ```yaml
 modules:
-- name: github.com/getoutreach/stencil-base
+  - name: github.com/getoutreach/stencil-base
 replacements:
   github.com/getoutreach/stencil-base: ../my-local-copy/stencil-base
 ```

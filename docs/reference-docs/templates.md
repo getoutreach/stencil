@@ -1,6 +1,6 @@
 # Templates
 
-A template is a `<filename>.<extension>.tpl` in a stencil module. 
+A template is a `<filename>.<extension>.tpl` in a stencil module.
 
 ## Render Behavior
 
@@ -15,9 +15,8 @@ being rendered by stencil.
 
 A complete list of all functions available to a template can be found in pkg.go.dev:
 
- * [`file`](https://pkg.go.dev/github.com/getoutreach/stencil/internal/codegen#TplFile) 
- * [`stencil`](https://pkg.go.dev/github.com/getoutreach/stencil/internal/codegen#TplStencil)
-
+- [`file`](https://pkg.go.dev/github.com/getoutreach/stencil/internal/codegen#TplFile)
+- [`stencil`](https://pkg.go.dev/github.com/getoutreach/stencil/internal/codegen#TplStencil)
 
 ## Creating Multiple Files From a Single Template
 
