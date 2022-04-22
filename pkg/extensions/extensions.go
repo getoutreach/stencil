@@ -215,12 +215,12 @@ func (h *Host) buildFromLocal(_ context.Context, filePath, name string) (string,
 
 // downloadFromRemote downloads a release from github and extracts it to disk
 func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
-	token, err := github.GetToken()
+	ghc, err := github.NewClient()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get github token")
+		return "", err
 	}
 
-	gh := updater.NewGithubUpdater(ctx, token, org, repo)
+	gh := updater.NewGithubUpdaterWithClient(ctx, ghc, org, repo)
 	err = gh.Check(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to validate github client worked")
