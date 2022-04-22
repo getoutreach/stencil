@@ -59,12 +59,9 @@ func toYAML(v interface{}) (string, error) {
 
 // fromYAML converts a YAML document into a map[string]interface{}.
 //
-// This is not a general-purpose YAML parser, and will not parse all valid
-// YAML documents.
-//
 // Based on: https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L98
-func fromYAML(str string) (map[string]interface{}, error) {
-	m := map[string]interface{}{}
+func fromYAML(str string) (interface{}, error) {
+	var m interface{}
 
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
 		return nil, err
