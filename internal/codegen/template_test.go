@@ -32,7 +32,6 @@ func TestSingleFileRender(t *testing.T) {
 
 	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"), logrus.New())
 	assert.NilError(t, err, "failed to create basic template")
-	assert.Equal(t, len(tpl.Files), 1, "expected NewTemplate() to create first file")
 
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
