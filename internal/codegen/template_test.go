@@ -14,6 +14,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -29,9 +30,8 @@ var applyTemplatePassthroughTemplate string
 func TestSingleFileRender(t *testing.T) {
 	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
-	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"))
+	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"), logrus.New())
 	assert.NilError(t, err, "failed to create basic template")
-	assert.Equal(t, len(tpl.Files), 1, "expected NewTemplate() to create first file")
 
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
@@ -49,7 +49,8 @@ func TestMultiFileRender(t *testing.T) {
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
-	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644, time.Now(), []byte(multiFileTemplate))
+	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644,
+		time.Now(), []byte(multiFileTemplate), logrus.New())
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
@@ -74,7 +75,8 @@ func TestMultiFileWithInputRender(t *testing.T) {
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
-	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644, time.Now(), []byte(multiFileInputTemplate))
+	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644,
+		time.Now(), []byte(multiFileInputTemplate), logrus.New())
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
@@ -99,7 +101,8 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
-	tpl, err := NewTemplate(m, "apply-template-passthrough.tpl", 0o644, time.Now(), []byte(applyTemplatePassthroughTemplate))
+	tpl, err := NewTemplate(m, "apply-template-passthrough.tpl", 0o644,
+		time.Now(), []byte(applyTemplatePassthroughTemplate), logrus.New())
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{

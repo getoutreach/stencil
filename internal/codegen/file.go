@@ -77,9 +77,17 @@ func (f *File) AddDeprecationNotice(msg string) {
 	f.Warnings = append(f.Warnings, msg)
 }
 
-// SetPath updates the path of this file
-func (f *File) SetPath(path string) {
+// SetPath updates the path of this file. This causes
+// the blocks to be parsed again.
+func (f *File) SetPath(path string) error {
+	blocks, err := parseBlocks(path)
+	if err != nil {
+		return err
+	}
+	f.blocks = blocks
 	f.path = path
+
+	return nil
 }
 
 // SetMode updates the mode of the file
