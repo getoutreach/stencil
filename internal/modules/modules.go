@@ -77,8 +77,9 @@ func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest
 				continue
 			}
 
-			// GC the old module
-			modules[d.Name] = nil
+			// GC the old module, we're not going to use it, and it'll be
+			// replaced later.
+			delete(modules, d.Name)
 		}
 
 		// create a module struct for this module, this resolves the latest version if
