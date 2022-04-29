@@ -12,6 +12,7 @@ import (
 	"context"
 	"path"
 
+	"github.com/blang/semver/v4"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	giturls "github.com/whilp/git-urls"
@@ -54,9 +55,31 @@ func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest
 			d.Name = path.Join(u.Host, u.Path)
 		}
 
-		// If we already used this dependency once, don't fetch it again.
+		// If we already used this dependency once, only fetch it again if
+		// this is a newer version to enable modules to request a specific version.
+		//
+		// IDEA: In the future we should probably warn the user when this happens
+		// because it's probably non-deterministic.
 		if _, ok := modules[d.Name]; ok {
-			continue
+			newV, err := semver.ParseTolerant(d.Version)
+			if err != nil {
+				// Handle when we're using a local version
+				newV = semver.MustParse("0.0.0")
+			}
+			curV, err := semver.ParseTolerant(modules[d.Name].Version)
+			if err != nil {
+				curV = semver.MustParse("0.0.0")
+			}
+
+			// The new version is less than the one we already found, so
+			// we skip downloading the module here.
+			if newV.LTE(curV) {
+				continue
+			}
+
+			// GC the old module, we're not going to use it, and it'll be
+			// replaced later.
+			delete(modules, d.Name)
 		}
 
 		// create a module struct for this module, this resolves the latest version if

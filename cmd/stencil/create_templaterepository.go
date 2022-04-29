@@ -57,6 +57,11 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 				Modules: []*configuration.TemplateRepository{{
 					Name: "github.com/getoutreach/stencil-template-base",
 				}},
+				Arguments: map[string]interface{}{
+					"releaseOptions": map[string]interface{}{
+						"enablePrereleases": true,
+					},
+				},
 			}
 
 			if _, err := os.Stat(manifestFileName); err == nil {
@@ -82,7 +87,7 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
-			return errors.Wrap(cmd.Run(), "failed ot run stancil")
+			return errors.Wrap(cmd.Run(), "failed to run stancil")
 		},
 	}
 }
