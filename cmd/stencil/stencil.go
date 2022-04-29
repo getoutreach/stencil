@@ -8,8 +8,11 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	oapp "github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/gobox/pkg/box"
 	gcli "github.com/getoutreach/gobox/pkg/cli"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -58,6 +61,19 @@ func main() {
 			serviceManifest, err := configuration.NewDefaultServiceManifest()
 			if err != nil {
 				return errors.Wrap(err, "failed to parse service.yaml")
+			}
+
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return errors.Wrap(err, "failed to get user's home directory")
+			}
+
+			// If we have a box config, ensure it's up to date. In the future this may
+			// become a requirement to run stencil.
+			if _, err := os.Stat(filepath.Join(homeDir, box.BoxConfigPath, box.BoxConfigFile)); err == nil {
+				if _, err := box.EnsureBoxWithOptions(ctx, box.WithLogger(log)); err != nil {
+					return errors.Wrap(err, "failed to load box config")
+				}
 			}
 
 			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"), c.Bool("frozen-lockfile"))
