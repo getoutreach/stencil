@@ -17,7 +17,6 @@ require (
 	github.com/google/go-github/v43 v43.0.0
 	github.com/hashicorp/go-hclog v1.0.0
 	github.com/hashicorp/go-plugin v1.4.3
-	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.4.0
@@ -63,6 +62,7 @@ require (
 	github.com/honeycombio/beeline-go v1.4.1 // indirect
 	github.com/honeycombio/libhoney-go v1.15.8 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
