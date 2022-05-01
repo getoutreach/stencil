@@ -1,5 +1,11 @@
 .git/
 
+# Unnecessary files (for a docker image)
+.github/
+.vscode/
+deployments/
+monitoring/
+
 # Node modules
 
 node_modules/

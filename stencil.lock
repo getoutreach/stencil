@@ -1,5 +1,5 @@
-version: v1.11.1
-generated: 2022-04-29T02:41:28.419135Z
+version: v1.9.2
+generated: 2022-05-01T00:15:07.475976752Z
 modules:
 - name: github.com/getoutreach/stencil-base
   url: https://github.com/getoutreach/stencil-base
