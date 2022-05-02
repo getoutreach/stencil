@@ -1,0 +1,17 @@
+{{ $text := `
+Go modules are required for stencil.
+
+For more information about Go Modules, see:
+
+* https://github.com/golang/go/wiki/Modules
+* https://blog.golang.org/using-go-modules
+` }}
+
+<aside class="admonition note">
+	<div class="note-icon">
+		{{partial "svg/exclamation.svg" (dict "size" "20px" ) }}
+	</div>
+	<div class="admonition-content">
+        {{- $text | markdownify -}}
+    </div>
+</aside>
