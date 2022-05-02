@@ -6,13 +6,15 @@
 package codegen
 
 import (
+	"context"
 	"text/template"
 
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/sirupsen/logrus"
 )
 
 // NewFuncMap returns the standard func map for a template
-func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncMap {
+func NewFuncMap(ctx context.Context, st *Stencil, t *Template, log logrus.FieldLogger) (template.FuncMap, error) {
 	// We allow tplst & tplf to be nil in the case of
 	// .Parse() of a template, where they need to be present
 	// but aren't actually executed by the template
@@ -26,9 +28,15 @@ func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncM
 		tplf = &TplFile{t.Files[0], t, log}
 	}
 
+	extCaller, err := st.ext.GetExtensionCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	// build the function map
 	funcs := Default
 	funcs["stencil"] = func() *TplStencil { return tplst }
 	funcs["file"] = func() *TplFile { return tplf }
-	return funcs
+	funcs["extensions"] = func() *extensions.ExtensionCaller { return extCaller }
+	return funcs, nil
 }

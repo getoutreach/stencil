@@ -102,7 +102,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	// functions declared in the same module
 	for _, t := range tplfiles {
 		log.Debugf("Parsing template %s", t.ImportPath())
-		if err := t.Parse(s); err != nil {
+		if err := t.Parse(ctx, s); err != nil {
 			return nil, errors.Wrapf(err, "failed to parse template %q", t.ImportPath())
 		}
 	}
@@ -110,7 +110,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	// Render the first pass, this is used to populate shared data
 	for _, t := range tplfiles {
 		log.Debugf("First pass render of template %s", t.ImportPath())
-		if err := t.Render(s, vals); err != nil {
+		if err := t.Render(ctx, s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
 
@@ -122,7 +122,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	tpls := make([]*Template, 0)
 	for _, t := range tplfiles {
 		log.Debugf("Second pass render of template %s", t.ImportPath())
-		if err := t.Render(s, vals); err != nil {
+		if err := t.Render(ctx, s, vals); err != nil {
 			return nil, errors.Wrapf(err, "failed to render template %q", t.ImportPath())
 		}
 
