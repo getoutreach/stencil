@@ -1,0 +1,85 @@
+[[docs]]
+  name = "About Stencil"
+  weight = 1
+  identifier = "about"
+  url = "/about/"
+
+[[docs]]
+  name = "Getting Started"
+  weight = 5
+  identifier = "getting-started"
+  url = "/getting-started/"
+
+[[docs]]
+  name = "Stencil Modules"
+  weight = 15
+  identifier = "modules"
+  post = "break"
+  url = "/stencil-modules/"
+
+# Core Menus
+
+[[docs]]
+  name = "Structure"
+  weight = 20
+  identifier = "structure"
+  post = "expanded"
+  url = "/structure/"
+
+[[docs]]
+  name = "Templates"
+  weight = 25
+  identifier = "templates"
+
+  url = "/templates/"
+
+[[docs]]
+  name = "Functions"
+  weight = 30
+  identifier = "functions"
+  url = "/functions/"
+
+[[docs]]
+  name = "Variables"
+  weight = 35
+  identifier = "variables"
+  url = "/variables/"
+[[docs]]
+  name = "CLI"
+  weight = 40
+  post = "break"
+  identifier = "commands"
+  url = "/commands/"
+
+
+
+# LOW LEVEL ITEMS
+
+[[docs]]
+  name = "Contribute"
+  weight = 100
+  post = "break"
+  identifier = "contribute"
+  url = "/contribute/"
+
+######## QUICKLINKS
+
+[[quicklinks]]
+  name = "Fundamentals"
+  weight = 1
+  identifier = "fundamentals"
+  url = "/tags/fundamentals/"
+
+
+[[global]]
+  name = "Docs"
+  weight = 5
+  identifier = "docs"
+  url = "/documentation/"
+
+[[global]]
+  name = "GitHub"
+  weight = 200
+  identifier = "github"
+  post = "external"
+  url = "https://github.com/getoutreach/stencil"
