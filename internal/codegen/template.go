@@ -6,14 +6,12 @@ package codegen
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/getoutreach/stencil/internal/modules"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -71,16 +69,11 @@ func (t *Template) ImportPath() string {
 
 // Parse parses the provided template and makes it available to be Rendered
 // in the context of the current module.
-func (t *Template) Parse(ctx context.Context, st *Stencil) error {
-	fm, err := NewFuncMap(ctx, nil, nil, t.log)
-	if err != nil {
-		return errors.Wrap(err, "create template function map")
-	}
-
+func (t *Template) Parse(st *Stencil) error {
 	// Add the current template to the template object on the module that we're
 	// attached to. This enables us to call functions in other templates within our
 	// 'module context'.
-	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(fm).
+	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(NewFuncMap(nil, nil, t.log)).
 		Parse(string(t.Contents)); err != nil {
 		return err
 	}
@@ -92,7 +85,7 @@ func (t *Template) Parse(ctx context.Context, st *Stencil) error {
 
 // Render renders the provided template, the produced files
 // are rendered onto the Files field of the template struct.
-func (t *Template) Render(ctx context.Context, st *Stencil, vals *Values) error {
+func (t *Template) Render(st *Stencil, vals *Values) error {
 	if len(t.Files) == 0 {
 		f, err := NewFile(strings.TrimSuffix(t.Path, ".tpl"), t.mode, t.modTime)
 		if err != nil {
@@ -103,22 +96,17 @@ func (t *Template) Render(ctx context.Context, st *Stencil, vals *Values) error 
 
 	// Parse the template if we haven't already
 	if !t.parsed {
-		if err := t.Parse(ctx, st); err != nil {
+		if err := t.Parse(st); err != nil {
 			return err
 		}
 	}
 
 	t.args = vals
 
-	fm, err := NewFuncMap(ctx, st, t, t.log)
-	if err != nil {
-		return errors.Wrap(err, "create template function map")
-	}
-
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Funcs(fm).
+	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t, t.log)).
 		ExecuteTemplate(&buf, t.ImportPath(), vals); err != nil {
 		return err
 	}
