@@ -1,0 +1,8 @@
+/*
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: origin-when-cross-origin
+/*
+  Link: </stencil/dist/app.bundle.js>; rel=preload; as=script
+  Link: </stencil/dist/main.css>; rel=preload; as=style

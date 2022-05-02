@@ -1,0 +1,24 @@
+# Netlify redirects. See https://www.netlify.com/docs/redirects/
+
+/tutorials/how-to-contribute-to-stencil/	/stencil/contribute/
+/community/contributing/           	/stencil/contribute/
+/layout/functions/                 	/stencil/functions/
+/templates/functions               	/stencil/functions/
+/overview/introduction/            	/stencil/getting-started/
+/about-stencil/                    	/stencil/about/
+/docs/                             	/stencil/about/
+/themes/overview/                  	/stencil/stencil-modules/
+/themes/                           	/stencil/stencil-modules/
+/quickstart/                       	/stencil/getting-started/quick-start/
+/overview/quickstart/              	/stencil/getting-started/quick-start/
+/overview/introduction/            	/stencil/about/what-is-stencil/
+/contribute/docs/                  	/stencil/contribute/documentation/
+/themes/usage/                     	/stencil/stencil-modules/use-modules/
+/themes/installing/                	/stencil/stencil-modules/use-modules/
+/installing-and-using-themes/      	/stencil/stencil-modules/use-modules/
+/tutorials/installing-on-windows/  	/stencil/getting-started/installing/
+/tutorials/installing-on-mac/      	/stencil/getting-started/installing/
+/overview/installing/              	/stencil/getting-started/installing/
+/getting-started/install           	/stencil/getting-started/installing/
+/install/                          	/stencil/getting-started/installing/
+/meta/license                      	/stencil/about/license/

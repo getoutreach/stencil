@@ -1,0 +1,221 @@
+<!doctype html><html class=no-js lang=en-us>
+<head>
+<meta charset=utf-8>
+<link rel=preload href=https://getoutreach.github.io/stencil/fonts/muli-latin-200.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://getoutreach.github.io/stencil/fonts/muli-latin-400.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://getoutreach.github.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
+<meta http-equiv=x-ua-compatible content="IE=edge">
+<title>A smart templating engine for service development | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
+<meta name=generator content="Hugo 0.98.0">
+<meta name=robots content="noindex, nofollow">
+<link rel=alternate type=application/rss+xml href=https://getoutreach.github.io/stencil/index.xml>
+<link rel=stylesheet href=/stencil/output/css/app.min.b368142944d203fdc1d3dec8ab085c0c0e75aaf9171853110f03e91c1c2616f4.css integrity="sha256-s2gUKUTSA/3B097IqwhcDA51qvkXGFMRDwPpHBwmFvQ=" crossorigin=anonymous>
+<meta name=description content="A smart templating engine for service development">
+<script type=text/javascript src=/stencil/output/js/app.47298621c8d8e4796852f5f21c47ec3cac298fa99e86598a196418f69d85b374.js integrity="sha256-RymGIcjY5HloUvXyHEfsPKwpj6mehlmKGWQY9p2Fs3Q=" crossorigin=anonymous defer></script>
+<script async defer src=https://buttons.github.io/buttons.js></script>
+<link rel=apple-touch-icon sizes=180x180 href=/stencil/apple-touch-icon.png>
+<link rel=icon type=image/png href=/stencil/favicon-32x32.png sizes=32x32>
+<link rel=icon type=image/png href=/stencil/favicon-16x16.png sizes=16x16>
+<meta name=theme-color content="#ffffff">
+<meta property="og:title" content="A smart templating engine for service development">
+<meta property="og:description" content="A smart templating engine for service development">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://getoutreach.github.io/stencil/"><meta property="og:image" content="https://getoutreach.github.io/stencil/opengraph/gohugoio-card-base-1_huf001e7df4fd9c00c4355abac7d4ca455_242906_filter_6565969874201803309.png">
+<meta itemprop=name content="A smart templating engine for service development">
+<meta itemprop=description content="A smart templating engine for service development"><meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="https://getoutreach.github.io/stencil/opengraph/gohugoio-card-base-1_huf001e7df4fd9c00c4355abac7d4ca455_242906_filter_6565969874201803309.png">
+<meta name=twitter:title content="A smart templating engine for service development">
+<meta name=twitter:description content="A smart templating engine for service development">
+</head><body class="ma0 sans-serif bg-primary-color-light">
+<nav class="bg-primary-color-dark pv4 w-100" role=navigation>
+<div class="center flex-ns flex-wrap items-center justify-start mw9">
+<h1 class="dim f3 lh-solid ml0-ns mr0 mr4-l mv0 pl3 pl4-ns">
+<a href=https://getoutreach.github.io/stencil/ class="link white">
+STENCIL
+</a>
+</h1><ul class="list ma0 pa0 dn dib-l" role=menu>
+<li class="f5 dib mr4" role=menuitem>
+<a href=/stencil/documentation/ class="dim link light-silver">
+Docs
+</a>
+</li><li class="f5 dib mr4" role=menuitem>
+<a href=https://github.com/getoutreach/stencil class="dim link light-silver">
+GitHub
+<span class=pl1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="10" height="10" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</span>
+</a>
+</li></ul><div class="db dib-ns pl3"><form id=site-search-form role=search>
+<fieldset class="bn ma0 pa0">
+<label class=clip for=search-input>Search</label>
+<input type=search id=search-input class="needs-js bg-left bn f5 input-reset lh-solid mt3 mt0-ns pl4 pv2 w5 white" placeholder="Search the Docs" name=search-input style="background:url(images/icon-search.png)5px 11px/16px 16px no-repeat;background-color:rgba(255,255,255,0)">
+</fieldset></form></div><span class="absolute mt1 mt2-l pr3 right-0 top-0">
+<a class="github-button needs-js link primary-color-dark" href=https://github.com/gohugoio/hugo data-size=large data-show-count=false aria-label="Star gohugoio/hugo on GitHub">Star</a>
+</span>
+</div></nav><header class="bg-primary-color-dark ph4 tc" role=banner>
+<section class="center pb4 pb5-l ph4-l pt3 pt5-ns w-90 w-60-l">
+<div class="center w-100 w-50-ns">
+<img src=img/stencilSM.png alt="Hugo Logo">
+</div><h2 class="f3 f1-l fw4 white-90 m0 lh-title pt2 pb3 pv0-ns">
+A smart templating engine for service development
+</h2><div class="lh-copy f4 w-90-ns center fw2 silver tc tc-ns">
+<p>Stencil is a templating engine for generating microservices, libraries, and everything in-between. It replaces
+traditional bootstrapping tools by managing the entire lifecycle of a repository.</p></div><div class="w4 mv4 center">
+<a class="f5 db link grow tc v-mid bg-blue white ba b--blue ph3 pv2 br1" href=/getting-started/quick-start/>Quick Start</a>
+</div></section></header><section class="relative w-100 bg-black white">
+<div class="flex flex-wrap w-90-l center center mw9">
+</div></section><main role=main class="content-with-sidebar min-vh-100 pb7 pb0-ns">
+<section class="w-100 ph4 ph5-ns pv4"><div class="w-90-l center">
+<div class="flex-ns flex-wrap justify-center center mw9">
+<div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-fast.svg alt="icon depicting Blistering Speed" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Blistering Speed
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">What's modern about waiting for your site to build?</p><div class=lh-copy>
+Hugo is the fastest tool of its kind. At &lt;1 ms per page, the average site builds in less than a second.
+</div></div></div></div></div><div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-content-management.svg alt="icon depicting Robust Content Management" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Robust Content Management
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">Flexibility rules. Hugo is a content strategist's dream.</p><div class=lh-copy>
+Hugo supports unlimited content types, taxonomies, menus, dynamic API-driven content, and more, all without plugins.
+</div></div></div></div></div><div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-shortcodes.svg alt="icon depicting Shortcodes" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Shortcodes
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">Hugo's shortcodes are Markdown's hidden superpower.</p><div class=lh-copy>
+We love the beautiful simplicity of markdown’s syntax, but there are times when we want more flexibility. Hugo shortcodes allow for both beauty and flexibility.
+</div></div></div></div></div><div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-built-in-templates.svg alt="icon depicting Built-in Templates" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Built-in Templates
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">Hugo has common patterns to get your work done quickly.</p><div class=lh-copy>
+Hugo ships with pre-made templates to make quick work of SEO, commenting, analytics and other functions. One line of code, and you're done.
+</div></div></div></div></div><div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-multilingual2.svg alt="icon depicting Multilingual and i18n" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Multilingual and i18n
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">Polyglot baked in.</p><div class=lh-copy>
+Hugo provides full i18n support for multi-language sites with the same straightforward development experience Hugo users love in single-language sites.
+</div></div></div></div></div><div class="w-100 w-50-ns ph5-l pv5-l nested-copy-line-height">
+<div class="flex-l flex-wrap justify-between">
+<div class="flex-auto w-100 w-20-ns pt1">
+<img src=images/icon-custom-outputs.svg alt="icon depicting Custom Outputs" class="h3 o-80 v-mid center w-100">
+</div><div class="flex-auto tc tl-ns w-100 w-80-ns">
+<h3 class="lh-title gray o-80 f4 f5-ns mb2 fw8 bmt1 mt0-l">
+Custom Outputs
+</h3><div class="db v-mid w-100 gray measure-wide mb5 mb0-l">
+<p class="f3 primary-color mt0 mb2">HTML not enough?</p><div class=lh-copy>
+Hugo allows you to output your content in multiple formats, including JSON or AMP, and makes it easy to create your own.
+</div></div></div></div></div></div></div></section><section class="w-100 ph4 ph5-ns pv4 pv6-ns mid-gray bg-white bb bt b--light-gray"> <div class="flex-ns flex-wrap center mw9">
+<div class="w-100 w-50-ns">
+<div class="w-80 center tc nested-copy-line-height">
+<h3 class="f2 black">Install in seconds, build in milliseconds.</h3><p class=f3>Stencil works on macOS, Windows and Linux.</p></div></div><div class="w-100 w-50-ns tc">
+<p class="f6 mid-gray m0 p0 pt3">macOS</p><div class="code f6 bg-black light-green lh-copy pv3 ph3 br2 w-100 w-50-ns center mb2 tl">
+$ brew install stencil <br>
+</div><p class="f5 nested-links"><a href=https://getoutreach.github.io/stencil/getting-started/installing/ class=link>See the Getting Started Guide for other methods.<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="14" height="14" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</a></p></div></div></section><section class="w-100 ph4 ph5-ns pt4 pb5 mid-gray bg-primary-color-light bb bt b--light-gray"><div class="w-100 center pt5">
+<div class="w-100 w-40-l tc center">
+<img src=images/GitHub-Mark-64px.png alt="Github Logo" class="tc center">
+</div></div><div class="flex-ns flex-wrap center pb4 center mw9">
+<div class="w-100 tc w-third-l">
+<h3 class="f3 mv3 accent-color-light">We welcome all contributions</h3><ul class="list ma0 pa0">
+<li class="mb3 f4">
+<a href=https://github.com/getoutreach/stencil/blob/main/CONTRIBUTING.md class="link mid-gray dim">
+Fork the repo and work on an issue<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="14" height="14" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</a>
+</li></ul></div><div class="w-100 w-third-l tc">
+<div class="w-60-l center">
+<p class=f4>Stencil is open-source and completely free.</p></div></div><div class="w-100 tc w-third-l">
+<h3 class="f3 mv3 accent-color-light">More ways to contribute</h3><ul class="list ma0 pa0">
+<li class="mb3 f4">
+<a href=contribute/documentation class="link mid-gray dim">
+Help improve the docs<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="14" height="14" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</a>
+</li><li class="mb3 f4">
+<a href=https://github.com/getoutreach/stencil/discussions class="link mid-gray dim">
+Help others in the dicussions<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="14" height="14" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</a>
+</li></ul></div></div></section></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
+<div class="center flex-ns flex-wrap justify-between mw9 w-90">
+<div class="pb3 pt4 w-100 w-50-ns">
+<div class="b f3 light-gray mb3 nested-links tc">
+By the <a href=https://github.com/getoutreach/stencil/graphs/contributors class=link>Stencil Authors</a><br>
+</div><div class="center w4">
+<img src=img/stencil-logo.png alt="Hugo Logo">
+</div><ul class="center f6 list ma0 mv3 pa0 tc"><li class="dib mr3"><a href=https://github.com/getoutreach/strencil/issues/new class="dim link light-gray pv2">File an Issue</a></li><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/discussions class="dim link light-gray pv2">Get Help</a></li></ul></div></div><img src=images/gopher-side_color.svg alt class="absolute-l bottom-0 dn db-l h4 right-0 z-999">
+<div class="bg-primary-color-dark bottom-0 left-0 right-0 dn-l fixed pb3 ph3 pt3 w-100"><div class="globalmenu mobilemenu pb1 dn">
+<ul class="list hidden dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/documentation/ class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+Docs
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=https://github.com/getoutreach/stencil class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+GitHub
+</a>
+</li></ul></div><div class="docsmenu mobilemenu pb1 dn">
+<ul class="list dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/about/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+About Stencil
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/getting-started/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Getting Started
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/stencil-modules/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Stencil Modules
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/structure/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Structure
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/templates/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Templates
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/functions/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Functions
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/variables/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Variables
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/commands/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+CLI
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/contribute/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Contribute
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/maintenance/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Maintenance
+</a>
+</li></ul></div><div class="flex dn-l justify-between">
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link mr2 white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.globalmenu>Menu</button>
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.docsmenu>Docs Menu</button>
+</div></div></footer></body></html>
