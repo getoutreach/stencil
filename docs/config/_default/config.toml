@@ -15,24 +15,12 @@ pluralizeListTitles = false
 disableAliases = true
 
 [outputs]
-home = [ "HTML", "RSS", "REDIR", "HEADERS" ]
+home = [ "HTML", "RSS", "REDIR", "HEADERS"]
 section = [ "HTML", "RSS"]
 
 [mediaTypes]
 [mediaTypes."text/netlify"]
 delimiter = ""
-
-[outputFormats]
-[outputFormats.REDIR]
-mediatype = "text/netlify"
-baseName = "_redirects"
-isPlainText = true
-notAlternative = true
-[outputFormats.HEADERS]
-mediatype = "text/netlify"
-baseName = "_headers"
-isPlainText = true
-notAlternative = true
 
 [caches]
 [caches.getjson]

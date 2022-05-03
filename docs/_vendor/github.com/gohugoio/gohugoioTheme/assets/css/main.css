@@ -1,12 +1,13 @@
 /*Base Styles*/
 @import '_tachyons';
 
+@import '@docsearch/css';
+
 /* purgecss start ignore */
 @import '_header-link';
 @import '_animation';
 @import '_documentation-styles';
 
-@import 'docsearch.js/dist/cdn/docsearch.min';
 @import '_carousel';
 @import '_code';
 @import '_tabs';

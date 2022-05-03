@@ -10,7 +10,7 @@
       {{ if .HasChildren }}
         <a href="#{{ .Name | urlize }}" class="ttu {{ $.Scratch.Get "listlinkClasses" }}{{if $currentPage.IsMenuCurrent   "main" . }} o-50{{end}}">
           {{ .Name }}
-          <!-- <img src="images/ic_keyboard_arrow_down_white_24px.svg" alt="" class="static v-mid f6 ma0 pa0"> -->
+          <!-- <img src="/stencil/images/ic_keyboard_arrow_down_white_24px.svg" alt="" class="static v-mid f6 ma0 pa0"> -->
         </a>
         <ul id="{{ .Name | urlize}}" class="list pa0 ma0">
           <li class="ma0 pl3 brand-font">

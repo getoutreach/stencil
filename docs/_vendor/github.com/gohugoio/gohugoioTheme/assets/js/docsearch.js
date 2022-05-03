@@ -1,7 +1,10 @@
-var docsearch = require('docsearch.js/dist/cdn/docsearch.js');
+import docsearch from '@docsearch/js';
+
+import '@docsearch/css';
+
 docsearch({
-  apiKey: 'e1beac4e9f4d826f6fea5ee10363348c',
+  container: '#search-input',
+  appId: '0DI22WVNDU',
   indexName: 'stencil',
-  inputSelector: '#search-input',
-  debug: true // Set debug to true if you want to inspect the dropdown
+  apiKey: 'e1beac4e9f4d826f6fea5ee10363348c',
 });
