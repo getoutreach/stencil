@@ -525,7 +525,7 @@ dd {
 
 /* Logo for FreeBSD until Font Awesome adds it, see https://github.com/FortAwesome/Font-Awesome/issues/1116 */
 i.freebsd-19px:before {
-  content: url(/img/freebsd-19px.svg);
+  content: url(/stencil/img/freebsd-19px.svg);
   vertical-align: -7%;
 }
 
