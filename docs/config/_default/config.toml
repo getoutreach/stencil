@@ -18,10 +18,6 @@ disableAliases = true
 home = [ "HTML", "RSS", "REDIR", "HEADERS"]
 section = [ "HTML", "RSS"]
 
-[mediaTypes]
-[mediaTypes."text/netlify"]
-delimiter = ""
-
 [caches]
 [caches.getjson]
 dir = ":cacheDir/:project"
@@ -38,7 +34,6 @@ maxAge = -1
 
 
 [related]
-
 threshold = 80
 includeNewer = true
 toLower = false
