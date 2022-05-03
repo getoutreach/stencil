@@ -23,7 +23,13 @@ import (
 
 // NewStencil creates a new, fully initialized Stencil renderer function
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
-	return &Stencil{m, extensions.NewHost(), mods, true, make(map[string][]interface{})}
+	return &Stencil{
+		m:           m,
+		ext:         extensions.NewHost(),
+		modules:     mods,
+		isFirstPass: true,
+		sharedData:  make(map[string][]interface{}),
+	}
 }
 
 // Stencil provides the basic functions for
@@ -31,7 +37,8 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stenc
 type Stencil struct {
 	m *configuration.ServiceManifest
 
-	ext *extensions.Host
+	ext       *extensions.Host
+	extCaller *extensions.ExtensionCaller
 
 	// modules is a list of modules used in this stencil render
 	modules []*modules.Module
@@ -91,6 +98,10 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
 	tplfiles, err := s.getTemplates(ctx, log)
 	if err != nil {
+		return nil, err
+	}
+
+	if s.extCaller, err = s.ext.GetExtensionCaller(ctx); err != nil {
 		return nil, err
 	}
 

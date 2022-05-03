@@ -8,6 +8,7 @@ package codegen
 import (
 	"text/template"
 
+	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,5 +31,6 @@ func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncM
 	funcs := Default
 	funcs["stencil"] = func() *TplStencil { return tplst }
 	funcs["file"] = func() *TplFile { return tplf }
+	funcs["extensions"] = func() *extensions.ExtensionCaller { return st.extCaller }
 	return funcs
 }
