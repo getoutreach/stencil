@@ -3,11 +3,11 @@ description = "A smart templating engine for service development"
 ## Setting this to true will add a "noindex" to *EVERY* page on the site..
 removefromexternalsearch = false
 ## Gh repo for site footer (include trailing slash)
-ghrepo = "https://github.com/getoutreach/strencil/"
+ghrepo = "https://github.com/getoutreach/stencil/"
 ## GH Repo for filing a new issue
-github_repo = "https://github.com/getoutreach/strencil/issues/new"
+github_repo = "https://github.com/getoutreach/stencil/issues/new"
 ### Edit content repo (set to automatically enter "edit" mode; this is good for "improve this page" links)
-ghdocsrepo = "https://github.com/getoutreach/strencil-docs/"
+ghdocsrepo = "https://github.com/getoutreach/stencil-docs/"
 ## Gitter URL
 gitter = ""
 ## Discuss Forum URL
