@@ -30,7 +30,7 @@ func TestBasicE2ERender(t *testing.T) {
 		Arguments: map[string]interface{}{},
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
-	})
+	}, logrus.New())
 
 	tpls, err := st.Render(ctx, logrus.New())
 	assert.NilError(t, err, "expected Render() to not fail")
@@ -81,7 +81,7 @@ func TestModuleHookRender(t *testing.T) {
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing1", m1fs),
 		modules.NewWithFS(ctx, "testing2", m2fs),
-	})
+	}, logrus.New())
 
 	tpls, err := st.Render(ctx, logrus.New())
 	assert.NilError(t, err, "expected Render() to not fail")
@@ -107,7 +107,7 @@ func ExampleStencil_PostRun() {
 		Arguments: map[string]interface{}{},
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
-	})
+	}, logrus.New())
 	err := st.PostRun(ctx, nullLog)
 	if err != nil {
 		fmt.Println(err)

@@ -103,7 +103,7 @@ func (t *Template) Run(save bool) {
 
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
 			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
-		st := codegen.NewStencil(mf, []*modules.Module{m})
+		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
 
 		tpls, err := st.Render(context.Background(), logrus.New())
 		if err != nil {

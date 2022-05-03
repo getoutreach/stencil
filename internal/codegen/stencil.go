@@ -22,10 +22,11 @@ import (
 )
 
 // NewStencil creates a new, fully initialized Stencil renderer function
-func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stencil {
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
 	return &Stencil{
+		log:         log,
 		m:           m,
-		ext:         extensions.NewHost(),
+		ext:         extensions.NewHost(log),
 		modules:     mods,
 		isFirstPass: true,
 		sharedData:  make(map[string][]interface{}),
@@ -35,7 +36,8 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module) *Stenc
 // Stencil provides the basic functions for
 // stencil templates
 type Stencil struct {
-	m *configuration.ServiceManifest
+	log logrus.FieldLogger
+	m   *configuration.ServiceManifest
 
 	ext       *extensions.Host
 	extCaller *extensions.ExtensionCaller

@@ -111,8 +111,10 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 		switch mf.Arguments[pth].Type {
 		case "list":
 			v = []interface{}{}
-		case "boolean":
+		case "boolean", "bool":
 			v = false
+		case "integer", "int":
+			v = 0
 		case "string":
 			v = ""
 		default:
