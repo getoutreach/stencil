@@ -133,6 +133,38 @@ dict
 eq
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/file.block/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Block
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.create/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Create
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.delete/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Delete
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.path/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Path
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setcontents/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetContents
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setpath/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetPath
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.skip/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Skip
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.static/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Static
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/ge/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 ge
 </a>
@@ -159,6 +191,26 @@ ne
 </li><li class="f6 fw4">
 <a href=/stencil/functions/now/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 now
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.addtomodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.AddToModuleHook
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.applytemplate/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ApplyTemplate
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.arg/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Arg
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.args/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Args
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetModuleHook
 </a>
 </li><li class="f6 fw4">
 <a href=/stencil/functions/with/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
@@ -240,6 +292,78 @@ Read More &#187;
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
 <div class="bg-white mb2 pa3 pa4-l gray">
 <h1 class="near-black f3">
+<a href=/stencil/functions/file.block/ class="link primary-color dim">file.Block</a>
+</h1><div class="lh-copy links">
+Block returns the contents of a given block ###Block(name) Hello, world! ###EndBlock(name)
+<a href=/stencil/functions/file.block/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.create/ class="link primary-color dim">file.Create</a>
+</h1><div class="lh-copy links">
+Create creates a new file that is rendered by the current template. If the template has a single file with no contents this file replaces it.
+<a href=/stencil/functions/file.create/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.delete/ class="link primary-color dim">file.Delete</a>
+</h1><div class="lh-copy links">
+Delete deletes the current file
+<a href=/stencil/functions/file.delete/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.path/ class="link primary-color dim">file.Path</a>
+</h1><div class="lh-copy links">
+Path returns the current path of the file we&rsquo;re writing to.
+<a href=/stencil/functions/file.path/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.setcontents/ class="link primary-color dim">file.SetContents</a>
+</h1><div class="lh-copy links">
+SetContents sets the contents of the current file to the provided string.
+<a href=/stencil/functions/file.setcontents/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.setpath/ class="link primary-color dim">file.SetPath</a>
+</h1><div class="lh-copy links">
+SetPath changes the path of the current file
+<a href=/stencil/functions/file.setpath/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.skip/ class="link primary-color dim">file.Skip</a>
+</h1><div class="lh-copy links">
+Skip skips the current file
+<a href=/stencil/functions/file.skip/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/file.static/ class="link primary-color dim">file.Static</a>
+</h1><div class="lh-copy links">
+Static marks the current file as static
+<a href=/stencil/functions/file.static/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
 <a href=/stencil/functions/ge/ class="link primary-color dim">ge</a>
 </h1><div class="lh-copy links">
 Returns the boolean truth of arg1 >= arg2.
@@ -303,6 +427,51 @@ Read More &#187;
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
 <div class="bg-white mb2 pa3 pa4-l gray">
 <h1 class="near-black f3">
+<a href=/stencil/functions/stencil.addtomodulehook/ class="link primary-color dim">stencil.AddToModuleHook</a>
+</h1><div class="lh-copy links">
+AddToModuleHook adds to a hook in another module
+<a href=/stencil/functions/stencil.addtomodulehook/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.applytemplate/ class="link primary-color dim">stencil.ApplyTemplate</a>
+</h1><div class="lh-copy links">
+ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+<a href=/stencil/functions/stencil.applytemplate/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.arg/ class="link primary-color dim">stencil.Arg</a>
+</h1><div class="lh-copy links">
+Arg returns the value of an argument in the service&rsquo;s manifest.
+<a href=/stencil/functions/stencil.arg/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.args/ class="link primary-color dim">stencil.Args</a>
+</h1><div class="lh-copy links">
+Args returns all arguments passed to stencil from the service&rsquo;s manifest. Note: This doesn&rsquo;t set default values and is instead representative of <em>all</em> data passed in its raw form.
+<a href=/stencil/functions/stencil.args/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.getmodulehook/ class="link primary-color dim">stencil.GetModuleHook</a>
+</h1><div class="lh-copy links">
+GetModuleHook returns a module block in the scope of this module
+<a href=/stencil/functions/stencil.getmodulehook/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
 <a href=/stencil/functions/with/ class="link primary-color dim">with</a>
 </h1><div class="lh-copy links">
 Rebinds the context (<code>.</code>) within its scope and skips the block if the variable is absent or empty.
@@ -311,12 +480,12 @@ Read More &#187;
 </a>
 </div></div></div></section></div></div></div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
-<div class="pb3 pt4 w-100 w-50-ns">
+<div class="pb3 pt4 w-100">
 <div class="b f3 light-gray mb3 nested-links tc">
 By the <a href=https://github.com/getoutreach/stencil/graphs/contributors class=link>Stencil Authors</a><br>
 </div><div class="center w4">
 <img src=/stencil/img/stencil-logo.png alt="Hugo Logo">
-</div><ul class="center f6 list ma0 mv3 pa0 tc"><li class="dib mr3"><a href=https://github.com/getoutreach/strencil/issues/new class="dim link light-gray pv2">File an Issue</a></li><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/discussions class="dim link light-gray pv2">Get Help</a></li></ul></div></div><img src=/stencil/images/gopher-side_color.svg alt class="absolute-l bottom-0 dn db-l h4 right-0 z-999">
+</div><ul class="center f6 list ma0 mv3 pa0 tc"><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/issues/new class="dim link light-gray pv2">File an Issue</a></li><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/discussions class="dim link light-gray pv2">Get Help</a></li></ul></div></div><img src=/stencil/images/gopher-side_color.svg alt class="absolute-l bottom-0 dn db-l h4 right-0 z-999">
 <div class="bg-primary-color-dark bottom-0 left-0 right-0 dn-l fixed pb3 ph3 pt3 w-100"><div class="globalmenu mobilemenu pb1 dn">
 <ul class="list hidden dib ph0 scrolling-touch tc">
 <li class="tl dib ma0 hover-bg-black w-100">
