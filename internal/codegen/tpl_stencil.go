@@ -109,6 +109,8 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	v, err := dotnotation.Get(mapInf, pth)
 	if err != nil {
 		switch mf.Arguments[pth].Type {
+		case "map":
+			return make(map[interface{}]interface{}), nil
 		case "list":
 			v = []interface{}{}
 		case "boolean", "bool":
