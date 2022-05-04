@@ -8,7 +8,7 @@ menu:
   main:
     parent: "section name"
     weight: 01
-weight: 01	#rem
+weight: 01 #rem
 layout: documentation-home
 ---
 

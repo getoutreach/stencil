@@ -25,4 +25,3 @@ Block returns the contents of a given block \#\#\#Block\(name\) Hello\, world\! 
 {{ file.Block "name" }}
 ###EndBlock(name)
 ```
-

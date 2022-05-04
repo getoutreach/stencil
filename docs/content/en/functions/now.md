@@ -1,13 +1,13 @@
 ---
 title: now
 linktitle: now
-description: Returns the current local time 
+description: Returns the current local time
 date: 2022-05-02
 categories: [functions]
 menu:
   docs:
     parent: "functions"
-keywords: [dates,time]
+keywords: [dates, time]
 signature: ["now"]
 ---
 

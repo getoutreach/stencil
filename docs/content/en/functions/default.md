@@ -15,12 +15,12 @@ draft: false
 aliases: []
 ---
 
-`default` checks whether a given value is set and returns a default value if it is not. *Set* in this context means different things depending on the data type:
+`default` checks whether a given value is set and returns a default value if it is not. _Set_ in this context means different things depending on the data type:
 
-* non-zero for numeric types and times
-* non-zero length for strings, arrays, slices, and maps
-* any boolean or struct value
-* non-nil for any other types
+- non-zero for numeric types and times
+- non-zero length for strings, arrays, slices, and maps
+- any boolean or struct value
+- non-nil for any other types
 
 `default` can be written in more than one way:
 
@@ -43,6 +43,7 @@ The following have equivalent return values but are far less terse. This demonst
 Using `if`:
 
 {{< code file="if-instead-of-default.html" nocopy="true" >}}
+
 <title>{{if stencil.Arg "oldArg" }}{{stencil.Arg "oldArg}}{{else}}{{stencil.Arg "newArg}}{{end}}</title>
 => Sane Defaults
 {{< /code >}}

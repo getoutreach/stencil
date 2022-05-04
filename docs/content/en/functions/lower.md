@@ -7,7 +7,7 @@ categories: [functions]
 menu:
   docs:
     parent: "functions"
-keywords: [strings,casing]
+keywords: [strings, casing]
 signature: ["lower INPUT"]
 ---
 

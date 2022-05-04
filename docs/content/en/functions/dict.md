@@ -22,7 +22,6 @@ Note that the `key` should be a string.
 {{ $m := dict "k "value" }}
 ```
 
-
 ### Multiple Keys
 
 ```go-text-template
