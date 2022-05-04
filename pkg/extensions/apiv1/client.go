@@ -24,7 +24,7 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
-			Level:  hclog.Info,
+			Level:  hclog.Trace,
 			Output: os.Stderr,
 		}),
 		HandshakeConfig: plugin.HandshakeConfig{

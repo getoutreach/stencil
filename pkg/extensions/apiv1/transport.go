@@ -8,6 +8,7 @@ package apiv1
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/pkg/errors"
 )
@@ -62,6 +63,8 @@ func (t *implementationToImplementationTransport) ExecuteTemplateFunction(exec *
 		return nil, errors.Wrap(err, "failed to encode response")
 	}
 
+	fmt.Println(b.String())
+
 	return b.Bytes(), nil
 }
 
@@ -70,7 +73,7 @@ func newImplementationTransportToImplementation(impl implementationTransport) *i
 	return &implementationTransportToImplementation{impl}
 }
 
-// implementationTransportToImplementation turns a transportImplementation into
+// implementationTransportToImplementation turns a implementationTransport into
 // a Implementation.
 type implementationTransportToImplementation struct {
 	impl implementationTransport

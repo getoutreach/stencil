@@ -27,7 +27,7 @@ func NewHandshake() plugin.HandshakeConfig {
 // and starts serving it.
 func NewExtensionImplementation(impl Implementation, log logrus.FieldLogger) error {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Info,
+		Level:      hclog.Trace,
 		Output:     os.Stderr,
 		JSONFormat: false,
 	})
