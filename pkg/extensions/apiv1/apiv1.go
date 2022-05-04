@@ -10,7 +10,7 @@ package apiv1
 import "encoding/gob"
 
 // init registers known types
-func init() { //nolint:gochecknoinits
+func init() { //nolint:gochecknoinits // Why: see comment
 	gob.Register([]interface{}{})
 }
 

@@ -32,9 +32,9 @@ func newImplementationToImplementationTransport(impl Implementation) *implementa
 	return &implementationToImplementationTransport{impl}
 }
 
-// transport wraps a Implementation and implements the underlyingImplementation
-// plugin interface automatically serializing the response values (as needed)
-// into json.
+// implementationToImplementationTransport wraps a Implementation and
+// implements the underlyingImplementation plugin interface automatically
+// serializing the response values (as needed) into json.
 type implementationToImplementationTransport struct {
 	impl Implementation
 }

@@ -18,10 +18,10 @@ type ExtensionPlugin struct {
 
 // Server serves a implementationTransport over net/rpc
 func (p *ExtensionPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &underlyingPluginServer{p.impl}, nil
+	return &rpcTransportServer{p.impl}, nil
 }
 
 // Client serves a Implementation over net/rpc
 func (*ExtensionPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &underlyingPluginClient{client: c}, nil
+	return &rpcTransportClient{client: c}, nil
 }
