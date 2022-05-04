@@ -7,10 +7,9 @@ categories: [functions]
 menu:
   docs:
     parent: "functions"
-keywords: [operators,logic]
+keywords: [operators, logic]
 signature: ["ne ARG1 ARG2"]
 ---
-
 
 ```
 {{ if ne .Section "blog" }}current{{ end }}

@@ -12,4 +12,4 @@ signature: ["with INPUT"]
 
 An alternative way of writing an `if` statement and then referencing the same value is to use `with` instead. `with` rebinds the context (`.`) within its scope and skips the block if the variable is absent, unset or empty.
 
-The set of *empty* values is defined by [the Go templates package](https://golang.org/pkg/text/template/). Empty values include `false`, the number zero, and the empty string.
+The set of _empty_ values is defined by [the Go templates package](https://golang.org/pkg/text/template/). Empty values include `false`, the number zero, and the empty string.

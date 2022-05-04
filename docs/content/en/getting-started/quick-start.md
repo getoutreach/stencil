@@ -5,7 +5,7 @@ description: Download stencil and use a template repository
 date: 2022-05-02
 publishdate: 2022-05-02
 categories: [getting started]
-keywords: [quick start,usage]
+keywords: [quick start, usage]
 authors: [jaredallard]
 menu:
   docs:
@@ -14,7 +14,7 @@ menu:
 weight: 10
 sections_weight: 10
 draft: false
-aliases: [/quickstart/,/overview/quickstart/]
+aliases: [/quickstart/, /overview/quickstart/]
 toc: true
 ---
 

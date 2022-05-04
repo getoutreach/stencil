@@ -1,6 +1,6 @@
 ---
 title: Module Manifest
-linktitle:  Module Manifest
+linktitle: Module Manifest
 description: This page describes the configuration options for a module.
 date: 2022-05-02
 categories: [stencil modules]

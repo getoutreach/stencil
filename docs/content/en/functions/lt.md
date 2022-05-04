@@ -7,10 +7,9 @@ categories: [functions]
 menu:
   docs:
     parent: "functions"
-keywords: [operators,logic]
+keywords: [operators, logic]
 signature: ["lt ARG1 ARG2"]
 ---
-
 
 ```
 {{ if lt 5 10 }}true{{ end }}

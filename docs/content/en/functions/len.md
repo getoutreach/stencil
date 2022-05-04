@@ -9,7 +9,7 @@ menu:
     parent: "functions"
 keywords: []
 signature: ["len INPUT"]
-workson: [lists,taxonomies,terms]
+workson: [lists, taxonomies, terms]
 deprecated: false
 toc: false
 ---
@@ -18,7 +18,7 @@ toc: false
 
 > Array: the number of elements in v.
 >
-> Pointer to array: the number of elements in *v (even if v is nil).
+> Pointer to array: the number of elements in \*v (even if v is nil).
 >
 > Slice, or map: the number of elements in v; if v is nil, len(v) is zero.
 >

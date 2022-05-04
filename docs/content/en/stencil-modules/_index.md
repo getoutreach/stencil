@@ -11,9 +11,9 @@ menu:
 weight: 01
 sections_weight: 01
 categories: [stencil modules]
-keywords: [themes,modules]
+keywords: [themes, modules]
 draft: false
-aliases: [/themes/overview/,/themes/]
+aliases: [/themes/overview/, /themes/]
 toc: true
 ---
 

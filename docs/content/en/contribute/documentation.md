@@ -6,7 +6,7 @@ date: 2022-05-02
 publishdate: 2022-05-02
 lastmod: 2022-05-02
 categories: [contribute]
-keywords: [docs,documentation,community, contribute]
+keywords: [docs, documentation, community, contribute]
 menu:
   docs:
     parent: "contribute"
@@ -56,13 +56,13 @@ The archetype for `functions` according to the Stencil docs is as follows:
 
 Here is a review of the front matter fields automatically generated for you using `hugo new functions/*`:
 
-***`title`***
+**_`title`_**
 : this will be auto-populated in all lowercase when you use `hugo new` generator.
 
-***`linktitle`***
+**_`linktitle`_**
 : the function's actual casing (e.g., `replaceRE` rather than `replacere`).
 
-***`description`***
+**_`description`_**
 : a brief description used to populate the [Functions Quick Reference](/functions/).
 
 `categories`
@@ -94,7 +94,7 @@ Code blocks are crucial for providing examples of Stencil's new features to end 
 
 ### Standard Syntax
 
-Across many pages on the Stencil docs, the typical triple-back-tick markdown syntax (```` ``` ````) is used. If you do not want to take the extra time to implement the following code block shortcodes, please use standard GitHub-flavored markdown. The Stencil docs use a version of [highlight.js](https://highlightjs.org/) with a specific set of languages.
+Across many pages on the Stencil docs, the typical triple-back-tick markdown syntax (` ``` `) is used. If you do not want to take the extra time to implement the following code block shortcodes, please use standard GitHub-flavored markdown. The Stencil docs use a version of [highlight.js](https://highlightjs.org/) with a specific set of languages.
 
 Your options for languages are `xml`/`html`, `go`/`golang`, `md`/`markdown`/`mkd`, `handlebars`, `apache`, `toml`, `yaml`, `json`, `css`, `asciidoc`, `ruby`, `powershell`/`ps`, `scss`, `sh`/`zsh`/`bash`/`git`, `http`/`https`, and `javascript`/`js`.
 
@@ -104,13 +104,12 @@ Your options for languages are `xml`/`html`, `go`/`golang`, `md`/`markdown`/`mkd
 ```
 ````
 
-
 ### Code Block Shortcode
 
 The Stencil documentation comes with a very robust shortcode for adding interactive code blocks.
 
 {{% note %}}
-With the `code` shortcodes, *you must include triple back ticks and a language declaration*. This was done by design so that the shortcode wrappers were easily added to legacy documentation and will be that much easier to remove if needed in future versions of the Stencil docs.
+With the `code` shortcodes, _you must include triple back ticks and a language declaration_. This was done by design so that the shortcode wrappers were easily added to legacy documentation and will be that much easier to remove if needed in future versions of the Stencil docs.
 {{% /note %}}
 
 ### `code`
@@ -125,9 +124,8 @@ A whole bunch of coding going on up in here!
 
 The following are the arguments passed into `code`:
 
-
-***`file`***
-: the only *required* argument. `file` is needed for styling but also plays an important role in helping users create a mental model around Stencil's directory structure. Visually, this will be displayed as text in the top left of the code block.
+**_`file`_**
+: the only _required_ argument. `file` is needed for styling but also plays an important role in helping users create a mental model around Stencil's directory structure. Visually, this will be displayed as text in the top left of the code block.
 
 `download`
 : if omitted, this will have no effect on the rendered shortcode. When a value is added to `download`, it's used as the filename for a downloadable version of the code block.
@@ -139,7 +137,7 @@ The following are the arguments passed into `code`:
 
 This example HTML code block tells Stencil users the following:
 
-1. This file *could* live in `layouts/_default`, as demonstrated by `layouts/_default/single.html` as the value for `file`.
+1. This file _could_ live in `layouts/_default`, as demonstrated by `layouts/_default/single.html` as the value for `file`.
 2. This snippet is complete enough to be downloaded and implemented in a Stencil project, as demonstrated by `download="single.html"`.
 
 ```
@@ -170,6 +168,7 @@ The output of this example will render to the Stencil docs as follows:
 
 {{< code file="layouts/_default/single.html" download="single.html" >}}
 {{ define "main" }}
+
 <main>
     <article>
         <header>
@@ -229,7 +228,7 @@ Which will render as follows in the Stencil docs:
 > Without the threat of punishment, there is no joy in flight. - [Kobo Abe][abe]
 
 {{% note "Blockquotes `!=` Admonitions" %}}
-Previous versions of Stencil documentation used blockquotes to draw attention to text. This is *not* the [intended semantic use of `<blockquote>`](https://html5doctor.com/cite-and-blockquote-reloaded/). Use blockquotes when quoting. To note or warn your user of specific information, use the admonition shortcodes that follow.
+Previous versions of Stencil documentation used blockquotes to draw attention to text. This is _not_ the [intended semantic use of `<blockquote>`](https://html5doctor.com/cite-and-blockquote-reloaded/). Use blockquotes when quoting. To note or warn your user of specific information, use the admonition shortcodes that follow.
 {{% /note %}}
 
 ## Admonitions
@@ -300,7 +299,7 @@ Use the `warning` shortcode when you want to draw the user's attention to someth
 
 {{< code file="warning-admonition-input.md" >}}
 {{%/* warning */%}}
-This is a warning, which should be reserved for *important* information like breaking changes.
+This is a warning, which should be reserved for _important_ information like breaking changes.
 {{%/* /warning */%}}
 {{< /code >}}
 
@@ -308,14 +307,14 @@ This is a warning, which should be reserved for *important* information like bre
 
 {{< output file="warning-admonition-output.html" >}}
 {{% warning %}}
-This is a warning, which should be reserved for *important* information like breaking changes.
+This is a warning, which should be reserved for _important_ information like breaking changes.
 {{% /warning %}}
 {{< /output >}}
 
 #### Example `warning` Display
 
 {{% warning %}}
-This is a warning, which should be reserved for *important* information like breaking changes.
+This is a warning, which should be reserved for _important_ information like breaking changes.
 {{% /warning %}}
 
 {{% note "Pull Requests and Branches" %}}

@@ -6,8 +6,8 @@ date: 2022-05-02
 publishdate: 2022-05-02
 lastmod: 2022-05-02
 categories: [contribute]
-keywords: [dev,open source]
-authors: [jaredallard,digitalcraftsmen]
+keywords: [dev, open source]
+authors: [jaredallard, digitalcraftsmen]
 menu:
   docs:
     parent: "contribute"
@@ -26,8 +26,8 @@ stencil is an open-source project and lives by the work of its [contributors][].
 
 This contribution guide takes a step-by-step approach in hopes of helping newcomers. Therefore, we only assume the following:
 
-* You are new to Git or open-source projects in general
-* You are a fan of Stencil and enthusiastic about contributing to the project
+- You are new to Git or open-source projects in general
+- You are a fan of Stencil and enthusiastic about contributing to the project
 
 {{% note "Additional Questions?" %}}
 If you're struggling at any point in this contribution guide, reach out to the Stencil community in [Stencil's Discussion forum](forums)
@@ -122,6 +122,7 @@ Since we installed gh earlier, it's super easy to fork this repository.
 ```
 gh repo fork
 ```
+
 <!-- TODO: Add snippets -->
 
 #### Trust, but verify
@@ -180,13 +181,13 @@ make
 
 This command generates the binary file at `./bin/stencil`
 
+### Test
 
-### Test 
 Sometimes changes on the codebase can cause unintended side effects. Or they don't work as expected. Most functions have their own test cases. You can find them in files ending with `_test.go`.
 
 Make sure the command `make test` passes.
 
-### Formatting 
+### Formatting
 
 The Go code styleguide maybe is opinionated but it ensures that the codebase looks the same, regardless who wrote the code. Go comes with its own formatting tool. Let's apply the styleguide to our additions:
 
@@ -257,11 +258,10 @@ Feel free to [open an issue][newissue] if you think you found a bug or you have 
 
 ## Additional References for Learning Git and Go
 
-* [Codecademy's Free "Learn Git" Course][codecademy] (Free)
-* [Code School and GitHub's "Try Git" Tutorial][trygit] (Free)
-* [The Git Book][gitbook] (Free)
-* [Go Bootcamp][gobootcamp]
-
+- [Codecademy's Free "Learn Git" Course][codecademy] (Free)
+- [Code School and GitHub's "Try Git" Tutorial][trygit] (Free)
+- [The Git Book][gitbook] (Free)
+- [Go Bootcamp][gobootcamp]
 
 [codecademy]: https://www.codecademy.com/learn/learn-git
 [contributors]: https://github.com/getoutreach/stencil/graphs/contributors

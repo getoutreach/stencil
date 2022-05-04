@@ -7,9 +7,10 @@ menu:
   docs:
     parent: "functions"
 keywords: [collections]
-signature: ["COLLECTION | append VALUE [VALUE]...", "COLLECTION | append COLLECTION"]
+signature:
+  ["COLLECTION | append VALUE [VALUE]...", "COLLECTION | append COLLECTION"]
 workson: []
-relatedfuncs: [last,first,where,slice]
+relatedfuncs: [last, first, where, slice]
 aliases: []
 ---
 

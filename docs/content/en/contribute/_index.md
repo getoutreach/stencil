@@ -11,10 +11,10 @@ menu:
   docs:
     parent: "contribute"
     weight: 01
-weight: 01	#rem
+weight: 01 #rem
 draft: false
 slug:
-aliases: [/tutorials/how-to-contribute-to-stencil/,/community/contributing/]
+aliases: [/tutorials/how-to-contribute-to-stencil/, /community/contributing/]
 toc: false
 ---
 

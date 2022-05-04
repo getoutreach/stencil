@@ -3,9 +3,9 @@ title: Install Stencil
 linktitle: Install Stencil
 description: Install Stencil on macOS, Windows, Linux, OpenBSD, FreeBSD, and on any machine where the Go compiler tool chain can run.
 date: 2022-05-02
-categories: [getting started,fundamentals]
+categories: [getting started, fundamentals]
 authors: ["Michael Henderson"]
-keywords: [install,pc,windows,linux,macos,binary,tarball]
+keywords: [install, pc, windows, linux, macos, binary, tarball]
 menu:
   docs:
     parent: "getting-started"
@@ -13,10 +13,16 @@ menu:
 weight: 30
 sections_weight: 30
 draft: false
-aliases: [/tutorials/installing-on-windows/,/tutorials/installing-on-mac/,/overview/installing/,/getting-started/install,/install/]
+aliases:
+  [
+    /tutorials/installing-on-windows/,
+    /tutorials/installing-on-mac/,
+    /overview/installing/,
+    /getting-started/install,
+    /install/,
+  ]
 toc: true
 ---
-
 
 {{% note %}}
 There is lots of talk about "Stencil being written in Go", but you don't need to install Go to enjoy Stencil. Just grab a precompiled binary!
@@ -26,9 +32,9 @@ Stencil is written in [Go](https://golang.org/) with support for multiple platfo
 
 Stencil currently provides pre-built binaries for the following:
 
-* macOS (Darwin) for x64, i386, and ARM architectures
-* Windows
-* Linux
+- macOS (Darwin) for x64, i386, and ARM architectures
+- Windows
+- Linux
 
 Stencil may also be compiled from source wherever the Go toolchain can run; e.g., on other operating systems such as DragonFly BSD, OpenBSD, Plan&nbsp;9, Solaris, and others. See <https://golang.org/doc/install/source> for the full set of supported combinations of target operating systems and compilation architectures.
 
@@ -44,8 +50,8 @@ Ideally, you should install it somewhere in your `PATH` for easy use. `/usr/loca
 
 #### Prerequisite Tools
 
-* [Git][installgit]
-* [Go (at least Go 1.18)](https://golang.org/dl/)
+- [Git][installgit]
+- [Go (at least Go 1.18)](https://golang.org/dl/)
 
 #### Fetch from GitHub
 

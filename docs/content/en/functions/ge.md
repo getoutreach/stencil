@@ -7,7 +7,7 @@ categories: [functions]
 menu:
   docs:
     parent: "functions"
-keywords: [operators,logic]
+keywords: [operators, logic]
 signature: ["ge ARG1 ARG2"]
 deprecated: false
 ---

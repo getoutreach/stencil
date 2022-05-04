@@ -9,9 +9,9 @@ keywords: []
 menu:
   docs:
     parent: "functions"
-weight: 01	#rem
+weight: 01 #rem
 draft: false
-aliases: [/layout/functions/,/templates/functions]
+aliases: [/layout/functions/, /templates/functions]
 ---
 
 Go templates are lightweight but extensible. Go itself supplies built-in functions, including comparison operators and other basic tools. These are listed in the [Go template documentation][gofuncs]. Stencil exposes more functions through [Sprig](sprig) and some itself.

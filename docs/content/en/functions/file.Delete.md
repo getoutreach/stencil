@@ -11,4 +11,3 @@ menu:
 ---
 
 Delete deletes the current file
-

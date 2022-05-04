@@ -19,7 +19,7 @@ features:
 
   - heading: Fast
     image_path: /stencil/images/icon-fast.svg
-    tagline: Who wants to wait 
+    tagline: Who wants to wait
     copy: Stencil is fast, written in Golang using go-templates allow it to render files incredibly quickly.
 
 sections: []

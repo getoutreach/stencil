@@ -13,7 +13,7 @@ menu:
     weight: 1
 weight: 1
 draft: false
-aliases: [/about-stencil/,/docs/]
+aliases: [/about-stencil/, /docs/]
 toc: false
 ---
 

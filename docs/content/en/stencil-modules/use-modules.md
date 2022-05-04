@@ -4,7 +4,7 @@ linktitle: Use Stencil Modules
 description: How to use Stencil Modules to build and manage your site.
 date: 2022-05-02
 categories: [stencil modules]
-keywords: [install, themes, source, organization, directories,usage,modules]
+keywords: [install, themes, source, organization, directories, usage, modules]
 menu:
   docs:
     parent: "modules"
@@ -12,14 +12,13 @@ menu:
 weight: 20
 sections_weight: 20
 draft: false
-aliases: [/themes/usage/,/themes/installing/,/installing-and-using-themes/]
+aliases: [/themes/usage/, /themes/installing/, /installing-and-using-themes/]
 toc: true
 ---
 
 ## Prerequisite
 
 {{< gomodules-info >}}
-
 
 ## Initialize a New Module
 
