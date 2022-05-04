@@ -1,7 +1,7 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
-// Description: This file implements the transport for the underlyingImplemenation
-// to implement Implementation
+// Description: This file implements the transport for the implementationTransport
+// to implement Implementation and vice versa
 
 package apiv1
 

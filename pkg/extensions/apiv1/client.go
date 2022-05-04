@@ -7,7 +7,6 @@ package apiv1
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"reflect"
 
@@ -24,8 +23,9 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
-			Level:  hclog.Trace,
-			Output: os.Stderr,
+			Level:       hclog.Trace,
+			Output:      &logger{fn: log.Debug},
+			DisableTime: true,
 		}),
 		HandshakeConfig: plugin.HandshakeConfig{
 			ProtocolVersion:  Version,

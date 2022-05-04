@@ -5,7 +5,6 @@
 package apiv1
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,7 +33,7 @@ func (s *rpcTransportServer) GetTemplateFunctions(args interface{}, resp *[]*Tem
 //nolint:gocritic // Why: go-plugin wants this
 func (s *rpcTransportServer) ExecuteTemplateFunction(t *TemplateFunctionExec, resp *[]byte) error {
 	v, err := s.impl.ExecuteTemplateFunction(t)
-	s.log.WithField("data", spew.Sdump(v)).WithField("name", t.Name).Debug("Extension function called")
+	s.log.WithField("name", t.Name).WithError(err).Debugf("Extension function called: %s", string(v))
 	*resp = v
 	return err
 }

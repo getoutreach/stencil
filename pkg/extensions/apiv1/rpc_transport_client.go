@@ -40,6 +40,6 @@ func (g *rpcTransportClient) ExecuteTemplateFunction(t *TemplateFunctionExec) ([
 	// IDEA(jaredallard): Actually stream this data in the future
 	var resp []byte
 	err := g.client.Call("Plugin.ExecuteTemplateFunction", t, &resp)
-	g.log.WithField("data", string(resp)).WithField("name", t.Name).Debug("Extension function called")
+	g.log.WithField("data", string(resp)).WithError(err).WithField("name", t.Name).Debug("Extension function returned data")
 	return resp, err
 }

@@ -81,7 +81,7 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 		}
 
 		for _, f := range funcs {
-			h.log.WithField("extension", extName).WithField("function", f.Name).Debug("discovered extension function")
+			h.log.WithField("extension", extName).WithField("function", f.Name).Debug("Registering extension function")
 			tfunc := h.createFunctionFromTemplateFunction(extName, ext, f)
 
 			if _, ok := funcMap[extName]; !ok {

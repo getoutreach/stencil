@@ -6,8 +6,6 @@
 package apiv1
 
 import (
-	"os"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/sirupsen/logrus"
@@ -27,9 +25,9 @@ func NewHandshake() plugin.HandshakeConfig {
 // and starts serving it.
 func NewExtensionImplementation(impl Implementation, log logrus.FieldLogger) error {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Trace,
-		Output:     os.Stderr,
-		JSONFormat: false,
+		Level:       hclog.Trace,
+		Output:      &logger{fn: log.Debug},
+		DisableTime: true,
 	})
 
 	plugin.Serve(&plugin.ServeConfig{
