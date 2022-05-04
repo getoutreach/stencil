@@ -91,7 +91,7 @@ func (c *Command) Run(ctx context.Context) error {
 		c.log.Infof(" -> %s %s", m.Name, m.Version)
 	}
 
-	st := codegen.NewStencil(c.manifest, mods)
+	st := codegen.NewStencil(c.manifest, mods, c.log)
 
 	c.log.Info("Loading native extensions")
 	if err := st.RegisterExtensions(ctx); err != nil {

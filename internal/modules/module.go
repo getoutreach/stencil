@@ -73,8 +73,7 @@ func getLatestVersion(ctx context.Context, name string) (string, error) {
 
 // New creates a new module at a specific revision. If a revision is
 // not provided then the latest version is automatically used. A revision
-// must be a valid git ref of semantic version. In the case of a semantic
-// version, a range is also acceptable, e.g. ~1.0.0.
+// must be a valid git ref of semantic version.
 //
 // If the uri is a file:// path, a version must be specified otherwise
 // it will be treated as if it has no version. If uri is not specified
@@ -93,7 +92,6 @@ func New(ctx context.Context, name, uri, version string) (*Module, error) {
 			return nil, err
 		}
 	}
-
 	return &Module{template.New(name).Funcs(sprig.TxtFuncMap()), name, uri, version, nil}, nil
 }
 
@@ -125,7 +123,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, ext *extensions.Host) e
 		return nil
 	}
 
-	return ext.RegisterExtension(ctx, m.Name, m.Name, m.Version)
+	return ext.RegisterExtension(ctx, m.URI, m.Name, m.Version)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed

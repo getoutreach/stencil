@@ -2,8 +2,17 @@
 
 // Description: See package description
 
-// Package apiv1 implements the extension API for stencil
+// Package apiv1 implements the bridge between a extension and go-plugin
+// providing most of the implementation for the extension if it's
+// written in Go.
 package apiv1
+
+import "encoding/gob"
+
+// init registers known types
+func init() { //nolint:gochecknoinits // Why: see comment
+	gob.Register([]interface{}{})
+}
 
 // This block contains the constants for the go-plugin
 // implementation.
@@ -30,20 +39,14 @@ type TemplateFunction struct {
 	//  extensions.<extensionLowerName>.<name>
 	Name string
 
-	// ArgumentTypes are the argument types that this function
-	// expects. They should be serializable via gob.
-	ArgumentTypes []interface{}
-
-	// ReturnType is the return type for this function, note that
-	// the signature is always (type, error) and that error is already
-	// included in the function signature.
-	ReturnType interface{}
+	// NumberOfArguments is the number of arguments that the
+	// template function takes.
+	NumberOfArguments int
 }
 
 // TemplateFunctionExec executes a template function
 type TemplateFunctionExec struct {
-	// Name is the name of this go-template function. It will be prefixed with the
-	// following format: extensions.<name>.<templateName>
+	// Name is the name of the template function to execute.
 	Name string
 
 	// Arguments are the arbitrary arguments that were passed to this function
@@ -52,14 +55,9 @@ type TemplateFunctionExec struct {
 
 // Config is configuration returned by an extension
 // to the extension host.
-type Config struct {
-	// Name is the name of this extension, used for template
-	// function naming
-	Name string
-}
+type Config struct{}
 
-// Implementation is the extension api that is implemented
-// by all extensions.
+// Implementation is a plugin implementation
 type Implementation interface {
 	// GetConfig returns the configuration of this extension.
 	GetConfig() (*Config, error)
