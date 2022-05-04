@@ -99,7 +99,7 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
 func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error { //nolint:funlen // Why: OK length.
-	h.log.WithField("extension", name).WithField("source", source).Debug("registering extension")
+	h.log.WithField("extension", name).WithField("source", source).Debug("Registered extension")
 
 	u, err := giturls.Parse(source)
 	if err != nil {
@@ -120,7 +120,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 		return errors.Wrap(err, "failed to setup extension")
 	}
 
-	ext, err := apiv1.NewExtensionClient(ctx, extPath)
+	ext, err := apiv1.NewExtensionClient(ctx, extPath, h.log)
 	if err != nil {
 		return err
 	}

@@ -4,9 +4,12 @@
 
 package apiv1
 
+import "github.com/sirupsen/logrus"
+
 // rpcTransportServer implements a rpc backed implementation
 // of implementationTransport.
 type rpcTransportServer struct {
+	log  logrus.FieldLogger
 	impl implementationTransport
 }
 

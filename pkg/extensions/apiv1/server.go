@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/sirupsen/logrus"
 )
 
 // NewHandshake returns a plugin.HandshakeConfig for
@@ -24,9 +25,9 @@ func NewHandshake() plugin.HandshakeConfig {
 
 // NewExtensionImplementation implements a new extension
 // and starts serving it.
-func NewExtensionImplementation(impl Implementation) error {
+func NewExtensionImplementation(impl Implementation, log logrus.FieldLogger) error {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Trace,
+		Level:      hclog.Info,
 		Output:     os.Stderr,
 		JSONFormat: false,
 	})
@@ -35,7 +36,7 @@ func NewExtensionImplementation(impl Implementation) error {
 		Logger:          logger,
 		HandshakeConfig: NewHandshake(),
 		Plugins: map[string]plugin.Plugin{
-			Name: &ExtensionPlugin{newImplementationToImplementationTransport(impl)},
+			Name: &ExtensionPlugin{log, newImplementationToImplementationTransport(impl)},
 		},
 	})
 
