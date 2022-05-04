@@ -98,7 +98,7 @@ func (t *implementationTransportToImplementation) ExecuteTemplateFunction(exec *
 	}
 
 	var respVal interface{}
-	if err := json.NewDecoder(bytes.NewReader(resp)).Decode(&resp); err != nil {
+	if err := json.NewDecoder(bytes.NewReader(resp)).Decode(&respVal); err != nil {
 		return nil, errors.Wrap(err, "failed to encode response")
 	}
 
