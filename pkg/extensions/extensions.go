@@ -18,8 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
-
-	gogithub "github.com/google/go-github/v43/github"
 )
 
 // generatedTemplateFunc is the underlying type of a function
@@ -98,7 +96,7 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
-func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error { //nolint:funlen // Why: OK length.
+func (h *Host) RegisterExtension(ctx context.Context, source, name string) error { //nolint:funlen // Why: OK length.
 	h.log.WithField("extension", name).WithField("source", source).Debug("Registered extension")
 
 	u, err := giturls.Parse(source)
@@ -110,11 +108,11 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	if u.Scheme == "file" {
 		extPath = filepath.Join(strings.TrimPrefix(source, "file://"), "bin", "plugin")
 	} else {
-		pathSpl := strings.Split(u.Path, "/")
+		pathSpl := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
 		if len(pathSpl) < 2 {
 			return fmt.Errorf("invalid repository, expected org/repo, got %s", u.Path)
 		}
-		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name, version)
+		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to setup extension")
@@ -134,15 +132,20 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 }
 
 // getExtensionPath returns the path to an extension binary
-func (h *Host) getExtensionPath(version, name string) string {
+func (h *Host) getExtensionPath(version, name, repo string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
-	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, "@v", version, name)
+	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, fmt.Sprintf("@%s", version), repo)
 	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
 
 // downloadFromRemote downloads a release from github and extracts it to disk
-func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
+//
+// using the example extension module: github.com/getoutreach/stencil-plugin
+// 	org: getoutreach
+// 	repo: stencil-plugin
+// 	name: github.com/getoutreach/stencil-plugin
+func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name string) (string, error) {
 	ghc, err := github.NewClient()
 	if err != nil {
 		return "", err
@@ -154,28 +157,35 @@ func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version 
 		return "", errors.Wrap(err, "failed to validate github client worked")
 	}
 
-	var rel *gogithub.RepositoryRelease
-	if version == "" {
-		rel, err = gh.GetLatestVersion(ctx, "v0.0.0", false)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to find latest extension version")
-		}
-		version = rel.GetTagName()
-	} else {
-		return "", fmt.Errorf("setting versions is not currently supported")
+	rel, err := gh.GetLatestVersion(ctx, "v0.0.0", false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to find latest extension version")
 	}
 
-	bin, cleanup, err := gh.DownloadRelease(ctx, rel, name, name)
-	if cleanup != nil {
-		cleanup()
+	// Check if the version we're pulling already exists and is exectuable before downloading
+	// it again.
+	dlPath := h.getExtensionPath(rel.GetTagName(), name, repo)
+	if info, err := os.Stat(dlPath); err == nil && info.Mode() == 0o755 {
+		return dlPath, nil
 	}
+
+	// Binary for plugin at version we want doesn't exist on disk, need to download.
+	bin, cleanup, err := gh.DownloadRelease(ctx, rel, repo, repo)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to download extension")
 	}
+	defer cleanup()
 
-	dlPath := h.getExtensionPath(version, name)
-	return dlPath, errors.Wrap(
-		os.Rename(bin, dlPath),
-		"failed to move downloaded extension",
-	)
+	// Move the downloaded release from where the updater put it to where we need it
+	// for stencil.
+	if err := os.Rename(bin, dlPath); err != nil {
+		return "", errors.Wrap(err, "failed to move downloaded extension")
+	}
+
+	// Ensure the file is executable.
+	if err := os.Chmod(dlPath, 0o755); err != nil {
+		return "", errors.Wrap(err, "ensure plugin is executable")
+	}
+
+	return dlPath, nil
 }

@@ -14,7 +14,7 @@ require (
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
 	github.com/go-git/go-billy/v5 v5.3.2-0.20210804024030-7ab80d7c013d
 	github.com/go-git/go-git/v5 v5.4.2
-	github.com/google/go-github/v43 v43.0.0
+	github.com/google/go-github/v43 v43.0.0 // indirect
 	github.com/hashicorp/go-hclog v1.0.0
 	github.com/hashicorp/go-plugin v1.4.3
 	github.com/pkg/errors v0.9.1

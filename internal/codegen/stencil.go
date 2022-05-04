@@ -57,7 +57,7 @@ type Stencil struct {
 // modules.
 func (s *Stencil) RegisterExtensions(ctx context.Context) error {
 	for _, m := range s.modules {
-		if err := m.RegisterExtensions(ctx, s.ext); err != nil {
+		if err := m.RegisterExtensions(ctx, s.log, s.ext); err != nil {
 			return errors.Wrapf(err, "failed to load extensions from module %q", m.Name)
 		}
 	}

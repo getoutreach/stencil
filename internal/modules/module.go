@@ -22,6 +22,7 @@ import (
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
 	"gopkg.in/yaml.v2"
 )
@@ -112,7 +113,7 @@ func (m *Module) GetTemplate() *template.Template {
 // by the given module. If the module is a local file
 // URI then extensions will be sourced from the `./bin`
 // directory of the base of the path.
-func (m *Module) RegisterExtensions(ctx context.Context, ext *extensions.Host) error {
+func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger, ext *extensions.Host) error {
 	mf, err := m.Manifest(ctx)
 	if err != nil {
 		return err
@@ -123,7 +124,12 @@ func (m *Module) RegisterExtensions(ctx context.Context, ext *extensions.Host) e
 		return nil
 	}
 
-	return ext.RegisterExtension(ctx, m.URI, m.Name, m.Version)
+	if m.Version != "" {
+		log.WithField("version", m.Version).
+			Warn("version was manually set on plugin, this is currently not supported, using latest")
+	}
+
+	return ext.RegisterExtension(ctx, m.URI, m.Name)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed
