@@ -18,8 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
-
-	gogithub "github.com/google/go-github/v43/github"
 )
 
 // generatedTemplateFunc is the underlying type of a function
@@ -110,7 +108,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	if u.Scheme == "file" {
 		extPath = filepath.Join(strings.TrimPrefix(source, "file://"), "bin", "plugin")
 	} else {
-		pathSpl := strings.Split(u.Path, "/")
+		pathSpl := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
 		if len(pathSpl) < 2 {
 			return fmt.Errorf("invalid repository, expected org/repo, got %s", u.Path)
 		}
@@ -154,16 +152,11 @@ func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version 
 		return "", errors.Wrap(err, "failed to validate github client worked")
 	}
 
-	var rel *gogithub.RepositoryRelease
-	if version == "" {
-		rel, err = gh.GetLatestVersion(ctx, "v0.0.0", false)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to find latest extension version")
-		}
-		version = rel.GetTagName()
-	} else {
-		return "", fmt.Errorf("setting versions is not currently supported")
+	rel, err := gh.GetLatestVersion(ctx, "v0.0.0", false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to find latest extension version")
 	}
+	version = rel.GetTagName()
 
 	bin, cleanup, err := gh.DownloadRelease(ctx, rel, name, name)
 	if cleanup != nil {
