@@ -21,10 +21,10 @@
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://getoutreach.github.io/stencil/functions/base64/"><meta property="og:image" content="https://getoutreach.github.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8262003777610750303.png"><meta property="article:section" content="functions">
 <meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-05-02T15:02:38-07:00">
+<meta property="article:modified_time" content="2022-05-04T12:55:13-07:00">
 <meta itemprop=name content="base64">
 <meta itemprop=description content="`base64Encode` and `base64Decode` let you easily decode content with a base64 encoding and vice versa through pipes."><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-05-02T15:02:38-07:00">
+<meta itemprop=dateModified content="2022-05-04T12:55:13-07:00">
 <meta itemprop=wordCount content="70"><meta itemprop=image content="https://getoutreach.github.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://getoutreach.github.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8262003777610750303.png">
@@ -82,6 +82,7 @@ FUNCTIONS
 </span></span><span class=line><span class=cl><span class=p>&lt;</span><span class=nt>p</span><span class=p>&gt;</span>SGVsbG8gd29ybGQ = <span class=cp>{{</span><span class=w> </span><span class=s>&#34;SGVsbG8gd29ybGQ=&#34;</span><span class=w> </span><span class=o>|</span><span class=w> </span><span class=nx>b64dec</span><span class=w> </span><span class=cp>}}</span><span class=p>&lt;/</span><span class=nt>p</span><span class=p>&gt;</span></span></span></code></pre></div></div></div><div class=code id=base64-output.html>
 <div class=filename title=base64-output.html>base64-output.html</div><div class="code-copy-content output-content">
 <pre><code>
+
 &lt;p&gt;Hello world = SGVsbG8gd29ybGQ=&lt;/p&gt;
 &lt;p&gt;SGVsbG8gd29ybGQ = Hello world&lt;/p&gt;
 </code></pre></div></div><p>You can also pass other data types as arguments to the template function which tries to convert them. The following will convert <em>42</em> from an integer to a string because both <code>b64enc</code> and <code>b64dec</code> always return a string.</p><pre tabindex=0><code>{{ 42 | b64enc | b64dec }}
@@ -273,7 +274,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: May 2, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/907b352eebace3ca4cf28ef13fb7d4549ccab860>docs: add hugo based documentation server (#84) (907b352)</a>
+Last updated: May 4, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/ea125f39f7abd31eaa5c7becd5df74e906778266>fix: rebootstrap cli (#88) (ea125f3)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/master/content/en/functions/base64.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
