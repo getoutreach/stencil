@@ -9,7 +9,7 @@ menu:
     parent: "commands"
 ---
 
-# stencil create templaterepository
+## stencil create templaterepository
 
 ```bash
 NAME:

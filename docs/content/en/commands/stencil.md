@@ -9,7 +9,7 @@ menu:
     parent: "commands"
 ---
 
-# stencil
+## stencil
 
 ```bash
 NAME:

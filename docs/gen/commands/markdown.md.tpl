@@ -9,7 +9,7 @@ menu:
     parent: "commands"
 ---
 
-# {{ .Command }}
+## {{ .Command }}
 
 ```bash
 {{ .Output }}
