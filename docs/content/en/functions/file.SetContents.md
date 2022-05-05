@@ -11,3 +11,4 @@ menu:
 ---
 
 SetContents sets the contents of the current file to the provided string\.
+

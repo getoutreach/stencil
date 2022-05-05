@@ -11,3 +11,4 @@ menu:
 ---
 
 GetModuleHook returns a module block in the scope of this module
+

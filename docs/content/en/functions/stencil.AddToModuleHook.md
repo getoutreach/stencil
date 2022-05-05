@@ -11,3 +11,4 @@ menu:
 ---
 
 AddToModuleHook adds to a hook in another module
+
