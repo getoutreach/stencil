@@ -1,4 +1,4 @@
-baseURL = "https://getoutreach.github.io/stencil"
+baseURL = "https://engineering.outreach.io/stencil"
 paginate = 100
 defaultContentLanguage = "en"
 enableEmoji = true
