@@ -1,0 +1,6 @@
+# Support /stencil/, which is how production is deployed.
+[[redirects]]
+  from = "/stencil/*"
+  to = "/:splat"
+  status = 200
+  force = true
