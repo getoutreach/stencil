@@ -187,24 +187,6 @@ The output of this example will render to the Stencil docs as follows:
 {{ end }}
 {{< /code >}}
 
-<!-- #### Output Code Block
-
-The `output` shortcode is almost identical to the `code` shortcode but only takes and requires `file`. The purpose of `output` is to show *rendered* HTML and therefore almost always follows another basic code block *or* and instance of the `code` shortcode:
-
-```
-{{%/* output file="posts/my-first-post/index.html" */%}}
-<h1>This is my First Stencil Blog Post</h1>
-<p>I am excited to be using Stencil.</p>
-{{%/* /output */%}}
-```
-
-The preceding `output` example will render as follows to the Stencil docs:
-
-{{< output file="posts/my-first-post/index.html" >}}
-<h1>This is my First Stencil Blog Post</h1>
-<p>I am excited to be using Stencil.</p>
-{{< /output >}} -->
-
 ## Blockquotes
 
 Blockquotes can be added to the Stencil documentation using [typical Markdown blockquote syntax][bqsyntax]:

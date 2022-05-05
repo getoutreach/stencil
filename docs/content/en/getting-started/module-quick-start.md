@@ -133,10 +133,10 @@ package main
 
 func main() {
 	fmt.Println("Hello, world!")
-	###Block(additionalMessage)
+	///Block(additionalMessage)
 {{- /* It's important to not indent the file.Block to prevent the indentation from being copied over and.. over again. */ }}
 {{ file.Block "additionalMessage" }}
-	###EndBlock(additionalMessage)
+	///EndBlock(additionalMessage)
 }
 {{< /code >}}
 
@@ -148,9 +148,9 @@ package main
 
 func main() {
 	fmt.Println("Hello, world!")
-	###Block(additionalMessage)
+	///Block(additionalMessage)
 
-	###EndBlock(additionalMessage)
+	///EndBlock(additionalMessage)
 }
 {{< /code >}}
 
@@ -158,7 +158,7 @@ If we add contents to the block and re-run stencil they'll be persisted across t
 
 ## Step 5: (Optional) Creating Multiple Files
 
-One of the powerful parts of stencil is the ability to create an arbitrary number of files with a single template. This is done with the [`file.Create`](/stencil/functions/file.create) function. Let's create a `greeter.go.tpl` template in the `templates/` directory that'll create a `hello.go` and `goodbye.go` file.
+One of the powerful parts of stencil is the ability to create an arbitrary number of files with a single template. This is done with the [`file.Create`](/stencil/functions/file.create) function. Let's create a `greeter.go.tpl` template in the `templates/` directory that'll create `<greeting>.go` based on the `greetings` argument.
 
 {{< code file="greeter.go.tpl" copy=true >}}
 # This is important! We don't want to create a greeter.go file
@@ -173,7 +173,7 @@ func main() {
 
 {{- end -}}
 
-{{- range $_, $greeting := (list "hello" "goodbye") }}
+{{- range $_, $greeting := stencil.Arg "greetings" }}
 # Create a new $greeting.go file
 {{- file.Create (printf "%s.go" $greeting) 0600 now }}
 # We'll render the template greeter with $greeting as the values being passed to it
@@ -185,6 +185,18 @@ func main() {
 {{% note %}}
 Blocks are supported in multiple files! When `file.SetPath` is called the host is searched to see if a file already exists at that path, if it does it is searched to see if it contains any blocks, if it does they are loaded and accessible via `file.Block` as normal
 {{% /note %}}
+
+Now let's modify the `manifest.yaml` to accept the argument `greetings`:
+
+{{< code file="manifest.yaml" copy=true >}}
+arguments:
+  greetings:
+		description: A list of greetings to use
+		type: list
+		require: true
+		default: ["hello", "goodbye"]
+{{< /code >}}
+
 
 If we run stencil on the test application, we should see the following:
 
@@ -199,6 +211,10 @@ INFO[0002] Writing template(s) to disk
 INFO[0002]   -> Created hello.go
 INFO[0002]   -> Created goodbye.go
 ```
+
+{{% note %}}
+`hello` and `goodbye` came from the default list of greetings that was set in the `manifest.yaml` file. Setting `arguments.greetings` on the test application and see it change!
+{{% /note %}}
 
 If we look at the files, we should see the following:
 
