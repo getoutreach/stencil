@@ -13,31 +13,13 @@ keywords: [application, service manifest]
 toc: true
 ---
 
-**Stencil Modules** are the core building blocks in Stencil.
+## What is a `service.yaml`?
 
-Modules are used to create reusable grouping of templates and native extensions to be used by stencil.
+A `service.yaml` can be thought as the specification for an application based on the modules being used. It defines the modules an application uses and the arguments to pass to them. 
 
-Stencil Modules are powered by Go Modules and must be within a git repository. For more information about Go Modules, see:
+## What are the fields in a `service.yaml`
 
-- [https://github.com/golang/go/wiki/Modules](https://github.com/golang/go/wiki/Modules)
-- [https://blog.golang.org/using-go-modules](https://blog.golang.org/using-go-modules)
-
-## Types of Modules
-
-There are two types of module usable by stencil, a module and a native extension. A module may, itself, be only one of these types of modules.
-
-### Module
-
-A module consists of templates in a `templates/` directory in the root of the repository. Modules are written in the [go template syntax](https://pkg.go.dev/text/template) with added functions and variables accessible to them at runtime. For more information about the module type see [the basic module documentation]().
-
-### Native Extensions
-
-Native extensions are modules that run binary code, and generally are written in Go but may be written in any language that can implement a `net/rpc` interface. Native extensions are accessible via the `extensions.Call "<importPath>.<functionName>"` method. For more information about the native extension module type see [the native extension module documentation]().
-
-## Creating a Module
-
-For information on how to create a module see the [getting started](/stencil/getting-started/) documentation.
-
-## More Information
-
-For more technical documentation on modules, see the below links.
+* `name`: The name of the application
+* `arguments`: The arguments to pass to the modules. This is a map of key value pairs.
+* `modules`: The modules to use. This is a list of objects containing a `name` and a, optionally, `version` field to use of this module.
+* `replacements`: A key/value of importPath to replace with another source. This is useful for replacing modules with a different version or local testing. Source should be a valid URL, import path, or file path on disk.
