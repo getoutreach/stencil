@@ -20,7 +20,7 @@ toc: true
 
 ## Create Your Fork
 
-It's best to make changes to the Stencil docs on your local machine to check for consistent visual styling. Make sure you've created a fork of [stencil](https://github.com/getoutreach/stencil on GitHub and cloned the repository locally on your machine. For more information, you can see [GitHub's documentation on "forking"][ghforking] or follow along with [Stencil's development contribution guide][stencildev].
+It's best to make changes to the Stencil docs on your local machine to check for consistent visual styling. Make sure you've created a fork of [stencil](https://github.com/getoutreach/stencil) on GitHub and cloned the repository locally on your machine. For more information, you can see [GitHub's documentation on "forking"][ghforking] or follow along with [Stencil's development contribution guide][stencildev].
 
 You can then create a separate branch for your additions. Be sure to choose a descriptive branch name that best fits the type of content. The following is an example of a branch name you might use for adding a new function:
 
@@ -227,10 +227,6 @@ Which will render as follows in the Stencil docs:
 
 > Without the threat of punishment, there is no joy in flight. - [Kobo Abe][abe]
 
-{{% note "Blockquotes `!=` Admonitions" %}}
-Previous versions of Stencil documentation used blockquotes to draw attention to text. This is _not_ the [intended semantic use of `<blockquote>`](https://html5doctor.com/cite-and-blockquote-reloaded/). Use blockquotes when quoting. To note or warn your user of specific information, use the admonition shortcodes that follow.
-{{% /note %}}
-
 ## Admonitions
 
 **Admonitions** are common in technical documentation. The most popular is that seen in [reStructuredText Directives][sourceforge]. From the SourceForge documentation:
@@ -327,6 +323,5 @@ Similar to [contributing to Stencil development](/contribute/development/), the 
 [charcount]: https://www.lettercount.com/
 [ghforking]: https://help.github.com/articles/fork-a-repo/
 [stencildev]: /contribute/development/
-[shortcodeparams]: content-management/shortcodes/#shortcodes-without-markdown
 [sourceforge]: https://docutils.sourceforge.io/docs/ref/rst/directives.html#admonitions
 [templating function]: /functions/

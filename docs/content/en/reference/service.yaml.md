@@ -1,15 +1,15 @@
 ---
-title: Stencil Modules
-linktitle: Stencil Modules Overview
-description: How to use Stencil Modules.
+title: service.yaml
+linktitle: Service Manifest
+description: The service.yaml passes arguments and defines which modules an application should use
 date: 2022-05-04
 publishdate:  2022-05-04
 menu:
   docs:
-    parent: "modules"
-    weight: 1
-categories: [modules]
-keywords: [modules]
+    parent: "reference"
+    weight: 4
+categories: [application]
+keywords: [application, service manifest]
 toc: true
 ---
 

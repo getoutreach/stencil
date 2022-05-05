@@ -2,12 +2,12 @@
 title: Template Module
 description: Modules contain a grouping of dependencies or templates for a Stencil application
 date: 2022-05-02
-categories: [template module]
-keywords: [module, template module, templates]
+categories: [module, template module]
+keywords: [module, template module]
 menu:
   docs:
-    parent: "modules"
-    weight: 10
+    parent: "reference"
+    weight: 3
 toc: true
 ---
 

@@ -2,12 +2,12 @@
 title: Native Extensions
 description: Native extensions enable writing code in any language and consuming it in a template.
 date: 2022-05-02
-categories: [modules]
-keywords: [module]
+categories: [module, native extension]
+keywords: [module, native extension]
 menu:
   docs:
-    parent: "modules"
-    weight: 10
+    parent: "reference"
+    weight: 2
 toc: true
 ---
 

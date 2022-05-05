@@ -13,10 +13,10 @@
 
 # Core Menus
 [[docs]]
-  name = "Modules"
+  name = "Reference Docs"
   weight = 15
-  identifier = "modules"
-  url = "/modules/"
+  identifier = "reference"
+  url = "/reference/"
 
 [[docs]]
   name = "Functions"
