@@ -8,30 +8,15 @@
   name = "Getting Started"
   weight = 5
   identifier = "getting-started"
+  post = "break"
   url = "/getting-started/"
 
+# Core Menus
 [[docs]]
-  name = "Stencil Modules"
+  name = "Modules"
   weight = 15
   identifier = "modules"
-  post = "break"
-  url = "/stencil-modules/"
-
-# Core Menus
-
-[[docs]]
-  name = "Structure"
-  weight = 20
-  identifier = "structure"
-  post = "expanded"
-  url = "/structure/"
-
-[[docs]]
-  name = "Templates"
-  weight = 25
-  identifier = "templates"
-
-  url = "/templates/"
+  url = "/modules/"
 
 [[docs]]
   name = "Functions"
@@ -40,21 +25,13 @@
   url = "/functions/"
 
 [[docs]]
-  name = "Variables"
-  weight = 35
-  identifier = "variables"
-  url = "/variables/"
-[[docs]]
   name = "CLI"
   weight = 40
   post = "break"
   identifier = "commands"
   url = "/commands/"
 
-
-
 # LOW LEVEL ITEMS
-
 [[docs]]
   name = "Contribute"
   weight = 100
@@ -62,15 +39,7 @@
   identifier = "contribute"
   url = "/contribute/"
 
-######## QUICKLINKS
-
-[[quicklinks]]
-  name = "Fundamentals"
-  weight = 1
-  identifier = "fundamentals"
-  url = "/tags/fundamentals/"
-
-
+## Links in the navbar
 [[global]]
   name = "Docs"
   weight = 5

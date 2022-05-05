@@ -4,23 +4,14 @@ linktitle: Install Stencil
 description: Install Stencil on macOS, Windows, Linux, OpenBSD, FreeBSD, and on any machine where the Go compiler tool chain can run.
 date: 2022-05-02
 categories: [getting started, fundamentals]
-authors: ["Michael Henderson"]
+authors: ["Michael Henderson", "Jared Allard"]
 keywords: [install, pc, windows, linux, macos, binary, tarball]
 menu:
   docs:
     parent: "getting-started"
     weight: 30
 weight: 30
-sections_weight: 30
-draft: false
-aliases:
-  [
-    /tutorials/installing-on-windows/,
-    /tutorials/installing-on-mac/,
-    /overview/installing/,
-    /getting-started/install,
-    /install/,
-  ]
+aliases: [/install/]
 toc: true
 ---
 
@@ -39,6 +30,14 @@ Stencil currently provides pre-built binaries for the following:
 Stencil may also be compiled from source wherever the Go toolchain can run; e.g., on other operating systems such as DragonFly BSD, OpenBSD, Plan&nbsp;9, Solaris, and others. See <https://golang.org/doc/install/source> for the full set of supported combinations of target operating systems and compilation architectures.
 
 ## Quick Install
+
+### Homebrew (macOS)
+
+We have a brew formula for Stencil. It is recommended to install Stencil via Homebrew on macOS.
+
+```bash
+brew install stencil
+```
 
 ### Binary (Cross-platform)
 
