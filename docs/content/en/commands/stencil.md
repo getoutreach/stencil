@@ -1,7 +1,7 @@
 ---
 title: stencil
 linktitle: stencil
-description: 
+description: a smart templating engine for service development
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,9 @@ USAGE:
 
 VERSION:
    v1.14.2
+
+DESCRIPTION:
+   a smart templating engine for service development
 
 COMMANDS:
    describe  
