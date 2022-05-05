@@ -19,5 +19,5 @@ toc: false
 
 If this is your first time using Stencil and you've [already installed Stencil on your machine][installed], we recommend the [quick start][].
 
-[installed]: /getting-started/installing/
-[quick start]: /getting-started/quick-start/
+[installed]: /stencil/getting-started/installing/
+[quick start]: /stencil/getting-started/quick-start/

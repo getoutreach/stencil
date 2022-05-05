@@ -71,5 +71,5 @@ Now that you've installed Stencil, read the [Quick Start guide][quickstart] and 
 [forum]: https://github.com/getoutreach/stencil/discussions
 [installgit]: https://git-scm.com/
 [installgo]: https://golang.org/dl/
-[quickstart]: /getting-started/quick-start/
+[quickstart]: /stencil/getting-started/quick-start/
 [releases]: https://github.com/getoutreach/stencil/releases
