@@ -1,0 +1,345 @@
+<!doctype html><html class=no-js lang=en-us>
+<head>
+<meta charset=utf-8>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-200.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-400.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
+<meta http-equiv=x-ua-compatible content="IE=edge">
+<title>Template Module | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
+<meta name=generator content="Hugo 0.98.0">
+<meta name=robots content="noindex, nofollow">
+<link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
+<meta name=description content="Modules contain a grouping of dependencies or templates for a Stencil application">
+<script type=text/javascript src=/stencil/output/js/app.e16c62666d428635bf13ea129976ae950eaffe7b033f59a3184bab747d2d7a41.js integrity="sha256-4WxiZm1ChjW/E+oSmXaulQ6v/nsDP1mjGEurdH0tekE=" crossorigin=anonymous defer></script>
+<script async defer src=https://buttons.github.io/buttons.js></script>
+<link rel=apple-touch-icon sizes=180x180 href=/stencil/apple-touch-icon.png>
+<link rel=icon type=image/png href=/stencil/favicon-32x32.png sizes=32x32>
+<link rel=icon type=image/png href=/stencil/favicon-16x16.png sizes=16x16>
+<meta name=theme-color content="#ffffff">
+<meta property="og:title" content="Template Module">
+<meta property="og:description" content="Modules contain a grouping of dependencies or templates for a Stencil application">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/reference/template-module/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_870886924083850990.png"><meta property="article:section" content="reference">
+<meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
+<meta property="article:modified_time" content="2022-05-05T22:57:50-07:00">
+<meta itemprop=name content="Template Module">
+<meta itemprop=description content="Modules contain a grouping of dependencies or templates for a Stencil application"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
+<meta itemprop=dateModified content="2022-05-05T22:57:50-07:00">
+<meta itemprop=wordCount content="902"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_870886924083850990.png">
+<meta name=twitter:title content="Template Module">
+<meta name=twitter:description content="Modules contain a grouping of dependencies or templates for a Stencil application">
+</head><body class="ma0 sans-serif bg-primary-color-light">
+<nav class="bg-primary-color-dark pv4 w-100" role=navigation>
+<div class="center flex-ns flex-wrap items-center justify-start mw9">
+<h1 class="dim f3 lh-solid ml0-ns mr0 mr4-l mv0 pl3 pl4-ns">
+<a href=/stencil class="link white">
+STENCIL
+</a>
+</h1><ul class="list ma0 pa0 dn dib-l" role=menu>
+<li class="f5 dib mr4" role=menuitem>
+<a href=/stencil/documentation/ class="dim link light-silver">
+Docs
+</a>
+</li><li class="f5 dib mr4" role=menuitem>
+<a href=https://github.com/getoutreach/stencil class="dim link light-silver">
+GitHub
+<span class=pl1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="10" height="10" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</span>
+</a>
+</li></ul><div class="db dib-ns pl3"><form id=site-search-form role=search>
+<fieldset class="bn ma0 pa0">
+<div type=search id=search-input>
+</fieldset></form></div><span class="absolute mt1 mt2-l pr3 right-0 top-0">
+<a class="github-button needs-js link primary-color-dark" href=https://github.com/getoutreach/stencil data-size=large data-show-count=false aria-label="Star getoutreach/stencil on GitHub">Star</a>
+</span>
+</div></nav><main role=main class="content-with-sidebar min-vh-100 pb7 pb0-ns">
+<article class="w-100 ph4 pb5 pb6-ns pt1 pt5-ns">
+<div class=flex-l>
+<div class="order-2 w-100 w-20-l ph5-m ph0-l mb4 sticky">
+<aside class="fixed-lTK mw5-l right-0 f6 bl-l b--moon-gray pv4 pv0-ns ph4-l nested-list-reset nested-links nested-copy-line-height">
+<p class=b>What's on this Page</p><nav id=TableOfContents>
+<ul>
+<li><a href=#general-module-requirements>General Module Requirements</a></li><li><a href=#structure>Structure</a></li><li><a href=#module-hooks>Module Hooks</a></li><li><a href=#testing-a-module>Testing a Module</a></li></ul></nav><div date-pref>
+<a href=https://engineering.outreach.io/stencil/reference/native-extensions/ class="dib f6 pl1 hover-bg-light-gray br-100" title="Native Extensions "><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+</a>
+</div></aside></div><div class="order-1 w-60-l mw7 ph0 ph5-ns mid-gray nested-copy-line-height no-underline nested-links nested-img nested-copy-seperator nested-blockquote mt0-ns" style=flex-grow:1>
+<div class="documentation-copy center measure-wide-l">
+<div id=readout class="fixed right-0 bottom-0">
+</div><header class="flex-none w-100">
+<a href=/stencil/categories/module class="f6 fw8 mb0 link mid-gray dim mr3">
+MODULE
+</a>
+<a href=/stencil/categories/template-module class="f6 fw8 mb0 link mid-gray dim mr3">
+TEMPLATE MODULE
+</a>
+<h1 class="lh-title mb3 mv0 pt3 primary-color-dark">Template Module</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
+<div class="f4 fw4 lh-copy">
+Modules contain a grouping of dependencies or templates for a Stencil application
+</div></aside><div class=prose id=prose>
+<p>A template module, sometimes referred to as a &ldquo;template repository&rdquo; is a module consumable by a stencil application, that contains a collection of go-templates.</p><h2 id=general-module-requirements>General Module Requirements <a class=header-link href=#general-module-requirements><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>A module requires a name and a description currently that are set in the <code>manifest.yaml</code> described later on in this document.</p><p>The name of a module must be equal to the import path of the module. The import path of a module follows the same rules as Golang, where as the repository URL must equal the import path. For example, if the module is located at <code>https://github.com/stencil/example-module</code>, the import path must be <code>github.com/stencil/example-module</code>.</p><h2 id=structure>Structure <a class=header-link href=#structure><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>A module structure typically looks like so:</p><ul>
+<li><code>templates/</code> - a directory that contains all of the go-templates that this module owns</li><li><code>manifest.yaml</code> - a manifest describing the arguments, dependencies and other metadata for this module</li><li><code>go.mod</code> - a go module file used for testing the module</li><li><code>**/.snapshots</code> - a directory used for snapshot testing files</li></ul><h3 id=templates><code>templates/</code> <a class=header-link href=#templates><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h3><p>This directory is used for storing all of the go-templates that a module owns. By default a file that doesn&rsquo;t have a <code>.tpl</code> extension will be ignored by stencil. When a <code>.tpl</code> file is found, this file is written to the base of the execution directory of stencil, minus the <code>templates</code> directory and <code>.tpl</code> extension.</p><p>For example, if a module had a template at <code>templates/helloWorld.tpl</code> it would by default be written to <code>./helloWorld</code></p><p>This can be changed with the <a href=/stencil/functions/file.setpath><code>file.SetPath</code></a> function as needed.</p><p>Templates can also call <code>file.Create</code> to create a new file within a loop. For more information see the <a href=/stencil/functions/file.create><code>file.Create</code> documentation</a></p><h3 id=manifestyaml><code>manifest.yaml</code> <a class=header-link href=#manifestyaml><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h3><p>The manifest.yaml file is arguably the most important file in a stencil module. This dictates the type of module, the arguments that the module accepts, and the dependencies that the module has.</p><p>The important keys that a module has are listed below, but an exhaustive list can be found on the <a href=https://pkg.go.dev/github.com/getoutreach/stencil/pkg/configuration#TemplateRepositoryManifest>pkg.go.dev</a></p><ul>
+<li><code>name</code> - The import path of the module</li><li><code>description</code> - A description of the module</li><li><code>modules</code> - a list of modules that this module depends on
+* <code>name</code> - import path of the module depended on
+* <code>version</code> - optional: A version to pin this module to.</li><li><code>arguments</code> - a map of arguments that this module accepts. A module cannot access an argument via <code>stencil.Arg</code> without first declaring it here.
+* <code>name</code> - the name of the argument
+* <code>description</code> - a description of the argument
+* <code>type</code> - the type of the argument, can be <code>string</code>, <code>int</code>, <code>bool</code>, <code>list</code>, or <code>map</code>
+* <code>default</code> - the default value of the argument
+* <code>required</code> - whether or not the argument is required</li></ul><h2 id=module-hooks>Module Hooks <a class=header-link href=#module-hooks><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Module hooks enable other modules to write to a section of a file in your module. This can be done with the <a href=/stencil/functions/stencil.getmodulehook><code>stencil.GetModuleHook "name"</code></a> function. This returns a <code>[]interface{}</code>, or for non-gophers a list of any type. You can process this with a <code>range</code> or in any other method you&rsquo;d like to generate whatever you need for your DSL.</p><p>A module can write to a module hook with the <a href=/stencil/functions/stencil.addtomodulehook><code>stencil.AddToModuleHook "importPath" "hookName"</code></a> function.</p><h2 id=testing-a-module>Testing a Module <a class=header-link href=#testing-a-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Testing a module can be done in a variety of different ways, but the officially supported way of testing a module is through the testing framework that&rsquo;s generated by the <code>stencil create module</code> command.</p><p>More documentation can be found on the documentation for that command, but in a nutshell the default and recommended testing method for modules is snapshot testing. Snapshot testing is done by rendering the files of a module to a directory, and then comparing the rendered files to the expected files overtime. This is supported by the <a href=https://pkg.go.dev/github.com/getoutreach/stencil@v1.14.2/pkg/stenciltest><code>stenciltest</code></a> go package.</p><p>Writing a test requires a valid <code>go.mod</code> file, as the tests are written in Go and to use the <code>stenciltest</code> package. To create a test, simply create a valid go test (e.g. <code>main_test.go</code>) and write a go test using the <code>stenciltest</code> package.</p><p>A simple example for rendering the template <code>helloWorld.tpl</code> to a file called <code>helloWorld</code> would look like so:</p><div class="code relative" id=helloworld.tpl><div class="filename san-serif f6 dib lh-solid pl2 pv2">helloWorld.tpl</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-tpl data-lang=tpl><span class=line><span class=cl><span class=x>hello, world!</span></span></span></code></pre></div></div></div><div class="code relative" id=main_test.go><div class="filename san-serif f6 dib lh-solid pl2 pv2">main_test.go</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span> <span class=nx>main</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kn>import</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>	<span class=s>&#34;testing&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>	<span class=s>&#34;github.com/getoutreach/stencil/pkg/stenciltest&#34;</span>
+</span></span><span class=line><span class=cl><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>func</span> <span class=nf>TestGoMod</span><span class=p>(</span><span class=nx>t</span> <span class=o>*</span><span class=nx>testing</span><span class=p>.</span><span class=nx>T</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>	<span class=c1>// Create a renderer with the specified file being the file to test.
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=c1>//
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=c1>// More files may be provided if they are depended as variadic arguments
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=c1>// but their output will not be saved.
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=nx>st</span> <span class=o>:=</span> <span class=nx>stenciltest</span><span class=p>.</span><span class=nf>New</span><span class=p>(</span><span class=nx>t</span><span class=p>,</span> <span class=s>&#34;go.mod.tpl&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>	<span class=c1>// Define the arguments to pass to stencil
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=nx>st</span><span class=p>.</span><span class=nf>Args</span><span class=p>(</span><span class=kd>map</span><span class=p>[</span><span class=kt>string</span><span class=p>]</span><span class=kd>interface</span><span class=p>{}{</span><span class=s>&#34;org&#34;</span><span class=p>:</span> <span class=s>&#34;getoutreach&#34;</span><span class=p>})</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>	<span class=c1>// Run the test, persisting the snapshot to disk if it changed.
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=c1>// Default is set to false.
+</span></span></span><span class=line><span class=cl><span class=c1></span>	<span class=nx>st</span><span class=p>.</span><span class=nf>Run</span><span class=p>(</span><span class=kc>false</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></div></div></div><p>You can run all tests by running <code>go test ./...</code> in the root of the repository:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ go <span class=nb>test</span> ./...
+</span></span><span class=line><span class=cl>...
+</span></span><span class=line><span class=cl>ok      testing.com/templates  2.861s
+</span></span></code></pre></div><h3 id=testing-a-module-used-in-a-stencil-application>Testing a Module used in a Stencil Application <a class=header-link href=#testing-a-module-used-in-a-stencil-application><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h3><p>A <code>service.yaml</code> supports a <code>replacements</code> key that can be used to replace the source of a module with a different module. This is useful for testing a module that is used in a stencil application.</p><p>For example, if an application uses the <code>github.com/stencil/example-module</code> module and you want to develop on the <code>example-module</code>, a key in <code>replacements</code> can be added to point it to a different source URL or file path.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>replacements</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=c># Replace it with a file path</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nt>github.com/stencil/example-module</span><span class=p>:</span><span class=w> </span><span class=l>../example-module</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=c># Replace it with a different URL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nt>github.com/stencil/example-module</span><span class=p>:</span><span class=w> </span><span class=l>github.com/myname/example-module</span><span class=w>
+</span></span></span></code></pre></div><p>If you want to lock the dependency to a specific version currently replacements don&rsquo;t support setting the version, but instead you&rsquo;d specify this in the <code>version</code> field of the module field of the <code>service.yaml</code>. For the example above:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>modules</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/stencil/example-module</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=l>v1.0.0</span><span class=w>
+</span></span></span></code></pre></div></div><h2>See Also</h2><ul>
+<li><a href=/stencil/reference/native-extensions/>Native Extensions</a></li></ul></div></div><div class="order-0 w-20 dn db-l">
+<nav role=navigation>
+<ul class="list pa0 nl2">
+<li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.about>About Stencil</a>
+<ul class="about desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/about/what-is-stencil/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+What is Stencil?
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/about/license/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+License
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.getting-started>Getting Started</a>
+<ul class="getting-started desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/getting-started/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Get Started Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/installing/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Install Stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Quick Start
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/module-quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Module Quick Start
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/native-extension-quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Native Extension Quick Start
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2 primary-color" data-target=.reference>Reference Docs</a>
+<ul class="reference desktopmenu animated fadeIn list pl0 bg-light-gray db">
+<li class="f6 fw4">
+<a href=/stencil/reference/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Reference Docs Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/modules/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Stencil Modules Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/native-extensions/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Native Extensions
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/template-module/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 primary-color">
+Template Module
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/service.yaml/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Service Manifest
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.functions>Functions</a>
+<ul class="functions desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/functions/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Functions Quick Reference
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.block/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Block
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.create/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Create
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.delete/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Delete
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.path/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Path
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setcontents/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetContents
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setpath/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetPath
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.skip/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Skip
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.static/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Static
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.addtomodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.AddToModuleHook
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.applytemplate/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ApplyTemplate
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.arg/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Arg
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.args/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Args
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetModuleHook
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
+<ul class="commands desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/commands/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Commands Quick Reference
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_create/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil create
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_create_templaterepository/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil create templaterepository
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_describe/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil describe
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>
+<ul class="contribute desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/contribute/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Contribute to Stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/contribute/development/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Development
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/contribute/documentation/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Documentation
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=/stencil/maintenance/ class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.>Maintenance</a>
+</li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
+<div class="mw7 pa4 center nested-lh-copy lh-copy">
+<h6 class="f6 dark-gray mb2">
+Last updated: May 5, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/dad4c11ed45e8945ce1a8844e92530ea06929579>docs: Add getting started and reference docs (#90) (dad4c11)</a>
+</h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/reference/template-module.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
+</div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
+<div class="center flex-ns flex-wrap justify-between mw9 w-90">
+<div class="pb3 pt4 w-100">
+<div class="b f3 light-gray mb3 nested-links tc">
+By the <a href=https://github.com/getoutreach/stencil/graphs/contributors class=link>Stencil Authors</a><br>
+</div><div class="center w4">
+<img src=/stencil/img/stencil-logo.png alt="Hugo Logo">
+</div><ul class="center f6 list ma0 mv3 pa0 tc"><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/issues/new class="dim link light-gray pv2">File an Issue</a></li><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/discussions class="dim link light-gray pv2">Get Help</a></li></ul></div></div><img src=/stencil/images/gopher-side_color.svg alt class="absolute-l bottom-0 dn db-l h4 right-0 z-999">
+<div class="bg-primary-color-dark bottom-0 left-0 right-0 dn-l fixed pb3 ph3 pt3 w-100"><div class="globalmenu mobilemenu pb1 dn">
+<ul class="list hidden dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/documentation/ class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+Docs
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=https://github.com/getoutreach/stencil class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+GitHub
+</a>
+</li></ul></div><div class="docsmenu mobilemenu pb1 dn">
+<ul class="list dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/about/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+About Stencil
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/getting-started/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Getting Started
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/reference/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Reference Docs
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/functions/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Functions
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/commands/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+CLI
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/contribute/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Contribute
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/maintenance/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Maintenance
+</a>
+</li></ul></div><div class="flex dn-l justify-between">
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link mr2 white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.globalmenu>Menu</button>
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.docsmenu>Docs Menu</button>
+</div></div></footer></body></html>

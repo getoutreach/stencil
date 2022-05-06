@@ -1,0 +1,436 @@
+<!doctype html><html class=no-js lang=en-us>
+<head>
+<meta charset=utf-8>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-200.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-400.woff2 as=font type=font/woff2 crossorigin>
+<link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
+<meta http-equiv=x-ua-compatible content="IE=edge">
+<title>Module Quick Start | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
+<meta name=generator content="Hugo 0.98.0">
+<meta name=robots content="noindex, nofollow">
+<link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
+<meta name=description content="Create a module and use it in an application">
+<script type=text/javascript src=/stencil/output/js/app.e16c62666d428635bf13ea129976ae950eaffe7b033f59a3184bab747d2d7a41.js integrity="sha256-4WxiZm1ChjW/E+oSmXaulQ6v/nsDP1mjGEurdH0tekE=" crossorigin=anonymous defer></script>
+<script async defer src=https://buttons.github.io/buttons.js></script>
+<link rel=apple-touch-icon sizes=180x180 href=/stencil/apple-touch-icon.png>
+<link rel=icon type=image/png href=/stencil/favicon-32x32.png sizes=32x32>
+<link rel=icon type=image/png href=/stencil/favicon-16x16.png sizes=16x16>
+<meta name=theme-color content="#ffffff">
+<meta property="og:title" content="Module Quick Start">
+<meta property="og:description" content="Create a module and use it in an application">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/getting-started/module-quick-start/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_4473737060735480427.png"><meta property="article:section" content="getting-started">
+<meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
+<meta property="article:modified_time" content="2022-05-05T22:57:50-07:00">
+<meta itemprop=name content="Module Quick Start">
+<meta itemprop=description content="Create a module and use it in an application"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
+<meta itemprop=dateModified content="2022-05-05T22:57:50-07:00">
+<meta itemprop=wordCount content="1063"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_4473737060735480427.png">
+<meta name=twitter:title content="Module Quick Start">
+<meta name=twitter:description content="Create a module and use it in an application">
+</head><body class="ma0 sans-serif bg-primary-color-light">
+<nav class="bg-primary-color-dark pv4 w-100" role=navigation>
+<div class="center flex-ns flex-wrap items-center justify-start mw9">
+<h1 class="dim f3 lh-solid ml0-ns mr0 mr4-l mv0 pl3 pl4-ns">
+<a href=/stencil class="link white">
+STENCIL
+</a>
+</h1><ul class="list ma0 pa0 dn dib-l" role=menu>
+<li class="f5 dib mr4" role=menuitem>
+<a href=/stencil/documentation/ class="dim link light-silver">
+Docs
+</a>
+</li><li class="f5 dib mr4" role=menuitem>
+<a href=https://github.com/getoutreach/stencil class="dim link light-silver">
+GitHub
+<span class=pl1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="10" height="10" viewBox="0 0 32 32" class="fill-current v-base" aria-label="External Link"><path d="M25.152 16.576v5.696q0 2.144-1.504 3.648T20 27.424H5.152q-2.144.0-3.648-1.504t-1.504-3.648V7.424q0-2.112 1.504-3.616t3.648-1.536h12.576q.224.0.384.16t.16.416V4q0 .256-.16.416t-.384.16H5.152q-1.184.0-2.016.832t-.864 2.016v14.848q0 1.184.864 2.016t2.016.864H20q1.184.0 2.016-.864t.832-2.016v-5.696q0-.256.16-.416t.416-.16h1.152q.256.0.416.16t.16.416zM32 1.152v9.12q0 .48-.352.8t-.8.352-.8-.352l-3.136-3.136-11.648 11.648q-.16.192-.416.192t-.384-.192l-2.048-2.048q-.192-.16-.192-.384t.192-.416L24.064 5.088l-3.136-3.136q-.352-.352-.352-.8t.352-.8.8-.352h9.12q.48.0.8.352t.352.8z"/></svg>
+</span>
+</a>
+</li></ul><div class="db dib-ns pl3"><form id=site-search-form role=search>
+<fieldset class="bn ma0 pa0">
+<div type=search id=search-input>
+</fieldset></form></div><span class="absolute mt1 mt2-l pr3 right-0 top-0">
+<a class="github-button needs-js link primary-color-dark" href=https://github.com/getoutreach/stencil data-size=large data-show-count=false aria-label="Star getoutreach/stencil on GitHub">Star</a>
+</span>
+</div></nav><main role=main class="content-with-sidebar min-vh-100 pb7 pb0-ns">
+<article class="w-100 ph4 pb5 pb6-ns pt1 pt5-ns">
+<div class=flex-l>
+<div class="order-2 w-100 w-20-l ph5-m ph0-l mb4 sticky">
+<aside class="fixed-lTK mw5-l right-0 f6 bl-l b--moon-gray pv4 pv0-ns ph4-l nested-list-reset nested-links nested-copy-line-height">
+<p class=b>What's on this Page</p><nav id=TableOfContents>
+<ul>
+<li><a href=#step-1-create-a-module>Step 1: Create a module</a></li><li><a href=#step-2-creating-a-template>Step 2: Creating a Template</a></li><li><a href=#step-3-consuming-the-module-in-an-application>Step 3: Consuming the Module in an Application</a></li><li><a href=#step-4-using-a-block>Step 4: Using a Block</a></li><li><a href=#step-5-optional-creating-multiple-files>Step 5: (Optional) Creating Multiple Files</a></li><li><a href=#reflection>Reflection</a></li></ul></nav><div date-pref>
+<a href=https://engineering.outreach.io/stencil/getting-started/installing/ class="dib f6 pl1 hover-bg-light-gray br-100" title="Install Stencil "><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+</a>
+<a href=https://engineering.outreach.io/stencil/getting-started/native-extension-quick-start/ class="dib f6 pr1 hover-bg-light-gray br-100" title="Native Extension Quick Start"><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+</a>
+</div></aside></div><div class="order-1 w-60-l mw7 ph0 ph5-ns mid-gray nested-copy-line-height no-underline nested-links nested-img nested-copy-seperator nested-blockquote mt0-ns" style=flex-grow:1>
+<div class="documentation-copy center measure-wide-l">
+<div id=readout class="fixed right-0 bottom-0">
+</div><header class="flex-none w-100">
+<a href=/stencil/categories/getting-started class="f6 fw8 mb0 link mid-gray dim mr3">
+GETTING STARTED
+</a>
+<h1 class="lh-title mb3 mv0 pt3 primary-color-dark">Module Quick Start</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
+<div class="f4 fw4 lh-copy">
+Create a module and use it in an application
+</div></aside><div class=prose id=prose>
+<aside class="admonition note">
+<div class=note-icon>
+</div><div class=admonition-content><p>This quick start assumes you&rsquo;re familiar with stencil usage already. If you aren&rsquo;t be sure to go through the <a href=/stencil/reference/>reference documentation</a> or the <a href=/stencil/getting-started/quick-start>quick start</a>.</p></div></aside><h2 id=step-1-create-a-module>Step 1: Create a module <a class=header-link href=#step-1-create-a-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Using the <a href><code>stencil create</code></a> command we&rsquo;re able to quickly create a module, let&rsquo;s start with a simple hello world module.</p><div class="code relative" id=create-module.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">create-module.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-sh data-lang=sh><span class=line><span class=cl>mkdir helloworld<span class=p>;</span> <span class=nb>cd</span> helloworld
+</span></span><span class=line><span class=cl>stencil create module github.com/yourorg/helloworld</span></span></code></pre></div></div></div><p>You&rsquo;ll notice that when running that command, stencil itself was ran. This is because <code>stencil create</code> uses the <a href=https://github.com/getoutreach/stencil-template-base><code>stencil-template-base</code></a> module by default. This brings automatic CI and testing support to your module.</p><p>Let&rsquo;s briefly look at what it&rsquo;s created:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>helloworld ❯ ls -alh
+</span></span><span class=line><span class=cl>total <span class=m>616</span>
+</span></span><span class=line><span class=cl>drwxr-xr-x   <span class=m>23</span> jaredallard  wheel   736B May  <span class=m>4</span> 20:41 .
+</span></span><span class=line><span class=cl>drwxr-xr-x    <span class=m>9</span> jaredallard  wheel   288B May  <span class=m>4</span> 20:40 ..
+</span></span><span class=line><span class=cl>drwxr-xr-x   <span class=m>32</span> jaredallard  wheel   1.0K May  <span class=m>4</span> 20:41 .bootstrap
+</span></span><span class=line><span class=cl>drwxr-xr-x    <span class=m>3</span> jaredallard  wheel    96B May  <span class=m>4</span> 20:41 .circleci
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   274B May  <span class=m>4</span> 20:41 .editorconfig
+</span></span><span class=line><span class=cl>drwxr-xr-x    <span class=m>4</span> jaredallard  wheel   128B May  <span class=m>4</span> 20:41 .github
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   795B May  <span class=m>4</span> 20:41 .gitignore
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   896B May  <span class=m>4</span> 20:41 .releaserc.yaml
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   417B May  <span class=m>4</span> 20:41 CONTRIBUTING.md
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel    11K May  <span class=m>4</span> 20:41 LICENSE.txt
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   160B May  <span class=m>4</span> 20:41 Makefile
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   684B May  <span class=m>4</span> 20:41 README.md
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   118B May  <span class=m>4</span> 20:41 bootstrap.lock
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   5.5K May  <span class=m>4</span> 20:41 go.mod
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   101K May  <span class=m>4</span> 20:41 go.sum
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel    74B May  <span class=m>4</span> 20:41 manifest.yaml
+</span></span><span class=line><span class=cl>drwxr-xr-x  <span class=m>375</span> jaredallard  wheel    12K May  <span class=m>4</span> 20:41 node_modules
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   474B May  <span class=m>4</span> 20:41 package.json
+</span></span><span class=line><span class=cl>drwxr-xr-x    <span class=m>5</span> jaredallard  wheel   160B May  <span class=m>4</span> 20:41 scripts
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   138B May  <span class=m>4</span> 20:41 service.yaml
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   3.4K May  <span class=m>4</span> 20:41 stencil.lock
+</span></span><span class=line><span class=cl>drwxr-xr-x    <span class=m>3</span> jaredallard  wheel    96B May  <span class=m>4</span> 20:41 templates
+</span></span><span class=line><span class=cl>-rw-r--r--    <span class=m>1</span> jaredallard  wheel   140K May  <span class=m>4</span> 20:41 yarn.lock
+</span></span></code></pre></div><p>A lot of files were created, the majority of these are niceties, like an automatic LICENSE (Apache-2.0), a README, and a CONTRIBUTING.md. Then there&rsquo;s also automatic .gitignore, circleci configuration for CI and a .releaserc for conventional commit powered releases. For more information for how to use these files, see the <a href=https://github.com/getoutreach/stencil-template-base>template-base documentation</a>.</p><p>The most important directory is the <code>templates/</code> directory, which will contain any templates we want to render.</p><h2 id=step-2-creating-a-template>Step 2: Creating a Template <a class=header-link href=#step-2-creating-a-template><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Let&rsquo;s create a template that creates a simple hello world message in Go. We&rsquo;ll start by creating a <code>hello.go.tpl</code> in the <code>templates/</code> directory.</p><div class="code relative" id=hello.go.tpl><div class="filename san-serif f6 dib lh-solid pl2 pv2">hello.go.tpl</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-tpl data-lang=tpl><span class=line><span class=cl><span class=x>package main
+</span></span></span><span class=line><span class=cl><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>func main() </span><span class=cp>{</span>
+</span></span><span class=line><span class=cl>	<span class=na>fmt</span><span class=o>.</span><span class=na>Println</span><span class=o>(</span><span class=s2>&#34;Hello, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=cp>}</span></span></span></code></pre></div></div></div><h2 id=step-3-consuming-the-module-in-an-application>Step 3: Consuming the Module in an Application <a class=header-link href=#step-3-consuming-the-module-in-an-application><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Now that we&rsquo;ve done that, well how do we use it? This is super easy with the <code>replacements</code> map in a <a href=/stencil/reference/service.yaml><code>service.yaml</code></a>.</p><p>Let&rsquo;s quickly create a test application:</p><div class="code relative" id=create-test-module.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">create-test-module.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-sh data-lang=sh><span class=line><span class=cl>mkdir testapp<span class=p>;</span> <span class=nb>cd</span> testapp
+</span></span><span class=line><span class=cl>cat &gt; service.yaml &lt;&lt;EOF
+</span></span><span class=line><span class=cl>name: testapp
+</span></span><span class=line><span class=cl>modules:
+</span></span><span class=line><span class=cl>- name: github.com/yourorg/helloworld
+</span></span><span class=line><span class=cl>replacements:
+</span></span><span class=line><span class=cl>	<span class=c1># Replace ../helloworld with the path to your module.</span>
+</span></span><span class=line><span class=cl>	github.com/yourorg/helloworld: ../helloworld</span></span></code></pre></div></div></div><p>Now if we run stencil on the test application, we should see the following:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ stencil
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> stencil v1.14.2
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> Fetching dependencies
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>  -&gt; github.com/yourorg/helloworld <span class=nb>local</span>
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Loading native extensions
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Rendering templates
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Writing template<span class=o>(</span>s<span class=o>)</span> to disk
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>   -&gt; Created hello.go
+</span></span></code></pre></div><p>It looks like it created <code>hello.go</code> for us! Let&rsquo;s validate:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ cat hello.go
+</span></span><span class=line><span class=cl>package main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>func main<span class=o>()</span> <span class=o>{</span>
+</span></span><span class=line><span class=cl>	fmt.Println<span class=o>(</span><span class=s2>&#34;Hello, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=o>}</span>
+</span></span></code></pre></div><p>🎉 We have a hello world application!</p><h2 id=step-4-using-a-block>Step 4: Using a Block <a class=header-link href=#step-4-using-a-block><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Blocks are incredibly easy to use in Stencil.</p><aside class="admonition note">
+<div class=note-icon>
+</div><div class=admonition-content><p>In case you don&rsquo;t remember, blocks are areas in your generated code that you&rsquo;d like to persist across runs.</p></div></aside><p>Let&rsquo;s create our own block in the hello.go template from earlier:</p><div class="code relative" id=hello.go.tpl><div class="filename san-serif f6 dib lh-solid pl2 pv2">hello.go.tpl</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-tpl data-lang=tpl><span class=line><span class=cl><span class=x>package main
+</span></span></span><span class=line><span class=cl><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>func main() </span><span class=cp>{</span>
+</span></span><span class=line><span class=cl>	<span class=na>fmt</span><span class=o>.</span><span class=na>Println</span><span class=o>(</span><span class=s2>&#34;Hello, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl>	<span class=o>///</span><span class=na>Block</span><span class=o>(</span><span class=na>additionalMessage</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=cp>{{</span><span class=o>-</span> <span class=o>/*</span> <span class=na>It</span><span class=err>&#39;</span><span class=na>s</span> <span class=na>important</span> <span class=na>to</span> <span class=na>not</span> <span class=na>indent</span> <span class=na>the</span> <span class=na>file</span><span class=o>.</span><span class=na>Block</span> <span class=na>to</span> <span class=na>prevent</span> <span class=na>the</span> <span class=na>indentation</span> <span class=na>from</span> <span class=na>being</span> <span class=na>copied</span> <span class=na>over</span> <span class=na>and</span><span class=o>..</span> <span class=na>over</span> <span class=na>again</span><span class=o>.</span> <span class=o>*/</span> <span class=cp>}}</span>
+</span></span><span class=line><span class=cl><span class=cp>{{</span> <span class=na>file</span><span class=o>.</span><span class=na>Block</span> <span class=s2>&#34;additionalMessage&#34;</span> <span class=cp>}}</span>
+</span></span><span class=line><span class=cl>	<span class=o>///</span><span class=na>EndBlock</span><span class=o>(</span><span class=na>additionalMessage</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=cp>}</span></span></span></code></pre></div></div></div><p>If we re-run stencil and look at <code>hello.go</code> we should see the following:</p><div class="code relative" id=hello.go><div class="filename san-serif f6 dib lh-solid pl2 pv2">hello.go</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span> <span class=nx>main</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Hello, world!&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>	<span class=c1>///Block(additionalMessage)
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>	<span class=c1>///EndBlock(additionalMessage)
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>}</span></span></span></code></pre></div></div></div><p>If we add contents to the block and re-run stencil they&rsquo;ll be persisted across the run!</p><h2 id=step-5-optional-creating-multiple-files>Step 5: (Optional) Creating Multiple Files <a class=header-link href=#step-5-optional-creating-multiple-files><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>One of the powerful parts of stencil is the ability to create an arbitrary number of files with a single template. This is done with the <a href=/stencil/functions/file.create><code>file.Create</code></a> function. Let&rsquo;s create a <code>greeter.go.tpl</code> template in the <code>templates/</code> directory that&rsquo;ll create <code>&lt;greeting>.go</code> based on the <code>greetings</code> argument.</p><div class="code relative" id=greeter.go.tpl><div class="filename san-serif f6 dib lh-solid pl2 pv2">greeter.go.tpl</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-tpl data-lang=tpl><span class=line><span class=cl><span class=x># This is important! We don&#39;t want to create a greeter.go file
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=nv>$_</span> <span class=o>:=</span> <span class=na>file</span><span class=o>.</span><span class=na>Skip</span> <span class=s2>&#34;Generates multiple files&#34;</span> <span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>define</span> <span class=s2>&#34;greeter&#34;</span> <span class=o>-</span><span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=nv>$greeting</span> <span class=o>:=</span> <span class=o>.</span><span class=na>greeting</span> <span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>package main
+</span></span></span><span class=line><span class=cl><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>func main() </span><span class=cp>{</span>
+</span></span><span class=line><span class=cl>	<span class=na>fmt</span><span class=o>.</span><span class=na>Println</span><span class=o>(</span><span class=s2>&#34;$greeting, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=cp>}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>end</span> <span class=o>-</span><span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>range</span> <span class=nv>$_</span><span class=o>,</span> <span class=nv>$greeting</span> <span class=o>:=</span> <span class=na>stencil</span><span class=o>.</span><span class=na>Arg</span> <span class=s2>&#34;greetings&#34;</span> <span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x># Create a new $greeting.go file
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>file</span><span class=o>.</span><span class=na>Create</span> <span class=o>(</span><span class=na>printf</span> <span class=s2>&#34;%s.go&#34;</span> <span class=nv>$greeting</span><span class=o>)</span> <span class=m>0600</span> <span class=na>now</span> <span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x># We&#39;ll render the template greeter with $greeting as the values being passed to it
+</span></span></span><span class=line><span class=cl><span class=x># Once we&#39;ve done that we&#39;ll use the output to set the contents of the file we just created.
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>stencil</span><span class=o>.</span><span class=na>ApplyTemplate</span> <span class=s2>&#34;greeter&#34;</span> <span class=nv>$greeting</span> <span class=o>|</span> <span class=na>file</span><span class=o>.</span><span class=na>SetContents</span> <span class=cp>}}</span><span class=x>
+</span></span></span><span class=line><span class=cl><span class=x></span><span class=cp>{{</span><span class=o>-</span> <span class=na>end</span> <span class=cp>}}</span></span></span></code></pre></div></div></div><aside class="admonition note">
+<div class=note-icon>
+</div><div class=admonition-content><p>Blocks are supported in multiple files! When <code>file.SetPath</code> is called the host is searched to see if a file already exists at that path, if it does it is searched to see if it contains any blocks, if it does they are loaded and accessible via <code>file.Block</code> as normal</p></div></aside><p>Now let&rsquo;s modify the <code>manifest.yaml</code> to accept the argument <code>greetings</code>:</p><div class="code relative" id=manifest.yaml><div class="filename san-serif f6 dib lh-solid pl2 pv2">manifest.yaml</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</button>
+<div class="code-copy-content nt3">
+<div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>arguments</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>greetings</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>description</span><span class=p>:</span><span class=w> </span><span class=l>A list of greetings to use</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>list</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>require</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>default</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=s2>&#34;hello&#34;</span><span class=p>,</span><span class=w> </span><span class=s2>&#34;goodbye&#34;</span><span class=p>]</span></span></span></code></pre></div></div></div><p>If we run stencil on the test application, we should see the following:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ stencil
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> stencil v1.14.2
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> Fetching dependencies
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>  -&gt; github.com/yourorg/helloworld <span class=nb>local</span>
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Loading native extensions
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Rendering templates
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Writing template<span class=o>(</span>s<span class=o>)</span> to disk
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>   -&gt; Created hello.go
+</span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>   -&gt; Created goodbye.go
+</span></span></code></pre></div><aside class="admonition note">
+<div class=note-icon>
+</div><div class=admonition-content><p><code>hello</code> and <code>goodbye</code> came from the default list of greetings that was set in the <code>manifest.yaml</code> file. Setting <code>arguments.greetings</code> on the test application and see it change!</p></div></aside><p>If we look at the files, we should see the following:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ cat hello.go
+</span></span><span class=line><span class=cl>package main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>func main<span class=o>()</span> <span class=o>{</span>
+</span></span><span class=line><span class=cl>	fmt.Println<span class=o>(</span><span class=s2>&#34;hello, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=o>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>testapp ❯ cat goodbye.go
+</span></span><span class=line><span class=cl>package main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>func main<span class=o>()</span> <span class=o>{</span>
+</span></span><span class=line><span class=cl>	fmt.Println<span class=o>(</span><span class=s2>&#34;goodbye, world!&#34;</span><span class=o>)</span>
+</span></span><span class=line><span class=cl><span class=o>}</span>
+</span></span></code></pre></div><h2 id=reflection>Reflection <a class=header-link href=#reflection><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>We&rsquo;ve created a module, used it in a test application via the <code>replacements</code> map in the <code>service.yaml</code> and used a block. Optionally we&rsquo;ve also created multiple files with a template. This is just the beginning of what you can do with modules. Modules have a rich amount of <a href=/stencil/functions/>functions</a> available to them. Check out the <a href=/stencil/reference/>reference</a> for more information about modules and how to use them.</p></div><h2>See Also</h2><ul>
+<li><a href=/stencil/getting-started/native-extension-quick-start/>Native Extension Quick Start</a></li><li><a href=/stencil/getting-started/quick-start/>Quick Start</a></li></ul></div></div><div class="order-0 w-20 dn db-l">
+<nav role=navigation>
+<ul class="list pa0 nl2">
+<li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.about>About Stencil</a>
+<ul class="about desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/about/what-is-stencil/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+What is Stencil?
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/about/license/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+License
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2 primary-color" data-target=.getting-started>Getting Started</a>
+<ul class="getting-started desktopmenu animated fadeIn list pl0 bg-light-gray db">
+<li class="f6 fw4">
+<a href=/stencil/getting-started/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Get Started Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/installing/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Install Stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Quick Start
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/module-quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 primary-color">
+Module Quick Start
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/getting-started/native-extension-quick-start/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Native Extension Quick Start
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.reference>Reference Docs</a>
+<ul class="reference desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/reference/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Reference Docs Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/modules/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Stencil Modules Overview
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/native-extensions/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Native Extensions
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/template-module/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Template Module
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/reference/service.yaml/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Service Manifest
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.functions>Functions</a>
+<ul class="functions desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/functions/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Functions Quick Reference
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.block/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Block
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.create/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Create
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.delete/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Delete
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.path/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Path
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setcontents/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetContents
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.setpath/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.SetPath
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.skip/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Skip
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/file.static/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+file.Static
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.addtomodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.AddToModuleHook
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.applytemplate/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ApplyTemplate
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.arg/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Arg
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.args/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Args
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetModuleHook
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
+<ul class="commands desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/commands/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Commands Quick Reference
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_create/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil create
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_create_templaterepository/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil create templaterepository
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_describe/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil describe
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
+<a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>
+<ul class="contribute desktopmenu animated fadeIn list pl0 bg-light-gray dn">
+<li class="f6 fw4">
+<a href=/stencil/contribute/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Contribute to Stencil
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/contribute/development/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Development
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/contribute/documentation/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+Documentation
+</a>
+</li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
+<a href=/stencil/maintenance/ class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.>Maintenance</a>
+</li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
+<div class="mw7 pa4 center nested-lh-copy lh-copy">
+<h6 class="f6 dark-gray mb2">
+Last updated: May 5, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/dad4c11ed45e8945ce1a8844e92530ea06929579>docs: Add getting started and reference docs (#90) (dad4c11)</a>
+</h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/getting-started/module-quick-start.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
+</div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
+<div class="center flex-ns flex-wrap justify-between mw9 w-90">
+<div class="pb3 pt4 w-100">
+<div class="b f3 light-gray mb3 nested-links tc">
+By the <a href=https://github.com/getoutreach/stencil/graphs/contributors class=link>Stencil Authors</a><br>
+</div><div class="center w4">
+<img src=/stencil/img/stencil-logo.png alt="Hugo Logo">
+</div><ul class="center f6 list ma0 mv3 pa0 tc"><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/issues/new class="dim link light-gray pv2">File an Issue</a></li><li class="dib mr3"><a href=https://github.com/getoutreach/stencil/discussions class="dim link light-gray pv2">Get Help</a></li></ul></div></div><img src=/stencil/images/gopher-side_color.svg alt class="absolute-l bottom-0 dn db-l h4 right-0 z-999">
+<div class="bg-primary-color-dark bottom-0 left-0 right-0 dn-l fixed pb3 ph3 pt3 w-100"><div class="globalmenu mobilemenu pb1 dn">
+<ul class="list hidden dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/documentation/ class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+Docs
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=https://github.com/getoutreach/stencil class="ttu f6 link primary-color-light overflow hover-white db brand-font ma0 w-100 pv3 ph4">
+GitHub
+</a>
+</li></ul></div><div class="docsmenu mobilemenu pb1 dn">
+<ul class="list dib ph0 scrolling-touch tc">
+<li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/about/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+About Stencil
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/getting-started/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Getting Started
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/reference/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Reference Docs
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/functions/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Functions
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/commands/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+CLI
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100 mb2 bb b--mid-gray">
+<a href=/stencil/contribute/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Contribute
+</a>
+</li><li class="tl dib ma0 hover-bg-black w-100">
+<a href=/stencil/maintenance/ class="ttu f6 link primary-color-light hover-white db brand-font mb1 ma0 w-100 pv2 ph4">
+Maintenance
+</a>
+</li></ul></div><div class="flex dn-l justify-between">
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link mr2 white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.globalmenu>Menu</button>
+<button class="js-toggle flex-auto dib dn-l f6 tc db ph3 pv2 link white bg-primary-color-dark hover-bg-primary-color ba b--white-40 w-auto" data-target=.docsmenu>Docs Menu</button>
+</div></div></footer></body></html>
