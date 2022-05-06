@@ -1,36 +1,16 @@
 ---
-{{- $description := "" }}
-{{- range .Doc.Blocks }}
-{{- if eq .Kind "paragraph" }}
-{{- $description = .Text }}
-{{- break}}
-{{- end }}
-{{- end }}
-{{- $namespace := "" }}
-{{- if eq .Receiver "*TplStencil" }}
-{{- $namespace = "stencil" }}
-{{- else if eq .Receiver "*TplFile" }}
-{{- $namespace = "file" }}
-{{- end }}
-title: {{ $namespace }}.{{ .Name }}
-linktitle: {{ $namespace }}.{{ .Name }}
-description: >
-  {{ $description }}
-date: 2022-05-02
-categories: [functions]
+title: {{ .Command }}
+linktitle: {{ .Command }}
+description: {{ .Description }}
+date: 2022-05-04
+categories: [commands]
 menu:
   docs:
-    parent: "functions"
+    parent: "commands"
 ---
 
-{{ with .Doc }}
-{{- range .Blocks -}}
-	{{- if eq .Kind "paragraph" -}}
-		{{- paragraph .Text -}}
-	{{- else if eq .Kind "code" -}}
-		{{- codeBlock "go-text-template" .Text -}}
-	{{- else if eq .Kind "header" -}}
-		{{- header .Level .Text -}}
-	{{- end -}}
-{{- end -}}
-{{- end }}
+## {{ .Command }}
+
+```bash
+{{ .Output }}
+```

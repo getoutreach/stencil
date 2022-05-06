@@ -30,14 +30,14 @@ This contribution guide takes a step-by-step approach in hopes of helping newcom
 - You are a fan of Stencil and enthusiastic about contributing to the project
 
 {{% note "Additional Questions?" %}}
-If you're struggling at any point in this contribution guide, reach out to the Stencil community in [Stencil's Discussion forum](forums)
+If you're struggling at any point in this contribution guide, reach out to the Stencil community in [Stencil's discussion forum](https://github.com/getoutreach/stencil/discussions)
 {{% /note %}}
 
 ## Install Go
 
 The installation of Go should take only a few minutes. You have more than one option to get Go up and running on your machine.
 
-If you are having trouble following the installation guides for Go, check out [Go Bootcamp, which contains setups for every platform][gobootcamp] or reach out to the Stencil community in the [Stencil Discussion Forums][forums].
+If you are having trouble following the installation guides for Go, check out [Go Bootcamp, which contains setups for every platform][gobootcamp] or reach out to the Stencil community in the [Stencil discussion Forums][forums].
 
 ### Install Go From Source
 

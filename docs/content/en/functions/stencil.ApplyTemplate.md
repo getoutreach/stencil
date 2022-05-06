@@ -26,3 +26,4 @@ func main() {
 
 {{- stencil.ApplyTemplate "command" | file.SetContents }}
 ```
+

@@ -15,3 +15,4 @@ Args returns all arguments passed to stencil from the service's manifest\. Note:
 ```go-text-template
 {{- (stencil.Args).name }}
 ```
+

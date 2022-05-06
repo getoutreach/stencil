@@ -15,3 +15,4 @@ Arg returns the value of an argument in the service's manifest\.
 ```go-text-template
 {{- stencil.Arg "name" }}
 ```
+

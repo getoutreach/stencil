@@ -2,7 +2,7 @@
 
 # Stencil Docs
 
-Documentation site for [Stencil](https://github.com/getoutreach/stencil), a programmable templating engine for Microservices and more.
+Documentation site for [Stencil](https://github.com/getoutreach/stencil), a programmable templating engine for microservices and more.
 
 ## Contributing
 
@@ -25,7 +25,8 @@ Spelling fixes are most welcomed, and if you want to contribute longer sections 
 To view the documentation site locally, you need to clone this repository:
 
 ```bash
-git clone https://github.com/getoutreach/stencil-docs.git
+git clone https://github.com/getoutreach/stencil.git
+cd docs/
 ```
 
 Then to view the docs in your browser, run Hugo and open up the link:

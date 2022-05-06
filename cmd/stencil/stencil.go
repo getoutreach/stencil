@@ -56,6 +56,7 @@ func main() {
 		Version: oapp.Version,
 		Name:    "stencil",
 		///Block(app)
+		Description: "a smart templating engine for service development",
 		Action: func(c *cli.Context) error {
 			log.Infof("stencil %s", oapp.Version)
 

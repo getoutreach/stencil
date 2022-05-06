@@ -4,28 +4,18 @@ linktitle: Install Stencil
 description: Install Stencil on macOS, Windows, Linux, OpenBSD, FreeBSD, and on any machine where the Go compiler tool chain can run.
 date: 2022-05-02
 categories: [getting started, fundamentals]
-authors: ["Michael Henderson"]
+authors: ["Michael Henderson", "Jared Allard"]
 keywords: [install, pc, windows, linux, macos, binary, tarball]
 menu:
   docs:
     parent: "getting-started"
-    weight: 30
-weight: 30
-sections_weight: 30
-draft: false
-aliases:
-  [
-    /tutorials/installing-on-windows/,
-    /tutorials/installing-on-mac/,
-    /overview/installing/,
-    /getting-started/install,
-    /install/,
-  ]
+    weight: 5
+aliases: [/install/]
 toc: true
 ---
 
 {{% note %}}
-There is lots of talk about "Stencil being written in Go", but you don't need to install Go to enjoy Stencil. Just grab a precompiled binary!
+There is lots of talk about "Stencil being written in Go", but you don't need to install Go to enjoy Stencil. Just grab a [precompiled](https://github.com/getoutreach/stencil/releases/latest) binary!
 {{% /note %}}
 
 Stencil is written in [Go](https://golang.org/) with support for multiple platforms. The latest release can be found at [Stencil Releases][releases].
@@ -39,6 +29,14 @@ Stencil currently provides pre-built binaries for the following:
 Stencil may also be compiled from source wherever the Go toolchain can run; e.g., on other operating systems such as DragonFly BSD, OpenBSD, Plan&nbsp;9, Solaris, and others. See <https://golang.org/doc/install/source> for the full set of supported combinations of target operating systems and compilation architectures.
 
 ## Quick Install
+
+### Homebrew (macOS)
+
+We have a brew formula for Stencil. It is recommended to install Stencil via Homebrew on macOS.
+
+```bash
+brew install stencil
+```
 
 ### Binary (Cross-platform)
 
@@ -68,10 +66,10 @@ Upgrading Stencil is as easy as downloading and replacing the executable you’v
 
 ## Next Steps
 
-Now that you've installed Stencil, read the [Quick Start guide][quickstart] and explore the rest of the documentation. If you have questions, ask the Stencil community directly by visiting the [Stencil Discussion Forum][forum].
+Now that you've installed Stencil, read the [Quick Start guide][quickstart] and explore the rest of the documentation. If you have questions, ask the Stencil community directly by visiting the [Stencil discussion Forum][forum].
 
 [forum]: https://github.com/getoutreach/stencil/discussions
 [installgit]: https://git-scm.com/
 [installgo]: https://golang.org/dl/
-[quickstart]: /getting-started/quick-start/
+[quickstart]: /stencil/getting-started/quick-start/
 [releases]: https://github.com/getoutreach/stencil/releases
