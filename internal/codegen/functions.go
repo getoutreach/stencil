@@ -6,6 +6,7 @@
 package codegen
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -57,13 +58,38 @@ func toYAML(v interface{}) (string, error) {
 	return strings.TrimSuffix(string(data), "\n"), nil
 }
 
-// fromYAML converts a YAML document into a map[string]interface{}.
+// fromYAML converts a YAML document into a interface{}.
 //
 // Based on: https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L98
 func fromYAML(str string) (interface{}, error) {
 	var m interface{}
 
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// toJSON converts a interface{} into a JSON document.
+func toJSON(v interface{}) (string, error) {
+	// If no data, return an empty string
+	if v == nil {
+		return "", nil
+	}
+
+	data, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSuffix(string(data), "\n"), nil
+}
+
+// fromJSON converts a JSON document into a interface{}.
+func fromJSON(str string) (interface{}, error) {
+	var m interface{}
+
+	if err := json.Unmarshal([]byte(str), &m); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -77,4 +103,6 @@ var Default = template.FuncMap{
 	"QuoteJoinStrings": quotejoinstrings,
 	"toYaml":           toYAML,
 	"fromYaml":         fromYAML,
+	"toJson":           toJSON,
+	"fromJson":         fromJSON,
 }

@@ -54,3 +54,27 @@ c: d
 	// Output:
 	// map[a:b c:d] <nil>
 }
+
+func Example_toJson() {
+	example := map[string]interface{}{
+		"a": "b",
+		"c": "d",
+	}
+	fmt.Println(toJSON(example))
+
+	// Output:
+	// {"a":"b","c":"d"} <nil>
+}
+
+func Example_fromJson() {
+	example := `
+{
+	"a": "b",
+	"c": "d"
+}
+`
+	fmt.Println(fromJSON(example))
+
+	// Output:
+	// map[a:b c:d] <nil>
+}
