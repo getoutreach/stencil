@@ -9,11 +9,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"path"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/getoutreach/stencil/internal/dotnotation"
+	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -134,6 +138,28 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 //   {{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {
 	return s.s.m.Arguments
+}
+
+// ReadFile reads a file from the current directory and returns
+// it's contents as a string.
+func (s *TplStencil) ReadFile(name string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	f, err := osfs.New(cwd).Open(name)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to read file %q", name)
+	}
+	defer f.Close()
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
 // ApplyTemplate executes a template inside of the current module
