@@ -3,7 +3,7 @@ title: Stencil Modules
 linktitle: Stencil Modules Overview
 description: How to use Stencil Modules.
 date: 2022-05-04
-publishdate:  2022-05-04
+publishdate: 2022-05-04
 menu:
   docs:
     parent: "reference"

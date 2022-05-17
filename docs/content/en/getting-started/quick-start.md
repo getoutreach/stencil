@@ -45,9 +45,13 @@ name: helloworld
 arguments: {}
 
 # Below is a list of modules to use for this application
+
 # It should follow the following format:
+
 # - name: <moduleImportPath>
-#   version: "optional-version-to-pin-to"
+
+# version: "optional-version-to-pin-to"
+
 modules: []
 {{< /code >}}
 
@@ -64,10 +68,10 @@ INFO[0002] Writing template(s) to disk
 INFO[0002] Running post-run command(s)
 
 helloworld ❯ ls -alh
-drwxr-xr-x  4 jaredallard  wheel   128B May  4 20:16 .
-drwxr-xr-x  9 jaredallard  wheel   288B May  4 20:16 ..
--rw-r--r--  1 jaredallard  wheel   213B May  4 20:16 service.yaml
--rw-r--r--  1 jaredallard  wheel    78B May  4 20:16 stencil.lock
+drwxr-xr-x 4 jaredallard wheel 128B May 4 20:16 .
+drwxr-xr-x 9 jaredallard wheel 288B May 4 20:16 ..
+-rw-r--r-- 1 jaredallard wheel 213B May 4 20:16 service.yaml
+-rw-r--r-- 1 jaredallard wheel 78B May 4 20:16 stencil.lock
 {{< /code >}}
 
 {{% note %}}
@@ -92,10 +96,10 @@ Now that we've created our first stencil application, you're going to want to im
 name: github.com/getoutreach/stencil-base
 ...
 arguments:
-  description:
-    required: true
-    type: string
-    description: The purpose of this repository.
+description:
+required: true
+type: string
+description: The purpose of this repository.
 {{< /code >}}
 
 We can see that `description` is a required argument, so let's add it! Modify the `service.yaml` to set `arguments.description` to `"My awesome service!"`
@@ -103,10 +107,11 @@ We can see that `description` is a required argument, so let's add it! Modify th
 {{< code file="service.yaml" >}}
 name: helloworld
 arguments:
-	description: "My awesome service!"
+description: "My awesome service!"
 modules:
+
 - name: github.com/getoutreach/stencil-base
-{{< /code >}}
+  {{< /code >}}
 
 Now if we run stencil we'll see that we have some files!
 
@@ -156,13 +161,14 @@ drwxr-xr-x   4 jaredallard  wheel   128B May  4 20:26 scripts
 
 # Step 4: Modifying a Block
 
-One of the key features in stencil is the notion of "blocks". Modules can expose a block where they want developers to modify the code. Let's look at the `stencil-base` module to see what blocks are available. 
+One of the key features in stencil is the notion of "blocks". Modules can expose a block where they want developers to modify the code. Let's look at the `stencil-base` module to see what blocks are available.
 
 In `README.md` we can see a basic block called "overview"
 
 {{< code file="README.md" copy=true >}}
 
 # helloworld
+
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/getoutreach/helloworld)
 [![Generated via Stencil](https://img.shields.io/badge/Outreach-Bootstrap-%235951ff)](https://github.com/getoutreach/stencil)
 [![Coverage Status](https://coveralls.io/repos/github/getoutreach/helloworld/badge.svg?branch=main)](https://coveralls.io/github/getoutreach/helloworld?branch=)
@@ -185,12 +191,15 @@ Let's add some content in two places. One inside the block, one outside.
 
 {{< code file="README.additions.md">}}
 ...
+
 ## High-level Overview
 
 hello, world!
 
 <!--- Block(overview) -->
+
 hello, world!
+
 <!--- EndBlock(overview) -->
 
 {{< /code >}}
@@ -200,6 +209,7 @@ If we re-run stencil, notice how the contents of `README.md` have changed.
 {{< code file="README.md" copy=true >}}
 
 # helloworld
+
 [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/getoutreach/helloworld)
 [![Generated via Stencil](https://img.shields.io/badge/Outreach-Bootstrap-%235951ff)](https://github.com/getoutreach/stencil)
 [![Coverage Status](https://coveralls.io/repos/github/getoutreach/helloworld/badge.svg?branch=main)](https://coveralls.io/github/getoutreach/helloworld?branch=)
@@ -213,7 +223,9 @@ Please read the [CONTRIBUTING.md](CONTRIBUTING.md) document for guidelines on de
 ## High-level Overview
 
 <!--- Block(overview) -->
+
 hello, world!
+
 <!--- EndBlock(overview) -->
 
 {{< /code >}}

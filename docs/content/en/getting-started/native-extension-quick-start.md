@@ -47,10 +47,11 @@ Now that we've created the `plugin/` directory we're going to created a simple `
 package main
 
 import (
-	"fmt"
+"fmt"
 
-	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
-	"github.com/sirupsen/logrus"
+    "github.com/getoutreach/stencil/pkg/extensions/apiv1"
+    "github.com/sirupsen/logrus"
+
 )
 
 // _ is a compile time assertion to ensure we implement
@@ -60,35 +61,36 @@ var _ apiv1.Implementation = &TestPlugin{}
 type TestPlugin struct{}
 
 func (tp *TestPlugin) GetConfig() (*apiv1.Config, error) {
-	return &apiv1.Config{}, nil
+return &apiv1.Config{}, nil
 }
 
 func (tp *TestPlugin) ExecuteTemplateFunction(t *apiv1.TemplateFunctionExec) (interface{}, error) {
-	if t.Name == "helloWorld" {
-		return "helloWorld"
-	}
+if t.Name == "helloWorld" {
+return "helloWorld"
+}
 
-	return nil, nil
+    return nil, nil
+
 }
 
 func (tp *TestPlugin) GetTemplateFunctions() ([]*apiv1.TemplateFunction, error) {
-	return []*apiv1.TemplateFunction{
-		{
-			Name:          "helloWorld",
-		},
-	}, nil
+return []\*apiv1.TemplateFunction{
+{
+Name: "helloWorld",
+},
+}, nil
 }
 
 func helloWorld() (interface{}, error) {
-	fmt.Println("👋 from the test plugin")
-	return "hello from a plugin!", nil
+fmt.Println("👋 from the test plugin")
+return "hello from a plugin!", nil
 }
 
 func main() {
-	err := apiv1.NewExtensionImplementation(&TestPlugin{})
-	if err != nil {
-		logrus.WithError(err).Fatal("failed to start extension")
-	}
+err := apiv1.NewExtensionImplementation(&TestPlugin{})
+if err != nil {
+logrus.WithError(err).Fatal("failed to start extension")
+}
 }
 {{< /code >}}
 
@@ -114,8 +116,9 @@ Ensure that the `manifest.yaml` for this module consumes the native extension:
 {{< code file="manifest.yaml" copy=true >}}
 name: testmodule
 modules:
+
 - name: github.com/yourorg/helloworld
-{{< /code >}}
+  {{< /code >}}
 
 ## Step 3: Running the Test Module
 
@@ -126,13 +129,12 @@ mkdir testapp; cd testapp
 cat > service.yaml <<EOF
 name: testapp
 modules:
+
 - name: github.com/yourorg/testmodule
-replacements:
-	# Note: Replace these directories with their actual paths. This assumes their
-	# right behind our application in the directory tree.
-	github.com/yourorg/helloworld: ../helloworld
-	github.com/yourorg/testmodule: ../testmodule
-{{< /code >}}
+  replacements: # Note: Replace these directories with their actual paths. This assumes their # right behind our application in the directory tree.
+  github.com/yourorg/helloworld: ../helloworld
+  github.com/yourorg/testmodule: ../testmodule
+  {{< /code >}}
 
 Now, if we run `stencil` we should get a `hello.txt` file in our test application.
 

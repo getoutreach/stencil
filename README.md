@@ -13,7 +13,9 @@ Please read the [CONTRIBUTING.md](CONTRIBUTING.md) document for guidelines on de
 ## High-level Overview
 
 <!--- Block(overview) -->
+
 Stencil is a smart templating engine for service/library development aimed to reduce the use of boilerplate code.
 
 Check out our [documentation](https://engineering.outreach.io/stencil/) for more information!
+
 <!--- EndBlock(overview) -->
