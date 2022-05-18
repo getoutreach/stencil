@@ -21,10 +21,10 @@
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/getting-started/native-extension-quick-start/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9600321328909867702.png"><meta property="article:section" content="getting-started">
 <meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-05-05T22:57:50-07:00">
+<meta property="article:modified_time" content="2022-05-18T15:48:26-07:00">
 <meta itemprop=name content="Native Extension Quick Start">
 <meta itemprop=description content="Create a native extension and use it in an application"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-05-05T22:57:50-07:00">
+<meta itemprop=dateModified content="2022-05-18T15:48:26-07:00">
 <meta itemprop=wordCount content="538"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9600321328909867702.png">
@@ -90,10 +90,11 @@ Create a native extension and use it in an application
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span> <span class=nx>main</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kn>import</span> <span class=p>(</span>
-</span></span><span class=line><span class=cl>	<span class=s>&#34;fmt&#34;</span>
+</span></span><span class=line><span class=cl><span class=s>&#34;fmt&#34;</span>
 </span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>	<span class=s>&#34;github.com/getoutreach/stencil/pkg/extensions/apiv1&#34;</span>
-</span></span><span class=line><span class=cl>	<span class=s>&#34;github.com/sirupsen/logrus&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=s>&#34;github.com/getoutreach/stencil/pkg/extensions/apiv1&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=s>&#34;github.com/sirupsen/logrus&#34;</span>
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=p>)</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=c1>// _ is a compile time assertion to ensure we implement
@@ -103,35 +104,36 @@ Create a native extension and use it in an application
 </span></span><span class=line><span class=cl><span class=kd>type</span> <span class=nx>TestPlugin</span> <span class=kd>struct</span><span class=p>{}</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kd>func</span> <span class=p>(</span><span class=nx>tp</span> <span class=o>*</span><span class=nx>TestPlugin</span><span class=p>)</span> <span class=nf>GetConfig</span><span class=p>()</span> <span class=p>(</span><span class=o>*</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>Config</span><span class=p>,</span> <span class=kt>error</span><span class=p>)</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=o>&amp;</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>Config</span><span class=p>{},</span> <span class=kc>nil</span>
+</span></span><span class=line><span class=cl><span class=k>return</span> <span class=o>&amp;</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>Config</span><span class=p>{},</span> <span class=kc>nil</span>
 </span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kd>func</span> <span class=p>(</span><span class=nx>tp</span> <span class=o>*</span><span class=nx>TestPlugin</span><span class=p>)</span> <span class=nf>ExecuteTemplateFunction</span><span class=p>(</span><span class=nx>t</span> <span class=o>*</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>TemplateFunctionExec</span><span class=p>)</span> <span class=p>(</span><span class=kd>interface</span><span class=p>{},</span> <span class=kt>error</span><span class=p>)</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>	<span class=k>if</span> <span class=nx>t</span><span class=p>.</span><span class=nx>Name</span> <span class=o>==</span> <span class=s>&#34;helloWorld&#34;</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>		<span class=k>return</span> <span class=s>&#34;helloWorld&#34;</span>
-</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=nx>t</span><span class=p>.</span><span class=nx>Name</span> <span class=o>==</span> <span class=s>&#34;helloWorld&#34;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=k>return</span> <span class=s>&#34;helloWorld&#34;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl>
-</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=kc>nil</span><span class=p>,</span> <span class=kc>nil</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=kc>nil</span><span class=p>,</span> <span class=kc>nil</span>
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kd>func</span> <span class=p>(</span><span class=nx>tp</span> <span class=o>*</span><span class=nx>TestPlugin</span><span class=p>)</span> <span class=nf>GetTemplateFunctions</span><span class=p>()</span> <span class=p>([]</span><span class=o>*</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>TemplateFunction</span><span class=p>,</span> <span class=kt>error</span><span class=p>)</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=p>[]</span><span class=o>*</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>TemplateFunction</span><span class=p>{</span>
-</span></span><span class=line><span class=cl>		<span class=p>{</span>
-</span></span><span class=line><span class=cl>			<span class=nx>Name</span><span class=p>:</span>          <span class=s>&#34;helloWorld&#34;</span><span class=p>,</span>
-</span></span><span class=line><span class=cl>		<span class=p>},</span>
-</span></span><span class=line><span class=cl>	<span class=p>},</span> <span class=kc>nil</span>
+</span></span><span class=line><span class=cl><span class=k>return</span> <span class=p>[]</span><span class=err>\</span><span class=o>*</span><span class=nx>apiv1</span><span class=p>.</span><span class=nx>TemplateFunction</span><span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=nx>Name</span><span class=p>:</span> <span class=s>&#34;helloWorld&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>},</span>
+</span></span><span class=line><span class=cl><span class=p>},</span> <span class=kc>nil</span>
 </span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kd>func</span> <span class=nf>helloWorld</span><span class=p>()</span> <span class=p>(</span><span class=kd>interface</span><span class=p>{},</span> <span class=kt>error</span><span class=p>)</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;👋 from the test plugin&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>	<span class=k>return</span> <span class=s>&#34;hello from a plugin!&#34;</span><span class=p>,</span> <span class=kc>nil</span>
+</span></span><span class=line><span class=cl><span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;👋 from the test plugin&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=k>return</span> <span class=s>&#34;hello from a plugin!&#34;</span><span class=p>,</span> <span class=kc>nil</span>
 </span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>	<span class=nx>err</span> <span class=o>:=</span> <span class=nx>apiv1</span><span class=p>.</span><span class=nf>NewExtensionImplementation</span><span class=p>(</span><span class=o>&amp;</span><span class=nx>TestPlugin</span><span class=p>{})</span>
-</span></span><span class=line><span class=cl>	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
-</span></span><span class=line><span class=cl>		<span class=nx>logrus</span><span class=p>.</span><span class=nf>WithError</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>Fatal</span><span class=p>(</span><span class=s>&#34;failed to start extension&#34;</span><span class=p>)</span>
-</span></span><span class=line><span class=cl>	<span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=nx>err</span> <span class=o>:=</span> <span class=nx>apiv1</span><span class=p>.</span><span class=nf>NewExtensionImplementation</span><span class=p>(</span><span class=o>&amp;</span><span class=nx>TestPlugin</span><span class=p>{})</span>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=nx>logrus</span><span class=p>.</span><span class=nf>WithError</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>Fatal</span><span class=p>(</span><span class=s>&#34;failed to start extension&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
 </span></span><span class=line><span class=cl><span class=p>}</span></span></span></code></pre></div></div></div><p>Now lets run <code>make</code> to create the binary at <code>bin/plugin</code> so we can consume it in a test application.</p><h2 id=step-2-using-in-a-test-module>Step 2: Using in a Test Module <a class=header-link href=#step-2-using-in-a-test-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Let&rsquo;s create a <code>testmodule</code> to consume the native extension.</p><div class="code relative" id=create-test-module.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">create-test-module.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
 </button>
 <div class="code-copy-content nt3">
@@ -144,19 +146,21 @@ Create a native extension and use it in an application
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>testmodule</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>modules</span><span class=p>:</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/yourorg/helloworld</span></span></span></code></pre></div></div></div><h2 id=step-3-running-the-test-module>Step 3: Running the Test Module <a class=header-link href=#step-3-running-the-test-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Now, in order to test the native extension and the module consuming it we&rsquo;ll need to create a test application.</p><div class="code relative" id=create-test-module.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">create-test-module.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/yourorg/helloworld</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span></span></span></code></pre></div></div></div><h2 id=step-3-running-the-test-module>Step 3: Running the Test Module <a class=header-link href=#step-3-running-the-test-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>Now, in order to test the native extension and the module consuming it we&rsquo;ll need to create a test application.</p><div class="code relative" id=create-test-module.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">create-test-module.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
 </button>
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-sh data-lang=sh><span class=line><span class=cl>mkdir testapp<span class=p>;</span> <span class=nb>cd</span> testapp
 </span></span><span class=line><span class=cl>cat &gt; service.yaml &lt;&lt;EOF
 </span></span><span class=line><span class=cl>name: testapp
 </span></span><span class=line><span class=cl>modules:
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>- name: github.com/yourorg/testmodule
-</span></span><span class=line><span class=cl>replacements:
-</span></span><span class=line><span class=cl>	<span class=c1># Note: Replace these directories with their actual paths. This assumes their</span>
-</span></span><span class=line><span class=cl>	<span class=c1># right behind our application in the directory tree.</span>
-</span></span><span class=line><span class=cl>	github.com/yourorg/helloworld: ../helloworld
-</span></span><span class=line><span class=cl>	github.com/yourorg/testmodule: ../testmodule</span></span></code></pre></div></div></div><p>Now, if we run <code>stencil</code> we should get a <code>hello.txt</code> file in our test application.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ stencil
+</span></span><span class=line><span class=cl>  replacements: <span class=c1># Note: Replace these directories with their actual paths. This assumes their # right behind our application in the directory tree.</span>
+</span></span><span class=line><span class=cl>  github.com/yourorg/helloworld: ../helloworld
+</span></span><span class=line><span class=cl>  github.com/yourorg/testmodule: ../testmodule
+</span></span><span class=line><span class=cl>  </span></span></code></pre></div></div></div><p>Now, if we run <code>stencil</code> we should get a <code>hello.txt</code> file in our test application.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>testapp ❯ stencil
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> stencil v1.14.2
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> Fetching dependencies
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span>  -&gt; github.com/yourorg/helloworld <span class=nb>local</span>
@@ -330,7 +334,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: May 5, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/dad4c11ed45e8945ce1a8844e92530ea06929579>docs: Add getting started and reference docs (#90) (dad4c11)</a>
+Last updated: May 18, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/f216eaa51f1f2a441366eed4abc573abe6d03adf>fix(bootstrap): v9.37.0 (#95) (f216eaa)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/getting-started/native-extension-quick-start.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">

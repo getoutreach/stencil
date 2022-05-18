@@ -21,10 +21,10 @@
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/getting-started/quick-start/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_1780697291855672919.png"><meta property="article:section" content="getting-started">
 <meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-05-05T22:57:50-07:00">
+<meta property="article:modified_time" content="2022-05-18T15:48:26-07:00">
 <meta itemprop=name content="Quick Start">
 <meta itemprop=description content="Download stencil and use a template repository"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-05-05T22:57:50-07:00">
+<meta itemprop=dateModified content="2022-05-18T15:48:26-07:00">
 <meta itemprop=wordCount content="870"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_1780697291855672919.png">
@@ -88,9 +88,13 @@ Download stencil and use a template repository
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>arguments</span><span class=p>:</span><span class=w> </span>{}<span class=w>
 </span></span></span><span class=line><span class=cl><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=c># Below is a list of modules to use for this application</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=c># It should follow the following format:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=c># - name: &lt;moduleImportPath&gt;</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w></span><span class=c>#   version: &#34;optional-version-to-pin-to&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=c># version: &#34;optional-version-to-pin-to&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>modules</span><span class=p>:</span><span class=w> </span><span class=p>[]</span></span></span></code></pre></div></div></div><p>Now run <code>stencil</code>, you should have&mldr; nothing! That&rsquo;s expected because we didn&rsquo;t define any modules yet.</p><div class="code relative" id=ls.sh><div class="filename san-serif f6 dib lh-solid pl2 pv2">ls.sh</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
 </button>
 <div class="code-copy-content nt3">
@@ -104,10 +108,10 @@ Download stencil and use a template repository
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0002<span class=o>]</span> Running post-run command<span class=o>(</span>s<span class=o>)</span>
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>helloworld ❯ ls -alh
-</span></span><span class=line><span class=cl>drwxr-xr-x  <span class=m>4</span> jaredallard  wheel   128B May  <span class=m>4</span> 20:16 .
-</span></span><span class=line><span class=cl>drwxr-xr-x  <span class=m>9</span> jaredallard  wheel   288B May  <span class=m>4</span> 20:16 ..
-</span></span><span class=line><span class=cl>-rw-r--r--  <span class=m>1</span> jaredallard  wheel   213B May  <span class=m>4</span> 20:16 service.yaml
-</span></span><span class=line><span class=cl>-rw-r--r--  <span class=m>1</span> jaredallard  wheel    78B May  <span class=m>4</span> 20:16 stencil.lock</span></span></code></pre></div></div></div><aside class="admonition note">
+</span></span><span class=line><span class=cl>drwxr-xr-x <span class=m>4</span> jaredallard wheel 128B May <span class=m>4</span> 20:16 .
+</span></span><span class=line><span class=cl>drwxr-xr-x <span class=m>9</span> jaredallard wheel 288B May <span class=m>4</span> 20:16 ..
+</span></span><span class=line><span class=cl>-rw-r--r-- <span class=m>1</span> jaredallard wheel 213B May <span class=m>4</span> 20:16 service.yaml
+</span></span><span class=line><span class=cl>-rw-r--r-- <span class=m>1</span> jaredallard wheel 78B May <span class=m>4</span> 20:16 stencil.lock</span></span></code></pre></div></div></div><aside class="admonition note">
 <div class=note-icon>
 </div><div class=admonition-content><p>You&rsquo;ll notice there&rsquo;s a <code>stencil.lock</code> file here.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=l>v1.14.2</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>generated</span><span class=p>:</span><span class=w> </span><span class=ld>2022-05-05T03:16:44.903458Z</span><span class=w>
@@ -119,17 +123,19 @@ Download stencil and use a template repository
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/getoutreach/stencil-base</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nn>...</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>arguments</span><span class=p>:</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>description</span><span class=p>:</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>required</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>string</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>description</span><span class=p>:</span><span class=w> </span><span class=l>The purpose of this repository.</span></span></span></code></pre></div></div></div><p>We can see that <code>description</code> is a required argument, so let&rsquo;s add it! Modify the <code>service.yaml</code> to set <code>arguments.description</code> to <code>"My awesome service!"</code></p><div class="code relative" id=service.yaml><div class="filename san-serif f6 dib lh-solid pl2 pv2">service.yaml</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>description</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>required</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>string</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>description</span><span class=p>:</span><span class=w> </span><span class=l>The purpose of this repository.</span></span></span></code></pre></div></div></div><p>We can see that <code>description</code> is a required argument, so let&rsquo;s add it! Modify the <code>service.yaml</code> to set <code>arguments.description</code> to <code>"My awesome service!"</code></p><div class="code relative" id=service.yaml><div class="filename san-serif f6 dib lh-solid pl2 pv2">service.yaml</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
 </button>
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>helloworld</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>arguments</span><span class=p>:</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nt>description</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;My awesome service!&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>description</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;My awesome service!&#34;</span><span class=w>
 </span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>modules</span><span class=p>:</span><span class=w>
-</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/getoutreach/stencil-base</span></span></span></code></pre></div></div></div><p>Now if we run stencil we&rsquo;ll see that we have some files!</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>helloworld ❯ stencil
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>github.com/getoutreach/stencil-base</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span></span></span></code></pre></div></div></div><p>Now if we run stencil we&rsquo;ll see that we have some files!</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>helloworld ❯ stencil
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> stencil v1.14.2
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0000<span class=o>]</span> Fetching dependencies
 </span></span><span class=line><span class=cl>INFO<span class=o>[</span>0001<span class=o>]</span>  -&gt; github.com/getoutreach/stencil-base v0.2.0
@@ -174,7 +180,8 @@ Download stencil and use a template repository
 </button>
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-md data-lang=md><span class=line><span class=cl><span class=gh># helloworld
-</span></span></span><span class=line><span class=cl><span class=gh></span>[<span class=nt>![go.dev reference</span>](<span class=na>https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&amp;logoColor=white</span>)](https://pkg.go.dev/github.com/getoutreach/helloworld)
+</span></span></span><span class=line><span class=cl><span class=gh></span>
+</span></span><span class=line><span class=cl>[<span class=nt>![go.dev reference</span>](<span class=na>https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&amp;logoColor=white</span>)](https://pkg.go.dev/github.com/getoutreach/helloworld)
 </span></span><span class=line><span class=cl>[<span class=nt>![Generated via Stencil</span>](<span class=na>https://img.shields.io/badge/Outreach-Bootstrap-%235951ff</span>)](https://github.com/getoutreach/stencil)
 </span></span><span class=line><span class=cl>[<span class=nt>![Coverage Status</span>](<span class=na>https://coveralls.io/repos/github/getoutreach/helloworld/badge.svg?branch=main</span>)](https://coveralls.io/github/getoutreach/helloworld?branch=)
 </span></span><span class=line><span class=cl>
@@ -192,17 +199,21 @@ Download stencil and use a template repository
 </button>
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-md data-lang=md><span class=line><span class=cl>...
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=gu>## High-level Overview
 </span></span></span><span class=line><span class=cl><span class=gu></span>
 </span></span><span class=line><span class=cl>hello, world!
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=c>&lt;!--- Block(overview) --&gt;</span>
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>hello, world!
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=c>&lt;!--- EndBlock(overview) --&gt;</span></span></span></code></pre></div></div></div><p>If we re-run stencil, notice how the contents of <code>README.md</code> have changed.</p><div class="code relative" id=readme.md><div class="filename san-serif f6 dib lh-solid pl2 pv2">README.md</div><button class="needs-js copy bg-accent-color-dark f6 absolute top-0 right-0 lh-solid hover-bg-primary-color-dark bn white ph3 pv2" title="Copy this code to your clipboard." data-clipboard-action=copy aria-label="copy button">
 </button>
 <div class="code-copy-content nt3">
 <div class=highlight><pre tabindex=0 class=chroma><code class=language-md data-lang=md><span class=line><span class=cl><span class=gh># helloworld
-</span></span></span><span class=line><span class=cl><span class=gh></span>[<span class=nt>![go.dev reference</span>](<span class=na>https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&amp;logoColor=white</span>)](https://pkg.go.dev/github.com/getoutreach/helloworld)
+</span></span></span><span class=line><span class=cl><span class=gh></span>
+</span></span><span class=line><span class=cl>[<span class=nt>![go.dev reference</span>](<span class=na>https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&amp;logoColor=white</span>)](https://pkg.go.dev/github.com/getoutreach/helloworld)
 </span></span><span class=line><span class=cl>[<span class=nt>![Generated via Stencil</span>](<span class=na>https://img.shields.io/badge/Outreach-Bootstrap-%235951ff</span>)](https://github.com/getoutreach/stencil)
 </span></span><span class=line><span class=cl>[<span class=nt>![Coverage Status</span>](<span class=na>https://coveralls.io/repos/github/getoutreach/helloworld/badge.svg?branch=main</span>)](https://coveralls.io/github/getoutreach/helloworld?branch=)
 </span></span><span class=line><span class=cl>
@@ -215,7 +226,9 @@ Download stencil and use a template repository
 </span></span><span class=line><span class=cl><span class=gu>## High-level Overview
 </span></span></span><span class=line><span class=cl><span class=gu></span>
 </span></span><span class=line><span class=cl><span class=c>&lt;!--- Block(overview) --&gt;</span>
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>hello, world!
+</span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl><span class=c>&lt;!--- EndBlock(overview) --&gt;</span></span></span></code></pre></div></div></div><p>The contents of <code>README.md</code> have changed, but the contents within the block have not. This is the power of blocks, modules are able to change the content <em>around</em> a user&rsquo;s content without affecting the user&rsquo;s content. This can be taken even further if a template decides to parse the code within a block at runtime, for example using the ast package to rewrite go code.</p><h2 id=reflection>Reflection <a class=header-link href=#reflection><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><p>In all, we&rsquo;ve created a <code>service.yaml</code>, added a module to it, ran stencil, and then modified the contents within a block. That&rsquo;s it! We&rsquo;ve imported a base module and created some files, all without doing much of anything on our side. Hopefully that shows you the power of stencil.</p><p>For more resources be sure to dive into <a href=/stencil/getting-started/module-quick-start/>how to create a module</a> to get insight on how to create a module.</p></div><h2>See Also</h2><ul>
 <li><a href=/stencil/getting-started/module-quick-start/>Module Quick Start</a></li><li><a href=/stencil/getting-started/native-extension-quick-start/>Native Extension Quick Start</a></li></ul></div></div><div class="order-0 w-20 dn db-l">
 <nav role=navigation>
@@ -379,7 +392,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: May 5, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/dad4c11ed45e8945ce1a8844e92530ea06929579>docs: Add getting started and reference docs (#90) (dad4c11)</a>
+Last updated: May 18, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/f216eaa51f1f2a441366eed4abc573abe6d03adf>fix(bootstrap): v9.37.0 (#95) (f216eaa)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/getting-started/quick-start.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
