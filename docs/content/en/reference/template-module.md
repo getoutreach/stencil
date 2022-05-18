@@ -165,7 +165,7 @@ A type controls the what is released, or not released. Generally a type should b
 
 ##### **Major Release (vX.0.0)**
 
- * **BREAKING CHANGE** - Breaks existing functionality. This should never be used lightly, always talk to #dev-tooling-support before doing this.
+ * **BREAKING CHANGE** - Breaks existing functionality. This will cause stencil to ask for a user's permission before updating.
  * **type!** - shorthand for BREAKING CHANGE, use any other type below with a ! at the end.
 
 Examples:
