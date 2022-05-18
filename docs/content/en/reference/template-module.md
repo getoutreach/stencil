@@ -201,3 +201,38 @@ Examples:
 
 * `feat(users): added multiple users modified files in a internal/reactor/users_controller.go`
 * `fix(http): properly bind to config port modified the http server code in internal/reactor/httpservice.go`
+
+### Creating a Release
+
+Keeping in mind the release branches above, below are standard "SOPs" to release a module.
+
+#### Creating a Release from `main` (Pre-release)
+
+```
+# Create the release
+git checkout main; git pull
+git checkout release; git pull
+git merge main
+git push
+
+# Merge the merge commit back to main to ensure history is up-to-date.
+git checkout main; git pull
+git merge release
+git push
+```
+
+#### Creating a One-Off Release (Hotfix)
+
+```
+# Create a cherry-picked commit
+git checkout main; git pull
+git checkout release; git pull
+git cherry-pick <commit>
+git push
+
+# Keep main at the same history as release
+git checkout main; git pull
+git merge release
+git push
+```
+```
