@@ -66,7 +66,7 @@ A module can write to a module hook with the [`stencil.AddToModuleHook "importPa
 
 Modules, by default, are updated by default when running `stencil`. This is done by finding the latest Github release for a module and then using it. However, this may not be desired, so `stencil` can also be ran with the `--frozen-lockfile` command which will attempt to use the last ran versions again.
 
-Module versions are stored in the `modules` key of the `stencil.lock` file.
+Module versions are stored in the `[]modules.version` keys in the `stencil.lock` file.
 
 ## Testing a Module
 
