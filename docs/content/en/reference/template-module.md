@@ -64,7 +64,7 @@ A module can write to a module hook with the [`stencil.AddToModuleHook "importPa
 
 ## Updating a Module
 
-Modules, by default, are updated by default when running `stencil`. This is done by finding the latest Github release for a module and then using it. However, this may not be desired, so `stencil` can also be ran with the `--frozen-lockfile` command which will attempt to use the last ran versions again.
+Modules, by default, are updated by default when running `stencil`. This is done by finding the latest Github release for a module and then using it. However, this may not be desired, so `stencil` can also be ran with the `--frozen-lockfile` command which will attempt to use the last ran versions again. An exception to this is major releases. Stencil will, by default, prompt the user for their permission to use the new version when a major version upgrade is detected. This will also display the release notes of that release to the user.
 
 Module versions are stored in the `[]modules.version` keys in the `stencil.lock` file.
 
