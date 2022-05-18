@@ -161,7 +161,7 @@ Let’s look at each of the different sections of a conventional commit:
 
 #### type
 
-A type controls the what is released, or not released. Generally a type should be specific to the changes in the PR, but when in doubt you can always select one that has the releasing behaviour you want
+A type controls the what is released, or not released. Generally a type should be specific to the changes in the PR, but when in doubt you can always select one that has the releasing behavior you want.
 
 ##### **Major Release (vX.0.0)**
 
