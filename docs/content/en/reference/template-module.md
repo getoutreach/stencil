@@ -19,16 +19,16 @@ A module requires a name and a description currently that are set in the `manife
 
 The name of a module must be equal to the import path of the module. The import path of a module follows the same rules as Golang, where as the repository URL must equal the import path. For example, if the module is located at `https://github.com/stencil/example-module`, the import path must be `github.com/stencil/example-module`.
 
-## Structure 
+## Structure
 
 A module structure typically looks like so:
 
-* `templates/` - a directory that contains all of the go-templates that this module owns
-* `manifest.yaml` - a manifest describing the arguments, dependencies and other metadata for this module
-* `go.mod` - a go module file used for testing the module
-* `**/.snapshots` - a directory used for snapshot testing files
+- `templates/` - a directory that contains all of the go-templates that this module owns
+- `manifest.yaml` - a manifest describing the arguments, dependencies and other metadata for this module
+- `go.mod` - a go module file used for testing the module
+- `**/.snapshots` - a directory used for snapshot testing files
 
-### `templates/` 
+### `templates/`
 
 This directory is used for storing all of the go-templates that a module owns. By default a file that doesn't have a `.tpl` extension will be ignored by stencil. When a `.tpl` file is found, this file is written to the base of the execution directory of stencil, minus the `templates` directory and `.tpl` extension.
 
@@ -44,17 +44,16 @@ The manifest.yaml file is arguably the most important file in a stencil module. 
 
 The important keys that a module has are listed below, but an exhaustive list can be found on the [pkg.go.dev](https://pkg.go.dev/github.com/getoutreach/stencil/pkg/configuration#TemplateRepositoryManifest)
 
-* `name` - The import path of the module
-* `description` - A description of the module
-* `modules` - a list of modules that this module depends on
-		* `name` - import path of the module depended on
-		* `version` - optional: A version to pin this module to.
-* `arguments` - a map of arguments that this module accepts. A module cannot access an argument via `stencil.Arg` without first declaring it here.
-		* `name` - the name of the argument
-		* `description` - a description of the argument
-		* `type` - the type of the argument, can be `string`, `int`, `bool`, `list`, or `map`
-		* `default` - the default value of the argument
-		* `required` - whether or not the argument is required
+- `name` - The import path of the module
+- `description` - A description of the module
+- `modules` - a list of modules that this module depends on
+  _ `name` - import path of the module depended on
+  _ `version` - optional: A version to pin this module to.
+- `arguments` - a map of arguments that this module accepts. A module cannot access an argument via `stencil.Arg` without first declaring it here.
+  _ `name` - the name of the argument
+  _ `description` - a description of the argument
+  _ `type` - the type of the argument, can be `string`, `int`, `bool`, `list`, or `map`
+  _ `default` - the default value of the argument \* `required` - whether or not the argument is required
 
 ## Module Hooks
 
@@ -86,24 +85,26 @@ hello, world!
 package main
 
 import (
-	"testing"
+"testing"
 
-	"github.com/getoutreach/stencil/pkg/stenciltest"
+    "github.com/getoutreach/stencil/pkg/stenciltest"
+
 )
 
-func TestGoMod(t *testing.T) {
-	// Create a renderer with the specified file being the file to test.
-	//
-	// More files may be provided if they are depended as variadic arguments
-	// but their output will not be saved.
-	st := stenciltest.New(t, "go.mod.tpl")
+func TestGoMod(t \*testing.T) {
+// Create a renderer with the specified file being the file to test.
+//
+// More files may be provided if they are depended as variadic arguments
+// but their output will not be saved.
+st := stenciltest.New(t, "go.mod.tpl")
 
-	// Define the arguments to pass to stencil
-	st.Args(map[string]interface{}{"org": "getoutreach"})
+    // Define the arguments to pass to stencil
+    st.Args(map[string]interface{}{"org": "getoutreach"})
 
-	// Run the test, persisting the snapshot to disk if it changed.
-	// Default is set to false.
-	st.Run(false)
+    // Run the test, persisting the snapshot to disk if it changed.
+    // Default is set to false.
+    st.Run(false)
+
 }
 
 {{< /code >}}

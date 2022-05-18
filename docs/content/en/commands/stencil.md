@@ -25,8 +25,8 @@ DESCRIPTION:
    a smart templating engine for service development
 
 COMMANDS:
-   describe  
-   create    
+   describe
+   create
    help, h   Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:

@@ -13,7 +13,7 @@ menu:
 
 ```bash
 NAME:
-   stencil create templaterepository - 
+   stencil create templaterepository -
 
 USAGE:
    stencil create templaterepository [command options] create templaterepository <name>
@@ -23,6 +23,6 @@ DESCRIPTION:
 
 OPTIONS:
    --help, -h  show help (default: false)
-   
+
 
 ```

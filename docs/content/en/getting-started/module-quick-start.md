@@ -71,13 +71,13 @@ Let's create a template that creates a simple hello world message in Go. We'll s
 package main
 
 func main() {
-	fmt.Println("Hello, world!")
+fmt.Println("Hello, world!")
 }
 {{< /code >}}
 
 ## Step 3: Consuming the Module in an Application
 
-Now that we've done that, well how do we use it? This is super easy with the `replacements` map in a [`service.yaml`](/stencil/reference/service.yaml). 
+Now that we've done that, well how do we use it? This is super easy with the `replacements` map in a [`service.yaml`](/stencil/reference/service.yaml).
 
 Let's quickly create a test application:
 
@@ -86,11 +86,11 @@ mkdir testapp; cd testapp
 cat > service.yaml <<EOF
 name: testapp
 modules:
+
 - name: github.com/yourorg/helloworld
-replacements:
-	# Replace ../helloworld with the path to your module.
-	github.com/yourorg/helloworld: ../helloworld
-{{< /code >}}
+  replacements: # Replace ../helloworld with the path to your module.
+  github.com/yourorg/helloworld: ../helloworld
+  {{< /code >}}
 
 Now if we run stencil on the test application, we should see the following:
 
@@ -132,25 +132,25 @@ Let's create our own block in the hello.go template from earlier:
 package main
 
 func main() {
-	fmt.Println("Hello, world!")
-	///Block(additionalMessage)
+fmt.Println("Hello, world!")
+///Block(additionalMessage)
 {{- /* It's important to not indent the file.Block to prevent the indentation from being copied over and.. over again. */ }}
 {{ file.Block "additionalMessage" }}
-	///EndBlock(additionalMessage)
+///EndBlock(additionalMessage)
 }
 {{< /code >}}
 
 If we re-run stencil and look at `hello.go` we should see the following:
 
-
 {{< code file="hello.go" copy=true >}}
 package main
 
 func main() {
-	fmt.Println("Hello, world!")
-	///Block(additionalMessage)
+fmt.Println("Hello, world!")
+///Block(additionalMessage)
 
-	///EndBlock(additionalMessage)
+    ///EndBlock(additionalMessage)
+
 }
 {{< /code >}}
 
@@ -161,23 +161,30 @@ If we add contents to the block and re-run stencil they'll be persisted across t
 One of the powerful parts of stencil is the ability to create an arbitrary number of files with a single template. This is done with the [`file.Create`](/stencil/functions/file.create) function. Let's create a `greeter.go.tpl` template in the `templates/` directory that'll create `<greeting>.go` based on the `greetings` argument.
 
 {{< code file="greeter.go.tpl" copy=true >}}
+
 # This is important! We don't want to create a greeter.go file
+
 {{- $_ := file.Skip "Generates multiple files" }}
 {{- define "greeter" -}}
 {{- $greeting := .greeting }}
 package main
 
 func main() {
-	fmt.Println("$greeting, world!")
+fmt.Println("$greeting, world!")
 }
 
 {{- end -}}
 
 {{- range $_, $greeting := stencil.Arg "greetings" }}
+
 # Create a new $greeting.go file
+
 {{- file.Create (printf "%s.go" $greeting) 0600 now }}
+
 # We'll render the template greeter with $greeting as the values being passed to it
+
 # Once we've done that we'll use the output to set the contents of the file we just created.
+
 {{- stencil.ApplyTemplate "greeter" $greeting | file.SetContents }}
 {{- end }}
 {{< /code >}}
@@ -190,13 +197,12 @@ Now let's modify the `manifest.yaml` to accept the argument `greetings`:
 
 {{< code file="manifest.yaml" copy=true >}}
 arguments:
-  greetings:
-		description: A list of greetings to use
-		type: list
-		require: true
-		default: ["hello", "goodbye"]
+greetings:
+description: A list of greetings to use
+type: list
+require: true
+default: ["hello", "goodbye"]
 {{< /code >}}
-
 
 If we run stencil on the test application, we should see the following:
 

@@ -11,4 +11,3 @@ menu:
 ---
 
 SetPath changes the path of the current file
-

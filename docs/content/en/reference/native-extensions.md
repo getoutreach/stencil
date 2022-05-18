@@ -27,7 +27,7 @@ By default a native extension is fetched from Github releases using semantic-ver
 
 Currently stencil does not provide a testing framework for native extensions, but the recommend approach would be to use the snapshot testing framework provided by stencil or to build a system outside of stenciltest for this.
 
-A native extension can be ran locally using the `replacements` key in an application's manifest (`service.yaml`), which is described in the [module documentation]({{< relref "template-module#testing-a-module-used-in-a-stencil-application" >}}). However, when doing this the native extension must write it's binary to `bin/plugin`. 
+A native extension can be ran locally using the `replacements` key in an application's manifest (`service.yaml`), which is described in the [module documentation]({{< relref "template-module#testing-a-module-used-in-a-stencil-application" >}}). However, when doing this the native extension must write it's binary to `bin/plugin`.
 
 ## How Native Extensions Work
 

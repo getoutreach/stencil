@@ -11,4 +11,3 @@ menu:
 ---
 
 Static marks the current file as static
-

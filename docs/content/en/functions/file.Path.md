@@ -15,4 +15,3 @@ Path returns the current path of the file we're writing to\.
 ```go-text-template
 {{ file.Path }}
 ```
-
