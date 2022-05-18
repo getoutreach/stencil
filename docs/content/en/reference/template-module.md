@@ -165,8 +165,8 @@ A type controls the what is released, or not released. Generally a type should b
 
 ##### **Major Release (vX.0.0)**
 
- * **BREAKING CHANGE** - Breaks existing functionality. This will cause stencil to ask for a user's permission before updating.
- * **type!** - shorthand for BREAKING CHANGE, use any other type below with a ! at the end.
+ * **BREAKING CHANGE** - Breaks existing functionality. This will cause stencil to ask for a user's permission before updating
+ * **type!** - shorthand for BREAKING CHANGE, use any other type below with a ! at the end
 
 Examples:
 
@@ -175,23 +175,23 @@ Examples:
 
 ##### **Minor Release (v0.X.0)**
 
- * `feat` - a feature, this should be something that adds to the service and is end user facing, this should not be a a breaking change.
+ * `feat` - a feature, this should be something that adds to the service and is end user facing, this should not be a a breaking change
 
 ##### **Patch Release (v0.0.X)**
 
- * `fix` - a fix to an existing feature in the service. Important: This should not be related to CI/CD, build, etc. See below for those.
+ * `fix` - a fix to an existing feature in the service. Important: This should not be related to CI/CD, build, etc. See below for those
  * `revert` - reverts a previous commit, e.g. an accidental breaking change
- * `perf` - a performance modification, does not change existing functionality. Use feat if net-new functionality is added.
+ * `perf` - a performance modification, does not change existing functionality. Use feat if net-new functionality is added
 
 ##### **No Release**
 
  * `refactor` - changes existing code, a catch-all for changes not related to performance
- * `ci` - a modification related to the CI/CD system of the service. This does not trigger a release.
- * `build` - a modification related to the build of the system, e.g. docker file, scripts building it, etc. This does not trigger a release.
+ * `ci` - a modification related to the CI/CD system of the service. This does not trigger a release
+ * `build` - a modification related to the build of the system, e.g. docker file, scripts building it, etc. This does not trigger a release
  * `docs` - a modification to the documentation of the service, e.g. README. This does not trigger a release
  * `style` - a pure style change to existing source code (e.g. whitespace formatting)
  * `test` - add missing tests or modify existing tests
- * `chore` - a misc, catch-all, change that doesn’t modify source code.  This does not trigger a release.
+ * `chore` - a misc, catch-all, change that doesn’t modify source code.  This does not trigger a release
 
 #### scope
 
