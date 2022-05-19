@@ -33,8 +33,18 @@ type TplStencil struct {
 	log logrus.FieldLogger
 }
 
-// GetModuleHook returns a module block in the scope of this
-// module
+// GetModuleHook returns a module block in the scope of this module
+//
+// This is incredibly useful for allowing other modules to write
+// to files that your module owns. Think of them as extension points
+// for your module. The value returned by this function is always a
+// []interface{}, aka a list.
+//
+//   {{- /* This returns a []interface{} */}}
+//   {{ $hook := stencil.GetModuleHook "myModuleHook" }}
+//   {{- range $hook }}
+//     {{ . }}
+//   {{- end }}
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	k := path.Join(s.t.Module.Name, name)
 	v := s.s.sharedData[k]
@@ -45,6 +55,15 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 }
 
 // AddToModuleHook adds to a hook in another module
+//
+// This functions write to module hook owned by another module for
+// it to operate on. These are not strongly typed so it's best practice
+// to look at how the owning module uses it for now. Module hooks must always
+// be written to with a list to ensure that they can always be written to multiple
+// times.
+//
+//   {{- /* This writes to a module hook */}}
+//   {{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
 func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) error {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
@@ -83,8 +102,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) erro
 	return nil
 }
 
-// Arg returns the value of an argument in the service's
-// manifest.
+// Arg returns the value of an argument in the service's manifest
 //
 //   {{- stencil.Arg "name" }}
 func (s *TplStencil) Arg(pth string) (interface{}, error) {
@@ -131,8 +149,9 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	return v, nil
 }
 
-// Args returns all arguments passed to stencil from the service's
-// manifest. Note: This doesn't set default values and is instead
+// Args returns all arguments passed to stencil from the service's manifest
+//
+// Note: This doesn't set default values and is instead
 // representative of _all_ data passed in its raw form.
 //
 //   {{- (stencil.Args).name }}
@@ -140,8 +159,9 @@ func (s *TplStencil) Args() map[string]interface{} {
 	return s.s.m.Arguments
 }
 
-// ReadFile reads a file from the current directory and returns
-// it's contents as a string.
+// ReadFile reads a file from the current directory and returns it's contents
+//
+//   {{ stencil.ReadFile "myfile.txt" }}
 func (s *TplStencil) ReadFile(name string) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -163,8 +183,8 @@ func (s *TplStencil) ReadFile(name string) (string, error) {
 }
 
 // ApplyTemplate executes a template inside of the current module
-// that belongs to the actively rendered template. It does not
-// support rendering a template from another module.
+//
+// This function does not support rendering a template from another module.
 //
 //   {{- define "command"}}
 //   package main

@@ -1,10 +1,11 @@
 ---
 {{- $description := "" }}
+{{- /* Use the first paragraph in a comment as the description */}}
 {{- range .Doc.Blocks }}
-{{- if eq .Kind "paragraph" }}
-{{- $description = .Text }}
-{{- break}}
-{{- end }}
+  {{- if eq .Kind "header" }}
+    {{- $description = .Text }}
+    {{- break}}
+  {{- end }}
 {{- end }}
 {{- $namespace := "" }}
 {{- if eq .Receiver "*TplStencil" }}
@@ -16,21 +17,18 @@ title: {{ $namespace }}.{{ .Name }}
 linktitle: {{ $namespace }}.{{ .Name }}
 description: >
   {{ $description }}
-date: 2022-05-02
+date: 2022-05-18
 categories: [functions]
 menu:
   docs:
     parent: "functions"
 ---
 
-{{ with .Doc }}
-{{- range .Blocks -}}
-	{{- if eq .Kind "paragraph" -}}
-		{{- paragraph .Text -}}
-	{{- else if eq .Kind "code" -}}
-		{{- codeBlock "go-text-template" .Text -}}
-	{{- else if eq .Kind "header" -}}
-		{{- header .Level .Text -}}
-	{{- end -}}
-{{- end -}}
-{{- end }}
+{{ range .Doc.Blocks }}
+  {{- /* Use text but not the description */}}
+	{{- if eq .Kind "paragraph" }}
+		{{- paragraph .Text }}
+	{{- else if eq .Kind "code" }}
+		{{- codeBlock "go-text-template" .Text }}
+	{{- end }}
+{{ end }}
