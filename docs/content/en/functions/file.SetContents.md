@@ -2,12 +2,16 @@
 title: file.SetContents
 linktitle: file.SetContents
 description: >
-  SetContents sets the contents of the current file to the provided string.
-date: 2022-05-02
+  SetContents sets the contents of file being rendered to the value
+date: 2022-05-18
 categories: [functions]
 menu:
   docs:
     parent: "functions"
 ---
 
-SetContents sets the contents of the current file to the provided string\.
+This is useful for programmatic file generation within a template\.
+
+```go-text-template
+{{ file.SetContents "Hello, world!" }}
+```

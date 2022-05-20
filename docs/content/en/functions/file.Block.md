@@ -2,17 +2,19 @@
 title: file.Block
 linktitle: file.Block
 description: >
-  Block returns the contents of a given block ###Block(name) Hello, world! ###EndBlock(name)
-date: 2022-05-02
+  Block returns the contents of a given block
+date: 2022-05-18
 categories: [functions]
 menu:
   docs:
     parent: "functions"
 ---
 
-Block returns the contents of a given block \#\#\#Block\(name\) Hello\, world\! \#\#\#EndBlock\(name\)
-
 ```go-text-template
+###Block(name)
+Hello, world!
+###EndBlock(name)
+
 ###Block(name)
 {{- /* Only output if the block is set */}}
 {{- if not (empty (file.Block "name")) }}

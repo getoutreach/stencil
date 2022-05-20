@@ -2,12 +2,14 @@
 title: file.Delete
 linktitle: file.Delete
 description: >
-  Delete deletes the current file
-date: 2022-05-02
+  Delete deletes the current file being rendered
+date: 2022-05-18
 categories: [functions]
 menu:
   docs:
     parent: "functions"
 ---
 
-Delete deletes the current file
+```go-text-template
+{{ file.Delete }}
+```

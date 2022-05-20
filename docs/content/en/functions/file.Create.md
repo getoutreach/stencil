@@ -2,15 +2,15 @@
 title: file.Create
 linktitle: file.Create
 description: >
-  Create creates a new file that is rendered by the current template. If the template has a single file with no contents this file replaces it.
-date: 2022-05-02
+  Create creates a new file that is rendered by the current template
+date: 2022-05-18
 categories: [functions]
 menu:
   docs:
     parent: "functions"
 ---
 
-Create creates a new file that is rendered by the current template\. If the template has a single file with no contents this file replaces it\.
+If the template has a single file with no contents this file replaces it\.
 
 ```go-text-template
 {{- define "command" }}
