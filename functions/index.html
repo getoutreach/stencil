@@ -172,6 +172,10 @@ stencil.Args
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ReadFile
+</a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
 <ul class="commands desktopmenu animated fadeIn list pl0 bg-light-gray dn">
@@ -224,7 +228,7 @@ Functions Quick Reference
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.block/ class="link primary-color dim">file.Block</a>
 </h1><div class="lh-copy links">
-Block returns the contents of a given block ###Block(name) Hello, world! ###EndBlock(name)
+Block returns the contents of a given block
 <a href=/stencil/functions/file.block/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -233,7 +237,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.create/ class="link primary-color dim">file.Create</a>
 </h1><div class="lh-copy links">
-Create creates a new file that is rendered by the current template. If the template has a single file with no contents this file replaces it.
+Create creates a new file that is rendered by the current template
 <a href=/stencil/functions/file.create/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -242,7 +246,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.delete/ class="link primary-color dim">file.Delete</a>
 </h1><div class="lh-copy links">
-Delete deletes the current file
+Delete deletes the current file being rendered
 <a href=/stencil/functions/file.delete/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -251,7 +255,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.path/ class="link primary-color dim">file.Path</a>
 </h1><div class="lh-copy links">
-Path returns the current path of the file we&rsquo;re writing to.
+Path returns the current path of the file we&rsquo;re writing to
 <a href=/stencil/functions/file.path/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -260,7 +264,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.setcontents/ class="link primary-color dim">file.SetContents</a>
 </h1><div class="lh-copy links">
-SetContents sets the contents of the current file to the provided string.
+SetContents sets the contents of file being rendered to the value
 <a href=/stencil/functions/file.setcontents/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -269,7 +273,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.setpath/ class="link primary-color dim">file.SetPath</a>
 </h1><div class="lh-copy links">
-SetPath changes the path of the current file
+SetPath changes the path of the current file being rendered
 <a href=/stencil/functions/file.setpath/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -278,7 +282,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/file.skip/ class="link primary-color dim">file.Skip</a>
 </h1><div class="lh-copy links">
-Skip skips the current file
+Skip skips the current file being rendered
 <a href=/stencil/functions/file.skip/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -305,7 +309,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/stencil.applytemplate/ class="link primary-color dim">stencil.ApplyTemplate</a>
 </h1><div class="lh-copy links">
-ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+ApplyTemplate executes a template inside of the current module
 <a href=/stencil/functions/stencil.applytemplate/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -314,7 +318,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/stencil.arg/ class="link primary-color dim">stencil.Arg</a>
 </h1><div class="lh-copy links">
-Arg returns the value of an argument in the service&rsquo;s manifest.
+Arg returns the value of an argument in the service&rsquo;s manifest
 <a href=/stencil/functions/stencil.arg/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -323,7 +327,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/functions/stencil.args/ class="link primary-color dim">stencil.Args</a>
 </h1><div class="lh-copy links">
-Args returns all arguments passed to stencil from the service&rsquo;s manifest. Note: This doesn&rsquo;t set default values and is instead representative of <em>all</em> data passed in its raw form.
+Args returns all arguments passed to stencil from the service&rsquo;s manifest
 <a href=/stencil/functions/stencil.args/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -334,6 +338,15 @@ Read More &#187;
 </h1><div class="lh-copy links">
 GetModuleHook returns a module block in the scope of this module
 <a href=/stencil/functions/stencil.getmodulehook/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.readfile/ class="link primary-color dim">stencil.ReadFile</a>
+</h1><div class="lh-copy links">
+ReadFile reads a file from the current directory and returns it&rsquo;s contents
+<a href=/stencil/functions/stencil.readfile/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div></section></div></div></div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>

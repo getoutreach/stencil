@@ -22,13 +22,13 @@
 ">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/functions/file.static/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_17606212885534331521.png"><meta property="article:section" content="functions">
-<meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-05-18T15:48:26-07:00">
+<meta property="article:published_time" content="2022-05-18T00:00:00-07:00">
+<meta property="article:modified_time" content="2022-05-20T14:27:45-07:00">
 <meta itemprop=name content="file.Static">
 <meta itemprop=description content="Static marks the current file as static
-"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-05-18T15:48:26-07:00">
-<meta itemprop=wordCount content="7"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+"><meta itemprop=datePublished content="2022-05-18T00:00:00-07:00">
+<meta itemprop=dateModified content="2022-05-20T14:27:45-07:00">
+<meta itemprop=wordCount content="53"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_17606212885534331521.png">
 <meta name=twitter:title content="file.Static">
@@ -79,7 +79,8 @@ FUNCTIONS
 <div class="f4 fw4 lh-copy">
 Static marks the current file as static
 </div></aside><div class=prose id=prose>
-<p>Static marks the current file as static</p></div></div></div><div class="order-0 w-20 dn db-l">
+<p>Marking a file is equivalent to calling file.Skip, but instead file.Skip is only called if the file already exists. This is useful for files you want to generate but only once. It&rsquo;s generally recommended that you do not do this as it limits your ability to change the file in the future.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-go-text-template data-lang=go-text-template><span class=line><span class=cl><span class=cp>{{</span><span class=w> </span><span class=nx>$_</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>file</span><span class=na>.Static</span><span class=w> </span><span class=cp>}}</span><span class=x>
+</span></span></span></code></pre></div></div></div></div><div class="order-0 w-20 dn db-l">
 <nav role=navigation>
 <ul class="list pa0 nl2">
 <li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8">
@@ -198,6 +199,10 @@ stencil.Args
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ReadFile
+</a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
 <ul class="commands desktopmenu animated fadeIn list pl0 bg-light-gray dn">
@@ -241,7 +246,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: May 18, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/f216eaa51f1f2a441366eed4abc573abe6d03adf>fix(bootstrap): v9.37.0 (#95) (f216eaa)</a>
+Last updated: May 20, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/0289b1ad4a3dccaff4fd89992f61d9a805ff26f0>docs: better generated docs (#97) (0289b1a)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/functions/file.Static.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">

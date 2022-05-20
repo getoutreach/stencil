@@ -9,7 +9,7 @@
 <meta name=generator content="Hugo 0.98.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
-<meta name=description content="ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+<meta name=description content="ApplyTemplate executes a template inside of the current module
 ">
 <script type=text/javascript src=/stencil/output/js/app.e16c62666d428635bf13ea129976ae950eaffe7b033f59a3184bab747d2d7a41.js integrity="sha256-4WxiZm1ChjW/E+oSmXaulQ6v/nsDP1mjGEurdH0tekE=" crossorigin=anonymous defer></script>
 <script async defer src=https://buttons.github.io/buttons.js></script>
@@ -18,21 +18,21 @@
 <link rel=icon type=image/png href=/stencil/favicon-16x16.png sizes=16x16>
 <meta name=theme-color content="#ffffff">
 <meta property="og:title" content="stencil.ApplyTemplate">
-<meta property="og:description" content="ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+<meta property="og:description" content="ApplyTemplate executes a template inside of the current module
 ">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/functions/stencil.applytemplate/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_7668218170709224342.png"><meta property="article:section" content="functions">
-<meta property="article:published_time" content="2022-05-02T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-05-18T15:48:26-07:00">
+<meta property="article:published_time" content="2022-05-18T00:00:00-07:00">
+<meta property="article:modified_time" content="2022-05-20T14:27:45-07:00">
 <meta itemprop=name content="stencil.ApplyTemplate">
-<meta itemprop=description content="ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
-"><meta itemprop=datePublished content="2022-05-02T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-05-18T15:48:26-07:00">
-<meta itemprop=wordCount content="37"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=description content="ApplyTemplate executes a template inside of the current module
+"><meta itemprop=datePublished content="2022-05-18T00:00:00-07:00">
+<meta itemprop=dateModified content="2022-05-20T14:27:45-07:00">
+<meta itemprop=wordCount content="22"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_7668218170709224342.png">
 <meta name=twitter:title content="stencil.ApplyTemplate">
-<meta name=twitter:description content="ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+<meta name=twitter:description content="ApplyTemplate executes a template inside of the current module
 ">
 </head><body class="ma0 sans-serif bg-primary-color-light">
 <nav class="bg-primary-color-dark pv4 w-100" role=navigation>
@@ -77,9 +77,9 @@ FUNCTIONS
 </a>
 <h1 class="lh-title mb3 mv0 pt3 primary-color-dark">stencil.ApplyTemplate</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
 <div class="f4 fw4 lh-copy">
-ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.
+ApplyTemplate executes a template inside of the current module
 </div></aside><div class=prose id=prose>
-<p>ApplyTemplate executes a template inside of the current module that belongs to the actively rendered template. It does not support rendering a template from another module.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-go-text-template data-lang=go-text-template><span class=line><span class=cl><span class=cp>{{-</span><span class=w> </span><span class=nx>define</span><span class=w> </span><span class=s>&#34;command&#34;</span><span class=cp>}}</span><span class=x>
+<p>This function does not support rendering a template from another module.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-go-text-template data-lang=go-text-template><span class=line><span class=cl><span class=cp>{{-</span><span class=w> </span><span class=nx>define</span><span class=w> </span><span class=s>&#34;command&#34;</span><span class=cp>}}</span><span class=x>
 </span></span></span><span class=line><span class=cl><span class=x>package main
 </span></span></span><span class=line><span class=cl><span class=x>
 </span></span></span><span class=line><span class=cl><span class=x>import &#34;fmt&#34;
@@ -210,6 +210,10 @@ stencil.Args
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ReadFile
+</a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
 <ul class="commands desktopmenu animated fadeIn list pl0 bg-light-gray dn">
@@ -253,7 +257,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: May 18, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/f216eaa51f1f2a441366eed4abc573abe6d03adf>fix(bootstrap): v9.37.0 (#95) (f216eaa)</a>
+Last updated: May 20, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/0289b1ad4a3dccaff4fd89992f61d9a805ff26f0>docs: better generated docs (#97) (0289b1a)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/functions/stencil.ApplyTemplate.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
