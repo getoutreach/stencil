@@ -71,7 +71,7 @@ Let's create a template that creates a simple hello world message in Go. We'll s
 package main
 
 func main() {
-fmt.Println("Hello, world!")
+	fmt.Println("Hello, world!")
 }
 ```
 
@@ -86,11 +86,11 @@ mkdir testapp; cd testapp
 cat > service.yaml <<EOF
 name: testapp
 modules:
-- name: github.com/yourorg/helloworld
+	- name: github.com/yourorg/helloworld
 
 replacements:
 	# Replace ../helloworld with the path to your module.
-  github.com/yourorg/helloworld: ../helloworld
+	github.com/yourorg/helloworld: ../helloworld
 EOF
 ```
 
