@@ -2,6 +2,7 @@
   // Please consider contributing back all added
   // settings to bootstrap!
   ///Block(settings)
+
   ///EndBlock(settings)
   "go.lintTool": "golangci-lint",
   "go.lintFlags": [],
