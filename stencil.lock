@@ -1,18 +1,21 @@
 version: v1.15.0
-generated: 2022-05-17T22:26:12.766981Z
+generated: 2022-05-26T19:53:15.706114Z
 modules:
 - name: github.com/getoutreach/stencil-base
   url: https://github.com/getoutreach/stencil-base
-  version: v0.3.0
+  version: v0.3.1
 - name: github.com/getoutreach/stencil-golang
   url: https://github.com/getoutreach/stencil-golang
-  version: v0.3.2
+  version: v0.4.0
 - name: github.com/getoutreach/stencil-opslevel
   url: https://github.com/getoutreach/stencil-opslevel
   version: v0.0.2
 - name: github.com/getoutreach/stencil-discovery
   url: https://github.com/getoutreach/stencil-discovery
   version: v1.0.0
+- name: github.com/getoutreach/stencil-outreach
+  url: https://github.com/getoutreach/stencil-outreach
+  version: v0.2.0
 files:
 - name: .editorconfig
   template: .editorconfig.tpl
@@ -88,6 +91,18 @@ files:
   module: github.com/getoutreach/stencil-golang
 - name: .prettierrc.yaml
   template: .prettierrc.yaml.tpl
+  module: github.com/getoutreach/stencil-golang
+- name: .vscode/extensions.json
+  template: .vscode/extensions.json.tpl
+  module: github.com/getoutreach/stencil-golang
+- name: .vscode/launch.json
+  template: .vscode/launch.json.tpl
+  module: github.com/getoutreach/stencil-golang
+- name: .vscode/private.env
+  template: .vscode/private.env.tpl
+  module: github.com/getoutreach/stencil-golang
+- name: .vscode/settings.json
+  template: .vscode/settings.json.tpl
   module: github.com/getoutreach/stencil-golang
 - name: Makefile
   template: Makefile.tpl
@@ -278,3 +293,9 @@ files:
 - name: opslevel.yml
   template: opslevel.yml.tpl
   module: github.com/getoutreach/stencil-opslevel
+- name: .vscode/outreach.code-snippets
+  template: .vscode/outreach.code-snippets.tpl
+  module: github.com/getoutreach/stencil-outreach
+- name: .vscode/private.env
+  template: .vscode/private.env.tpl
+  module: github.com/getoutreach/stencil-outreach

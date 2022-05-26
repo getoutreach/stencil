@@ -40,20 +40,15 @@ A [`service.yaml`](/stencil/reference/service.yaml/) is integral to running sten
 
 Start with creating a basic `service.yaml`:
 
-{{< code file="service.yaml" copy=true >}}
+```yaml
 name: helloworld
 arguments: {}
-
 # Below is a list of modules to use for this application
-
 # It should follow the following format:
-
 # - name: <moduleImportPath>
-
-# version: "optional-version-to-pin-to"
-
+#   version: "optional-version-to-pin-to"
 modules: []
-{{< /code >}}
+```
 
 Now run `stencil`, you should have... nothing! That's expected because we didn't define any modules yet.
 
@@ -92,7 +87,7 @@ This will keep track of what files were created by stencil and what created them
 
 Now that we've created our first stencil application, you're going to want to import a module! Let's import the [`stencil-base`](https://github.com/getoutreach/stencil-base) module. stencil-base includes a bunch of scripts and other build blocks for a service. Let's take a look at it's `manifest.yaml` to see what arguments are required.
 
-{{< code file="manifest.yaml" >}}
+```yaml
 name: github.com/getoutreach/stencil-base
 ...
 arguments:
@@ -100,18 +95,17 @@ description:
 required: true
 type: string
 description: The purpose of this repository.
-{{< /code >}}
+```
 
 We can see that `description` is a required argument, so let's add it! Modify the `service.yaml` to set `arguments.description` to `"My awesome service!"`
 
-{{< code file="service.yaml" >}}
+```yaml
 name: helloworld
-arguments:
+arguments: {}
 description: "My awesome service!"
 modules:
-
 - name: github.com/getoutreach/stencil-base
-  {{< /code >}}
+```
 
 Now if we run stencil we'll see that we have some files!
 

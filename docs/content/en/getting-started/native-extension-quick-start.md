@@ -43,15 +43,14 @@ rm templates; mkdir plugin
 
 Now that we've created the `plugin/` directory we're going to created a simple `plugin.go` file that'll implement the `Implementation` interface and prints `helloWorld` when the `helloWorld` function is called.
 
-{{< code file="plugin.go" >}}
+```go
 package main
 
 import (
 "fmt"
 
-    "github.com/getoutreach/stencil/pkg/extensions/apiv1"
-    "github.com/sirupsen/logrus"
-
+	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
+	"github.com/sirupsen/logrus"
 )
 
 // _ is a compile time assertion to ensure we implement
@@ -61,38 +60,37 @@ var _ apiv1.Implementation = &TestPlugin{}
 type TestPlugin struct{}
 
 func (tp *TestPlugin) GetConfig() (*apiv1.Config, error) {
-return &apiv1.Config{}, nil
+	return &apiv1.Config{}, nil
 }
 
 func (tp *TestPlugin) ExecuteTemplateFunction(t *apiv1.TemplateFunctionExec) (interface{}, error) {
-if t.Name == "helloWorld" {
-return "helloWorld"
-}
+	if t.Name == "helloWorld" {
+		return "helloWorld"
+	}
 
-    return nil, nil
-
+  return nil, nil
 }
 
 func (tp *TestPlugin) GetTemplateFunctions() ([]*apiv1.TemplateFunction, error) {
-return []\*apiv1.TemplateFunction{
-{
-Name: "helloWorld",
-},
-}, nil
+	return []*apiv1.TemplateFunction{
+		{
+			Name: "helloWorld",
+		},
+	}, nil
 }
 
 func helloWorld() (interface{}, error) {
-fmt.Println("👋 from the test plugin")
-return "hello from a plugin!", nil
+	fmt.Println("👋 from the test plugin")
+	return "hello from a plugin!", nil
 }
 
 func main() {
-err := apiv1.NewExtensionImplementation(&TestPlugin{})
-if err != nil {
-logrus.WithError(err).Fatal("failed to start extension")
+	err := apiv1.NewExtensionImplementation(&TestPlugin{})
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to start extension")
+	}
 }
-}
-{{< /code >}}
+```
 
 Now lets run `make` to create the binary at `bin/plugin` so we can consume it in a test application.
 
@@ -113,28 +111,28 @@ Now let's create a `hello.txt.tpl` that consumes the `helloWorld` function.
 
 Ensure that the `manifest.yaml` for this module consumes the native extension:
 
-{{< code file="manifest.yaml" copy=true >}}
+```yaml
 name: testmodule
 modules:
-
 - name: github.com/yourorg/helloworld
-  {{< /code >}}
+```
 
 ## Step 3: Running the Test Module
 
 Now, in order to test the native extension and the module consuming it we'll need to create a test application.
 
-{{< code file="create-test-module.sh" copy=true >}}
+```bash
 mkdir testapp; cd testapp
 cat > service.yaml <<EOF
 name: testapp
 modules:
-
 - name: github.com/yourorg/testmodule
-  replacements: # Note: Replace these directories with their actual paths. This assumes their # right behind our application in the directory tree.
+replacements: 
+	# Note: Replace these directories with their actual paths. This assumes they're 
+	# right behind our application in the directory tree.
   github.com/yourorg/helloworld: ../helloworld
   github.com/yourorg/testmodule: ../testmodule
-  {{< /code >}}
+```
 
 Now, if we run `stencil` we should get a `hello.txt` file in our test application.
 
