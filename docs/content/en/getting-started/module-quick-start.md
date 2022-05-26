@@ -152,7 +152,7 @@ func main() {
 	fmt.Println("Hello, world!")
 	///Block(additionalMessage)
 
-  ///EndBlock(additionalMessage)
+	///EndBlock(additionalMessage)
 }
 ```
 
