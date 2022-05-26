@@ -36,7 +36,7 @@ service:
     - key: stencil_version
       value: "v1.15.0"
     - key: golang_version
-      value: "1.17.9"
+      value: "1.18.1"
     - key: tutorial
       value: "false"
     - key: cli

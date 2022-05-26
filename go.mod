@@ -1,6 +1,6 @@
 module github.com/getoutreach/stencil
 
-go 1.17
+go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.4
@@ -8,7 +8,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
-	github.com/getoutreach/gobox v1.38.0
+	github.com/getoutreach/gobox v1.39.2
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.4
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/urfave/cli/v2 v2.4.0
+	github.com/urfave/cli/v2 v2.6.0
 	github.com/whilp/git-urls v1.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.2.0
