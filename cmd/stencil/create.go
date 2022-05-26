@@ -15,7 +15,7 @@ func NewCreateCommand() *cli.Command {
 		Name:        "create",
 		Description: "Commands to create template repositories, or stencil powered repositories",
 		Subcommands: []*cli.Command{
-			NewCreateTemplateRepositoryCommand(),
+			NewCreateModule(),
 		},
 	}
 }
