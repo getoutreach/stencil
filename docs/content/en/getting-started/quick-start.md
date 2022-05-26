@@ -104,7 +104,7 @@ name: helloworld
 arguments: {}
 description: "My awesome service!"
 modules:
-- name: github.com/getoutreach/stencil-base
+  - name: github.com/getoutreach/stencil-base
 ```
 
 Now if we run stencil we'll see that we have some files!

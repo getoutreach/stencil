@@ -114,7 +114,7 @@ Ensure that the `manifest.yaml` for this module consumes the native extension:
 ```yaml
 name: testmodule
 modules:
-- name: github.com/yourorg/helloworld
+  - name: github.com/yourorg/helloworld
 ```
 
 ## Step 3: Running the Test Module
@@ -127,8 +127,8 @@ cat > service.yaml <<EOF
 name: testapp
 modules:
 - name: github.com/yourorg/testmodule
-replacements: 
-	# Note: Replace these directories with their actual paths. This assumes they're 
+replacements:
+	# Note: Replace these directories with their actual paths. This assumes they're
 	# right behind our application in the directory tree.
   github.com/yourorg/helloworld: ../helloworld
   github.com/yourorg/testmodule: ../testmodule

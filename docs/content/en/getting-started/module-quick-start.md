@@ -198,7 +198,7 @@ Blocks are supported in multiple files! When `file.SetPath` is called the host i
 Now let's modify the `manifest.yaml` to accept the argument `greetings`:
 
 ```yaml
-arguments: 
+arguments:
 	greetings:
 		description: A list of greetings to use
 type: list
