@@ -146,7 +146,7 @@ func (h *Host) getExtensionPath(version, name, repo string) string {
 // 	repo: stencil-plugin
 // 	name: github.com/getoutreach/stencil-plugin
 func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name string) (string, error) {
-	ghc, err := github.NewClient()
+	ghc, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(h.log))
 	if err != nil {
 		return "", err
 	}
