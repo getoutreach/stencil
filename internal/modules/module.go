@@ -7,6 +7,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"text/template"
 
@@ -59,7 +60,7 @@ func getLatestVersion(ctx context.Context, name string) (string, error) {
 		return "", fmt.Errorf("invalid module path %q, expected github.com/<org>/<repo>", name)
 	}
 
-	gh, err := github.NewClient()
+	gh, err := github.NewClient(github.WithAllowUnauthenticated())
 	if err != nil {
 		return "", err
 	}
@@ -82,8 +83,20 @@ func getLatestVersion(ctx context.Context, name string) (string, error) {
 func New(ctx context.Context, name, uri, version string) (*Module, error) {
 	if uri == "" {
 		uri = "https://" + name
-	} else if strings.HasPrefix(uri, "file://") {
-		version = "local-" + strings.TrimPrefix(uri, "file://")
+	}
+
+	// check if a url based on if :// is in the uri, this is kinda hacky
+	// but the only way to do this with a URL+file path being allowed.
+	// We also support the "older" file:// scheme.
+	if !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://") { // Assume it's a path.
+		osPath := strings.TrimPrefix(uri, "file://")
+		if _, err := os.Stat(osPath); err != nil {
+			return nil, errors.Wrapf(err, "failed to find module %s at path %q", name, osPath)
+		}
+
+		// translate the path into a file:// URI
+		uri = "file://" + osPath
+		version = "local"
 	}
 
 	if version == "" {
