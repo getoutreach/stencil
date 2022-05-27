@@ -192,20 +192,20 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	token, err := github.GetToken()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get github token")
-	}
-
 	m.fs = memfs.New()
 	opts := &git.CloneOptions{
 		URL:               m.URI,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 		Depth:             1,
-		Auth: &githttp.BasicAuth{
+	}
+
+	if token, err := github.GetToken(); err == nil {
+		opts.Auth = &githttp.BasicAuth{
 			Username: "x-access-token",
 			Password: string(token),
-		},
+		}
+	} else {
+		logrus.WithError(err).Warn("failed to get github token, will use an unauthenticated client")
 	}
 
 	if m.Version != "" {
