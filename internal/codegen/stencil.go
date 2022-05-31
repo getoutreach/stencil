@@ -198,6 +198,8 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 
 		// default to templates/, but if it's not present fallback to
 		// the root w/ a warning
+		// Note: This behaviour is deprecated and will be removed soon. Put templates
+		// into /templates instead.
 		if inf, err := fs.Stat("templates"); err != nil || !inf.IsDir() {
 			log.Warnf("Module %q has templates outside of templates/ directory, this is not recommended and is deprecated", m.Name)
 		} else {
