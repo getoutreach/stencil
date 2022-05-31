@@ -183,6 +183,17 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 			return nil, errors.Wrapf(err, "failed to read module filesystem %q", m.Name)
 		}
 
+		// Note: This error should never really fire since we already fetched the FS above
+		// that being said, we handle it here. Skip native extensions as they cannot have templates.
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if mf.Type != configuration.TemplateRepositoryTypeStd {
+			log.Debugf("Skipping template discovery for module %q, not a template module (type %s)", m.Name, mf.Type)
+			continue
+		}
+
 		log.Debugf("Discovering templates from module %q", m.Name)
 
 		// default to templates/, but if it's not present fallback to
