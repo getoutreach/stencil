@@ -1,0 +1,1 @@
+{{ index (stencil.GetModuleHook "coolthing") 0 }}
