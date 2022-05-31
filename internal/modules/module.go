@@ -77,13 +77,13 @@ func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository)
 		if len(rels) != 1 {
 			return "", errors.New("failed to get latest release (returned >1 release)")
 		}
-		rel = rels[0]
-	} else { // Use GetLatestRelease() to ensure it's the latest _released_ version.
-		var err error
-		rel, _, err = gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
-		if err != nil {
-			return "", errors.Wrapf(err, "failed to find the latest release for module %q", tr.Name)
-		}
+		return rels[0].GetTagName(), nil
+	}
+	
+	// Use GetLatestRelease() to ensure it's the latest _released_ version.
+	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to find the latest release for module %q", tr.Name)
 	}
 
 	return rel.GetTagName(), nil
