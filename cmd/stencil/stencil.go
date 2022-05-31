@@ -83,7 +83,8 @@ func main() {
 				}
 			}
 
-			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"), c.Bool("frozen-lockfile"))
+			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"),
+				c.Bool("frozen-lockfile"), c.Bool("use-prerelease"))
 			return errors.Wrap(cmd.Run(ctx), "run codegen")
 		},
 		///EndBlock(app)
@@ -98,6 +99,10 @@ func main() {
 		&cli.BoolFlag{
 			Name:  "frozen-lockfile",
 			Usage: "Use versions from the lockfile instead of the latest",
+		},
+		&cli.BoolFlag{
+			Name:  "use-prerelease",
+			Usage: "Use prerelease versions of stencil modules",
 		},
 		///EndBlock(flags)
 	}
