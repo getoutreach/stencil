@@ -66,7 +66,6 @@ func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository)
 		return "", err
 	}
 
-	var rel *gogithub.RepositoryRelease
 	if tr.Prerelease { // Use the newest, first, release.
 		rels, _, err := gh.Repositories.ListReleases(ctx, paths[1], paths[2], &gogithub.ListOptions{
 			PerPage: 1,
@@ -79,7 +78,7 @@ func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository)
 		}
 		return rels[0].GetTagName(), nil
 	}
-	
+
 	// Use GetLatestRelease() to ensure it's the latest _released_ version.
 	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
 	if err != nil {
