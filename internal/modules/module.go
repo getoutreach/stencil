@@ -157,12 +157,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 		return nil
 	}
 
-	if m.Version != "" {
-		log.WithField("version", m.Version).
-			Warn("version was manually set on plugin, this is currently not supported, using latest")
-	}
-
-	return ext.RegisterExtension(ctx, m.URI, m.Name)
+	return ext.RegisterExtension(ctx, m.URI, m.Name, m.Version)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed
