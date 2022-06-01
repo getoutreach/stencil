@@ -16,19 +16,26 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// NewCreateTemplateRepositoryCommand returns a new urfave/cli.Command for the
-// create templaterepository command
-func NewCreateTemplateRepositoryCommand() *cli.Command {
+// NewCreateModule returns a new urfave/cli.Command for the
+// create module command
+func NewCreateModule() *cli.Command {
 	return &cli.Command{
-		Name:        "templaterepository",
-		Description: "Creates a templaterepository with the provided name in the current directory",
-		ArgsUsage:   "create templaterepository <name>",
+		Name:        "module",
+		Description: "Creates a module with the provided name in the current directory",
+		ArgsUsage:   "create module <name>",
+		Aliases:     []string{"templaterepository"},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "native-extension",
+				Usage: "Generates a native extension",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			var manifestFileName = "service.yaml"
 
 			// ensure we have a name
 			if c.NArg() != 1 {
-				return errors.New("must provide a name for the templaterepository")
+				return errors.New("must provide a name for the module")
 			}
 
 			allowedFiles := []string{".", "..", ".git"}
@@ -62,6 +69,9 @@ func NewCreateTemplateRepositoryCommand() *cli.Command {
 						"enablePrereleases": true,
 					},
 				},
+			}
+			if c.Bool("native-extension") {
+				tm.Arguments["type"] = "native"
 			}
 
 			if _, err := os.Stat(manifestFileName); err == nil {

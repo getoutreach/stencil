@@ -19,7 +19,7 @@ USAGE:
    stencil [global options] command [command options] [arguments...]
 
 VERSION:
-   v1.14.2
+   v1.15.1
 
 DESCRIPTION:
    a smart templating engine for service development

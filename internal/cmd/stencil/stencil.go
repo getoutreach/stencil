@@ -202,7 +202,7 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
 	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
 
-	gh, err := github.NewClient()
+	gh, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(c.log))
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch release notes (create github client)")
 	}

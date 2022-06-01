@@ -32,7 +32,7 @@ Much like a module we're going to use the [`stencil create module`] command to c
 
 {{< code file="create-module.sh" >}}
 mkdir helloworld; cd helloworld
-stencil create module github.com/yourorg/helloworld
+stencil create module --native-extension github.com/yourorg/helloworld
 {{< /code >}}
 
 However, instead of using the `templates/` directory we're going to create a `plugin/` directory.
