@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Command is a thin wrapper around the codegen package that
@@ -60,7 +60,8 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 	if usePrerelease {
 		log.Info("Using prerelease versions")
 		for i := range s.Modules {
-			s.Modules[i].Prerelease = usePrerelease
+			s.Modules[i].Prerelease = true
+			s.Modules[i].Version = ""
 		}
 	}
 

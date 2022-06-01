@@ -11,7 +11,7 @@ import (
 	"os"
 	"regexp"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // ValidateNameRegexp is the regex used to validate the service's name
@@ -137,19 +137,30 @@ type PostRunCommandSpec struct {
 // Argument is a user-input argument that can be passed to
 // templates
 type Argument struct {
+	// Description is a description of this argument.
+	Description string `yaml:"description"`
+
 	// Required denotes this argument as required.
 	Required bool `yaml:"required"`
 
+	// Default is the default value for this argument if it's not set.
+	// This cannot be set when required is true.
+	Default interface{} `yaml:"default"`
+
+	// Schema is a JSON schema, in YAML, for the argument.
+	Schema map[string]interface{} `yaml:"schema"`
+
+	// Deprecated fields below.
+
+	// Deprecated: Use schema instead
 	// Type declares the type of the argument. This is not implemented
 	// yet, so is likely to change in the future.
 	Type string `yaml:"type"`
 
+	// Deprecated: Use schema instead.
 	// Values is a list of possible values for this, if empty all input is
 	// considered valid.
 	Values []string `yaml:"values"`
-
-	// Description is a description of this argument. Optional.
-	Description string `yaml:"description"`
 }
 
 // ValidateName ensures that the name of a service in the manifest

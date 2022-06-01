@@ -110,6 +110,7 @@ func main() {
 		///Block(commands)
 		NewDescribeCmd(),
 		NewCreateCommand(),
+		NewDocsCommand(),
 		///EndBlock(commands)
 	}
 
