@@ -67,13 +67,13 @@ The most important directory is the `templates/` directory, which will contain a
 
 Let's create a template that creates a simple hello world message in Go. We'll start by creating a `hello.go.tpl` in the `templates/` directory.
 
-{{< code file="hello.go.tpl" copy=true >}}
+```go
 package main
 
 func main() {
-fmt.Println("Hello, world!")
+	fmt.Println("Hello, world!")
 }
-{{< /code >}}
+```
 
 ## Step 3: Consuming the Module in an Application
 
@@ -81,16 +81,18 @@ Now that we've done that, well how do we use it? This is super easy with the `re
 
 Let's quickly create a test application:
 
-{{< code file="create-test-module.sh" copy=true >}}
+```bash
 mkdir testapp; cd testapp
 cat > service.yaml <<EOF
 name: testapp
 modules:
+	- name: github.com/yourorg/helloworld
 
-- name: github.com/yourorg/helloworld
-  replacements: # Replace ../helloworld with the path to your module.
-  github.com/yourorg/helloworld: ../helloworld
-  {{< /code >}}
+replacements:
+	# Replace ../helloworld with the path to your module.
+	github.com/yourorg/helloworld: ../helloworld
+EOF
+```
 
 Now if we run stencil on the test application, we should see the following:
 
@@ -128,31 +130,31 @@ In case you don't remember, blocks are areas in your generated code that you'd l
 
 Let's create our own block in the hello.go template from earlier:
 
-{{< code file="hello.go.tpl" copy=true >}}
+```tpl
 package main
 
 func main() {
-fmt.Println("Hello, world!")
-///Block(additionalMessage)
-{{- /* It's important to not indent the file.Block to prevent the indentation from being copied over and.. over again. */ }}
+	fmt.Println("Hello, world!")
+
+	///Block(additionalMessage)
+	{{- /* It's important to not indent the file.Block to prevent the indentation from being copied over and.. over again. */ }}
 {{ file.Block "additionalMessage" }}
-///EndBlock(additionalMessage)
+	///EndBlock(additionalMessage)
 }
-{{< /code >}}
+```
 
 If we re-run stencil and look at `hello.go` we should see the following:
 
-{{< code file="hello.go" copy=true >}}
+```go
 package main
 
 func main() {
-fmt.Println("Hello, world!")
-///Block(additionalMessage)
+	fmt.Println("Hello, world!")
+	///Block(additionalMessage)
 
-    ///EndBlock(additionalMessage)
-
+	///EndBlock(additionalMessage)
 }
-{{< /code >}}
+```
 
 If we add contents to the block and re-run stencil they'll be persisted across the run!
 
@@ -160,7 +162,7 @@ If we add contents to the block and re-run stencil they'll be persisted across t
 
 One of the powerful parts of stencil is the ability to create an arbitrary number of files with a single template. This is done with the [`file.Create`](/stencil/functions/file.create) function. Let's create a `greeter.go.tpl` template in the `templates/` directory that'll create `<greeting>.go` based on the `greetings` argument.
 
-{{< code file="greeter.go.tpl" copy=true >}}
+```tpl
 
 # This is important! We don't want to create a greeter.go file
 
@@ -187,7 +189,7 @@ fmt.Println("$greeting, world!")
 
 {{- stencil.ApplyTemplate "greeter" $greeting | file.SetContents }}
 {{- end }}
-{{< /code >}}
+```
 
 {{% note %}}
 Blocks are supported in multiple files! When `file.SetPath` is called the host is searched to see if a file already exists at that path, if it does it is searched to see if it contains any blocks, if it does they are loaded and accessible via `file.Block` as normal
@@ -195,14 +197,14 @@ Blocks are supported in multiple files! When `file.SetPath` is called the host i
 
 Now let's modify the `manifest.yaml` to accept the argument `greetings`:
 
-{{< code file="manifest.yaml" copy=true >}}
+```yaml
 arguments:
-greetings:
-description: A list of greetings to use
+	greetings:
+		description: A list of greetings to use
 type: list
 require: true
 default: ["hello", "goodbye"]
-{{< /code >}}
+```
 
 If we run stencil on the test application, we should see the following:
 

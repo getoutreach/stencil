@@ -162,31 +162,6 @@ This example HTML code block tells Stencil users the following:
 {{</* /code */>}}
 ```
 
-##### Example 'code' Display
-
-The output of this example will render to the Stencil docs as follows:
-
-{{< code file="layouts/_default/single.html" download="single.html" >}}
-{{ define "main" }}
-
-<main>
-    <article>
-        <header>
-            <h1>{{.Title}}</h1>
-            {{with .Params.subtitle}}
-            <span>{{.}}</span>
-        </header>
-        <div>
-            {{.Content}}
-        </div>
-        <aside>
-            {{.TableOfContents}}
-        </aside>
-    </article>
-</main>
-{{ end }}
-{{< /code >}}
-
 ## Blockquotes
 
 Blockquotes can be added to the Stencil documentation using [typical Markdown blockquote syntax][bqsyntax]:
