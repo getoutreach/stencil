@@ -74,7 +74,7 @@ func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository)
 			return "", errors.Wrapf(err, "failed to get releases for module %q", tr.Name)
 		}
 		if len(rels) != 1 {
-			return "", errors.New("failed to get latest release (returned >1 release)")
+			return "", fmt.Errorf("failed to get latest release (returned >1 release) for module %q", tr.Name)
 		}
 		return rels[0].GetTagName(), nil
 	}
