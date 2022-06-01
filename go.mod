@@ -28,6 +28,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.5.8
+	github.com/google/go-github/v43 v43.0.0
 )
 
 require (
@@ -54,7 +55,6 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-github/v43 v43.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect

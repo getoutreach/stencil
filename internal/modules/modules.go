@@ -84,7 +84,10 @@ func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest
 
 		// create a module struct for this module, this resolves the latest version if
 		// the version wasn't set.
-		m, err := New(ctx, d.Name, sm.Replacements[d.Name], d.Version)
+		m, err := New(ctx, sm.Replacements[d.Name], &configuration.TemplateRepository{
+			Name:    d.Name,
+			Version: d.Version,
+		})
 		if err != nil {
 			return errors.Wrapf(err, "failed to create dependency %q", d.Name)
 		}

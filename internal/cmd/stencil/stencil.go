@@ -51,10 +51,17 @@ type Command struct {
 }
 
 // NewCommand creates a new stencil command
-func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen bool) *Command {
+func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen, usePrerelease bool) *Command {
 	l, err := stencil.LoadLockfile("")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
+	}
+
+	if usePrerelease {
+		log.Info("Using prerelease versions")
+		for i := range s.Modules {
+			s.Modules[i].Prerelease = usePrerelease
+		}
 	}
 
 	return &Command{

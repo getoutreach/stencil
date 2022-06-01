@@ -96,7 +96,7 @@ func (t *Template) ErrorContains(msg string) {
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
-		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, append([]string{t.path}, t.additionalTemplates...)...)
+		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, "modulestest", append([]string{t.path}, t.additionalTemplates...)...)
 		if err != nil {
 			got.Fatalf("failed to create module from template %q", t.path)
 		}

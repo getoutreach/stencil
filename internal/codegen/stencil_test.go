@@ -8,6 +8,7 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -18,6 +19,11 @@ import (
 func TestBasicE2ERender(t *testing.T) {
 	fs := memfs.New()
 	ctx := context.Background()
+
+	// create stub manifest
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing"))
+	f.Close()
 
 	// create a stub template
 	f, err := fs.Create("test-template.tpl")
@@ -60,28 +66,22 @@ func TestBasicE2ERender(t *testing.T) {
 }
 
 func TestModuleHookRender(t *testing.T) {
-	m1fs := memfs.New()
-	m2fs := memfs.New()
 	ctx := context.Background()
 
-	// create a stub template
-	f, err := m1fs.Create("test-template.tpl")
-	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte(`{{ file.Skip "virtual file" }}{{ stencil.AddToModuleHook "testing2" "coolthing" (list "a") }}`))
-	f.Close()
-
-	f, err = m2fs.Create("test-template.tpl")
-	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte(`{{ index (stencil.GetModuleHook "coolthing") 0 }}`))
-	f.Close()
+	// create modules
+	m1, err := modulestest.NewModuleFromTemplates(nil, "testing1", "testdata/module-hook/m1.tpl")
+	if err != nil {
+		t.Errorf("failed to create module 1: %v", err)
+	}
+	m2, err := modulestest.NewModuleFromTemplates(nil, "testing2", "testdata/module-hook/m2.tpl")
+	if err != nil {
+		t.Errorf("failed to create module 2: %v", err)
+	}
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
 		Arguments: map[string]interface{}{},
-	}, []*modules.Module{
-		modules.NewWithFS(ctx, "testing1", m1fs),
-		modules.NewWithFS(ctx, "testing2", m2fs),
-	}, logrus.New())
+	}, []*modules.Module{m1, m2}, logrus.New())
 
 	tpls, err := st.Render(ctx, logrus.New())
 	assert.NilError(t, err, "expected Render() to not fail")

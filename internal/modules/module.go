@@ -22,6 +22,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
+	gogithub "github.com/google/go-github/v43/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
@@ -52,12 +53,12 @@ type Module struct {
 
 // getLatestVersion returns the latest version of a git repository
 // name should be a valid go import path, like github.com/<org>/<repo>
-func getLatestVersion(ctx context.Context, name string) (string, error) {
-	paths := strings.Split(name, "/")
+func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository) (string, error) {
+	paths := strings.Split(tr.Name, "/")
 
 	// github.com, getoutreach, stencil-base
 	if len(paths) < 3 {
-		return "", fmt.Errorf("invalid module path %q, expected github.com/<org>/<repo>", name)
+		return "", fmt.Errorf("invalid module path %q, expected github.com/<org>/<repo>", tr.Name)
 	}
 
 	gh, err := github.NewClient(github.WithAllowUnauthenticated())
@@ -65,24 +66,38 @@ func getLatestVersion(ctx context.Context, name string) (string, error) {
 		return "", err
 	}
 
+	if tr.Prerelease { // Use the newest, first, release.
+		rels, _, err := gh.Repositories.ListReleases(ctx, paths[1], paths[2], &gogithub.ListOptions{
+			PerPage: 1,
+		})
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to get releases for module %q", tr.Name)
+		}
+		if len(rels) != 1 {
+			return "", fmt.Errorf("failed to get latest release (returned >1 release) for module %q", tr.Name)
+		}
+		return rels[0].GetTagName(), nil
+	}
+
+	// Use GetLatestRelease() to ensure it's the latest _released_ version.
 	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find the latest release for module %q", name)
+		return "", errors.Wrapf(err, "failed to find the latest release for module %q", tr.Name)
 	}
 
 	return rel.GetTagName(), nil
 }
 
-// New creates a new module at a specific revision. If a revision is
-// not provided then the latest version is automatically used. A revision
-// must be a valid git ref of semantic version.
+// New creates a new module from a TemplateRepository. If no version is specified
+// then the latest released revision is used. If `prerelease` is set to true then
+// the latest revision is used, regardless of whether it is a released version or
+// not.
 //
-// If the uri is a file:// path, a version must be specified otherwise
-// it will be treated as if it has no version. If uri is not specified
-// it is default to HTTPS
-func New(ctx context.Context, name, uri, version string) (*Module, error) {
+// uri is the URI for the module. If it is an empty string https://+name is used
+// instead.
+func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) (*Module, error) {
 	if uri == "" {
-		uri = "https://" + name
+		uri = "https://" + tr.Name
 	}
 
 	// check if a url based on if :// is in the uri, this is kinda hacky
@@ -91,28 +106,32 @@ func New(ctx context.Context, name, uri, version string) (*Module, error) {
 	if !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://") { // Assume it's a path.
 		osPath := strings.TrimPrefix(uri, "file://")
 		if _, err := os.Stat(osPath); err != nil {
-			return nil, errors.Wrapf(err, "failed to find module %s at path %q", name, osPath)
+			return nil, errors.Wrapf(err, "failed to find module %s at path %q", tr.Name, osPath)
 		}
 
 		// translate the path into a file:// URI
 		uri = "file://" + osPath
-		version = "local"
+		tr.Version = "local"
 	}
 
-	if version == "" {
+	if tr.Version == "" {
 		var err error
-		version, err = getLatestVersion(ctx, name)
+		tr.Version, err = getLatestVersion(ctx, tr)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &Module{template.New(name).Funcs(sprig.TxtFuncMap()), name, uri, version, nil}, nil
+	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
 }
 
 // NewWithFS creates a module with the specified file system. This is
 // generally only meant to be used in tests.
 func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
-	m, _ := New(ctx, name, "vfs://"+name, "vfs") //nolint:errcheck // Why: No errors
+	//nolint:errcheck // Why: No errors
+	m, _ := New(ctx, "vfs://"+name, &configuration.TemplateRepository{
+		Name:    name,
+		Version: "vfs",
+	})
 	m.fs = fs
 	return m
 }
@@ -137,12 +156,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 		return nil
 	}
 
-	if m.Version != "" {
-		log.WithField("version", m.Version).
-			Warn("version was manually set on plugin, this is currently not supported, using latest")
-	}
-
-	return ext.RegisterExtension(ctx, m.URI, m.Name)
+	return ext.RegisterExtension(ctx, m.URI, m.Name, m.Version)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed

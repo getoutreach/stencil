@@ -15,7 +15,7 @@ import (
 
 func TestCanFetchModule(t *testing.T) {
 	ctx := context.Background()
-	m, err := modules.New(ctx, "github.com/getoutreach/stencil-base", "", "main")
+	m, err := modules.New(ctx, "", &configuration.TemplateRepository{Name: "github.com/getoutreach/stencil-base", Version: "main"})
 	assert.NilError(t, err, "failed to call New()")
 
 	manifest, err := m.Manifest(ctx)
@@ -30,7 +30,7 @@ func TestCanFetchModule(t *testing.T) {
 }
 
 func TestCanGetLatestModule(t *testing.T) {
-	_, err := modules.New(context.Background(), "github.com/getoutreach/stencil-base", "", "")
+	_, err := modules.New(context.Background(), "", &configuration.TemplateRepository{Name: "github.com/getoutreach/stencil-base"})
 	assert.NilError(t, err, "failed to call New()")
 }
 

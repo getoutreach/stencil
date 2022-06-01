@@ -90,6 +90,9 @@ type TemplateRepository struct {
 	// Name is the name of this module. This should be a valid go import path
 	Name string `yaml:"name"`
 
+	// Prerelease is a boolean indicating whether or not to consider prerelease versions
+	Prerelease bool `yaml:"prerelease"`
+
 	// Deprecated: Use name instead
 	// URL is a full URL for a given module
 	URL string `yaml:"url,omitempty"`

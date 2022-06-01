@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/updater"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
+	gogithub "github.com/google/go-github/v43/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
@@ -93,10 +94,12 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 	return &ExtensionCaller{funcMap}, nil
 }
 
+// TODO(jaredallard)[DTSS-1926]: Refactor a lot of this RegisterExtension code.
+
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
-func (h *Host) RegisterExtension(ctx context.Context, source, name string) error { //nolint:funlen // Why: OK length.
+func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error { //nolint:funlen // Why: OK length.
 	h.log.WithField("extension", name).WithField("source", source).Debug("Registered extension")
 
 	u, err := giturls.Parse(source)
@@ -112,7 +115,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name string) error
 		if len(pathSpl) < 2 {
 			return fmt.Errorf("invalid repository, expected org/repo, got %s", u.Path)
 		}
-		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name)
+		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name, version)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to setup extension")
@@ -145,21 +148,27 @@ func (h *Host) getExtensionPath(version, name, repo string) string {
 // 	org: getoutreach
 // 	repo: stencil-plugin
 // 	name: github.com/getoutreach/stencil-plugin
-func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name string) (string, error) {
+func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
 	ghc, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(h.log))
 	if err != nil {
 		return "", err
 	}
 
 	gh := updater.NewGithubUpdaterWithClient(ctx, ghc, org, repo)
-	err = gh.Check(ctx)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to validate github client worked")
-	}
 
-	rel, err := gh.GetLatestVersion(ctx, "v0.0.0", false)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to find latest extension version")
+	var rel *gogithub.RepositoryRelease
+	if version == "" {
+		var err error
+		rel, err = gh.GetLatestVersion(ctx, "v0.0.0", false)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to find latest extension version")
+		}
+	} else {
+		var err error
+		rel, err = gh.GetRelease(ctx, version)
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to find extension version %q", version)
+		}
 	}
 
 	// Check if the version we're pulling already exists and is exectuable before downloading
