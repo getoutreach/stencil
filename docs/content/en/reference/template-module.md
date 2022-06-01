@@ -81,33 +81,30 @@ A simple example for rendering the template `helloWorld.tpl` to a file called `h
 hello, world!
 {{< /code >}}
 
-{{< code file="main_test.go" >}}
+```go
 package main
 
 import (
-"testing"
+	"testing"
 
-    "github.com/getoutreach/stencil/pkg/stenciltest"
-
+  "github.com/getoutreach/stencil/pkg/stenciltest"
 )
 
 func TestGoMod(t \*testing.T) {
-// Create a renderer with the specified file being the file to test.
-//
-// More files may be provided if they are depended as variadic arguments
-// but their output will not be saved.
-st := stenciltest.New(t, "go.mod.tpl")
+	// Create a renderer with the specified file being the file to test.
+	//
+	// More files may be provided if they are depended as variadic arguments
+	// but their output will not be saved.
+	st := stenciltest.New(t, "go.mod.tpl")
 
-    // Define the arguments to pass to stencil
-    st.Args(map[string]interface{}{"org": "getoutreach"})
+	// Define the arguments to pass to stencil
+	st.Args(map[string]interface{}{"org": "getoutreach"})
 
-    // Run the test, persisting the snapshot to disk if it changed.
-    // Default is set to false.
-    st.Run(false)
-
+	// Run the test, persisting the snapshot to disk if it changed.
+	// Default is set to false.
+	st.Run(false)
 }
-
-{{< /code >}}
+```
 
 You can run all tests by running `go test ./...` in the root of the repository:
 
