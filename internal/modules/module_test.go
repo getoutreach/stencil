@@ -53,19 +53,3 @@ func TestReplacementLocalModule(t *testing.T) {
 	assert.Equal(t, mods[0].URI, sm.Replacements["github.com/getoutreach/stencil-base"],
 		"expected module to use replacement URI")
 }
-
-func TestCanFetchDeprecatedModule(t *testing.T) {
-	sm := &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				URL: "https://github.com/getoutreach/stencil-base",
-			},
-		},
-	}
-
-	mods, err := modules.GetModulesForService(context.Background(), sm)
-	assert.NilError(t, err, "expected GetModulesForService() to not error")
-	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
-	assert.Equal(t, mods[0].Name, "github.com/getoutreach/stencil-base")
-}
