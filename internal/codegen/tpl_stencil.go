@@ -192,6 +192,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	return v, nil
 }
 
+// Deprecated: Use Arg instead.
 // Args returns all arguments passed to stencil from the service's manifest
 //
 // Note: This doesn't set default values and is instead
