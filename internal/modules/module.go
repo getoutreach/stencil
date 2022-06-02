@@ -26,8 +26,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
+
+// localModuleVersion is the version string used for local modules
+const localModuleVersion = "local"
 
 // Module is a stencil module that contains template files.
 type Module struct {
@@ -111,7 +114,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 
 		// translate the path into a file:// URI
 		uri = "file://" + osPath
-		tr.Version = "local"
+		tr.Version = localModuleVersion
 	}
 
 	if tr.Version == "" {

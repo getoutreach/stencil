@@ -52,8 +52,34 @@ The important keys that a module has are listed below, but an exhaustive list ca
 - `arguments` - a map of arguments that this module accepts. A module cannot access an argument via `stencil.Arg` without first declaring it here.
   _ `name` - the name of the argument
   _ `description` - a description of the argument
-  _ `type` - the type of the argument, can be `string`, `int`, `bool`, `list`, or `map`
-  _ `default` - the default value of the argument \* `required` - whether or not the argument is required
+	- `schema` - a JSON schema for the argument
+	- `required` - whether or not the argument is required to be set
+	- `default` - a default value for the argument, cannot be set when required is true
+
+#### Writing a JSON Schema
+
+Arguments support JSON Schemas. The schema is used to validate the argument value. The schema is a JSON Schema [described here](https://json-schema.org/). This essentially boils down to two structures. For concrete types, like strings, numbers, and booleans, the schema is a simple object with a `type` key. For example:
+
+```yaml
+type: string
+```
+
+For more complex types, like objects, and arrays the schema is an object with properties or a list of properties. For example, objects:
+
+```yaml
+type: object
+properties:
+	name:
+		type: string
+```
+
+For example, array of strings:
+
+```yaml
+type: array
+items:
+	type: string
+```
 
 ## Module Hooks
 

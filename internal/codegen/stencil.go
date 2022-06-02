@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -90,6 +91,15 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 			Version: m.Version,
 		})
 	}
+
+	// sort based on name to ensure deterministic output
+	sort.SliceStable(l.Files, func(i, j int) bool {
+		return l.Files[i].Name < l.Files[j].Name
+	})
+
+	sort.SliceStable(l.Modules, func(i, j int) bool {
+		return l.Modules[i].Name < l.Modules[j].Name
+	})
 
 	return l
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/assert"
 )
 
