@@ -165,6 +165,36 @@ func TestTplStencil_Arg(t *testing.T) {
 			want:    map[string]interface{}{"world": map[string]interface{}{"abc": []string{"def"}}},
 			wantErr: false,
 		},
+		{
+			name: "should return default type when arg is not provided",
+			fields: fakeTemplate(t, map[string]interface{}{},
+				map[string]configuration.Argument{
+					"hello": {
+						Schema: map[string]interface{}{
+							"type": "string",
+						},
+					},
+				}),
+			args: args{
+				pth: "hello",
+			},
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name: "should fallback to deprecated type when schema is not provided",
+			fields: fakeTemplate(t, map[string]interface{}{},
+				map[string]configuration.Argument{
+					"hello": {
+						Type: "string",
+					},
+				}),
+			args: args{
+				pth: "hello",
+			},
+			want:    "",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
