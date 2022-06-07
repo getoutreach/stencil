@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -208,6 +209,10 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 
 // promptMajorVersion prompts the user to upgrade their templates
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
+	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+		return nil
+	}
+
 	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
 
 	gh, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(c.log))
