@@ -111,6 +111,7 @@ func main() {
 		NewDescribeCmd(),
 		NewCreateCommand(),
 		NewDocsCommand(),
+		NewLintCommand(),
 		///EndBlock(commands)
 	}
 
