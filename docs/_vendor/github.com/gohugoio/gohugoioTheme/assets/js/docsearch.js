@@ -4,7 +4,7 @@ import '@docsearch/css';
 
 docsearch({
   container: '#search-input',
-  appId: '0DI22WVNDU',
+  appId: '3LKIQPX0OJ',
   indexName: 'stencil',
-  apiKey: 'e1beac4e9f4d826f6fea5ee10363348c',
+  apiKey: 'e847aae6cb1cb8619d70123e6be76b47',
 });
