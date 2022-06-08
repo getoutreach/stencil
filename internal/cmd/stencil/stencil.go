@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
@@ -209,7 +209,7 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 
 // promptMajorVersion prompts the user to upgrade their templates
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
-	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return nil
 	}
 
