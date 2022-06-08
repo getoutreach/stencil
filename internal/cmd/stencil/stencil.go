@@ -49,10 +49,15 @@ type Command struct {
 	// frozenLockfile denotes if we should use versions from the lockfile
 	// or not
 	frozenLockfile bool
+
+	// allowMajorVersionUpgrade denotes if we should allow major version
+	// upgrades without a prompt or not
+	allowMajorVersionUpgrades bool
 }
 
 // NewCommand creates a new stencil command
-func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen, usePrerelease bool) *Command {
+func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
+	dryRun, frozen, usePrerelease, allowMajorVersionUpgrades bool) *Command {
 	l, err := stencil.LoadLockfile("")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
@@ -67,11 +72,12 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 	}
 
 	return &Command{
-		lock:           l,
-		manifest:       s,
-		log:            log,
-		dryRun:         dryRun,
-		frozenLockfile: frozen,
+		lock:                      l,
+		manifest:                  s,
+		log:                       log,
+		dryRun:                    dryRun,
+		frozenLockfile:            frozen,
+		allowMajorVersionUpgrades: allowMajorVersionUpgrades,
 	}
 }
 
@@ -209,11 +215,17 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 
 // promptMajorVersion prompts the user to upgrade their templates
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
+	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
+	if c.allowMajorVersionUpgrades {
+		c.log.Info("Continuing with major version upgrade, --allow-major-version-upgrades was set")
 		return nil
 	}
 
-	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
+	// If we're not a terminal, we can't ask for consent
+	// so we error out informing the user how to fix this.
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return fmt.Errorf("unable to prompt for major version upgrade, stdin is not a terminal, pass --allow-major-version-upgrades to continue")
+	}
 
 	gh, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(c.log))
 	if err != nil {
