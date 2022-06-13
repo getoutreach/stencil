@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -59,12 +60,28 @@ func NewCreateModule() *cli.Command {
 				}
 			}
 
+			var reportingTeam string
+			if err := survey.AskOne(&survey.Input{
+				Message: "What is the reporting team for this module in the form of a GitHub slug (used in CODEOWNERS)?",
+			}, &reportingTeam); err != nil {
+				return errors.Wrap(err, "ask for reporting team")
+			}
+
+			var description string
+			if err := survey.AskOne(&survey.Input{
+				Message: "Enter a description for the module.",
+			}, &description); err != nil {
+				return errors.Wrap(err, "ask for description")
+			}
+
 			tm := &configuration.ServiceManifest{
 				Name: path.Base(c.Args().Get(0)),
 				Modules: []*configuration.TemplateRepository{{
 					Name: "github.com/getoutreach/stencil-template-base",
 				}},
 				Arguments: map[string]interface{}{
+					"reportingTeam": reportingTeam,
+					"description":   description,
 					"releaseOptions": map[string]interface{}{
 						"enablePrereleases": true,
 					},
