@@ -8,7 +8,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
-	github.com/getoutreach/gobox v1.41.2
+	github.com/getoutreach/gobox v1.41.5
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
@@ -20,7 +20,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli/v2 v2.6.0
 	github.com/whilp/git-urls v1.0.0
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.2.0
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -119,4 +118,5 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

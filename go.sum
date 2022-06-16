@@ -160,8 +160,8 @@ github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga
 github.com/felixge/httpsnoop v1.0.2/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
-github.com/getoutreach/gobox v1.41.2 h1:Y5yutBB5XhmtGRqiG7W3vutEMwawZq8ZlEuey6myUyE=
-github.com/getoutreach/gobox v1.41.2/go.mod h1:oZMyUGM7StL/JIyqFh27n4T6GxG2BsbaHq0w18B5nv0=
+github.com/getoutreach/gobox v1.41.5 h1:d0B1LK2uwut9PQg+y9zR7Gw0KTm2nCUS/LLMFCQU2Ls=
+github.com/getoutreach/gobox v1.41.5/go.mod h1:oZMyUGM7StL/JIyqFh27n4T6GxG2BsbaHq0w18B5nv0=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
 github.com/gin-gonic/gin v1.7.7/go.mod h1:axIBovoeJpVj8S3BwE0uPMTeReE4+AfFtqpqaZ1qq1U=

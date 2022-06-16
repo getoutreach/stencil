@@ -20,11 +20,16 @@ import (
 )
 
 func TestValues(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "stencil-values-test")
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir, err := os.MkdirTemp(t.TempDir(), "stencil-values-test")
 	assert.NilError(t, err, "expected os.MkdirTemp() not to fail")
-	assert.NilError(t, os.Chdir(tmpDir), "expected os.Chdir() not to fail")
+
+	wd, err := os.Getwd()
+	assert.NilError(t, err, "expected os.Getwd() not to fail")
+
+	// Change directory to the temporary directory, and restore the original
+	// working directory when we're done.
+	os.Chdir(tmpDir)
+	defer func() { os.Chdir(wd) }()
 
 	r, err := gogit.PlainInit(tmpDir, false)
 	assert.NilError(t, err, "expected gogit.PlainInit() not to fail")
