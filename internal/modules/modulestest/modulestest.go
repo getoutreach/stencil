@@ -9,8 +9,10 @@ package modulestest
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -22,6 +24,12 @@ import (
 
 // addTemplateToFS adds a template to a billy.Filesystem
 func addTemplateToFS(fs billy.Filesystem, tpl string) error {
+	dirName := filepath.Dir(tpl)
+	files, _ := fs.ReadDir(dirName)
+	wd, _ := os.Getwd()
+	fmt.Println("pwd:", wd)
+	fmt.Println(dirName, ":", files)
+
 	srcFile, err := os.Open(tpl)
 	if err != nil {
 		return errors.Wrapf(err, "failed to open template file %q", tpl)
