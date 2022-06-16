@@ -52,9 +52,9 @@ The important keys that a module has are listed below, but an exhaustive list ca
 - `arguments` - a map of arguments that this module accepts. A module cannot access an argument via `stencil.Arg` without first declaring it here.
   _ `name` - the name of the argument
   _ `description` - a description of the argument
-	- `schema` - a JSON schema for the argument
-	- `required` - whether or not the argument is required to be set
-	- `default` - a default value for the argument, cannot be set when required is true
+  - `schema` - a JSON schema for the argument
+  - `required` - whether or not the argument is required to be set
+  - `default` - a default value for the argument, cannot be set when required is true
 
 #### Writing a JSON Schema
 
