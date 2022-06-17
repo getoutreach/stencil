@@ -30,12 +30,12 @@
           "to": "/home/dev/app"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.18.3/packages/pkg/mod",
+          "from": "${env:HOME}/.asdf/installs/golang/1.17.9/packages/pkg/mod",
           "to": "/tmp/cache/go/mod/"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.18.3/go/src",
-          "to": "/home/dev/.asdf/installs/golang/1.18.3/go/src"
+          "from": "${env:HOME}/.asdf/installs/golang/1.17.9/go/src",
+          "to": "/home/dev/.asdf/installs/golang/1.17.9/go/src"
         }
       ]
     }
