@@ -95,8 +95,12 @@ func (t *Template) Args(args map[string]interface{}) *Template {
 // It is up to the unit test to provide each extension used by their template with this API.
 // Unit tests can decide if they can use the real implementation of the extension AS IS or if a
 // mock extension is needed to feed fake data per test case.
+//
+// Note: even though input extension is registered inproc, its response to ExecuteTemplateFunction
+// will be encoded as JSON and decoded back as a plain inteface{} to simulate the GRPC transport
+// layer between stencil and the same extension. Refer to the inprocExt struct docs for details.
 func (t *Template) Ext(name string, ext apiv1.Implementation) *Template {
-	t.exts[name] = ext
+	t.exts[name] = inprocExt{ext: ext}
 	return t
 }
 
