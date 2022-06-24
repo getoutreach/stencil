@@ -199,7 +199,7 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 		if err != nil {
 			return nil, err
 		}
-		if mf.Type != configuration.TemplateRepositoryTypeStd {
+		if !mf.Type.Contains(configuration.TemplateRepositoryTypeTemplates) {
 			log.Debugf("Skipping template discovery for module %q, not a template module (type %s)", m.Name, mf.Type)
 			continue
 		}

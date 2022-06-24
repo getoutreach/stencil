@@ -20,7 +20,7 @@ func TestCanFetchModule(t *testing.T) {
 
 	manifest, err := m.Manifest(ctx)
 	assert.NilError(t, err, "failed to call Manifest() on module")
-	assert.Equal(t, manifest.Type, configuration.TemplateRepositoryTypeStd, "failed to validate returned manifest")
+	assert.Assert(t, manifest.Type.Contains(configuration.TemplateRepositoryTypeTemplates), "failed to validate returned manifest")
 
 	fs, err := m.GetFS(ctx)
 	assert.NilError(t, err, "failed to call GetFS() on module")

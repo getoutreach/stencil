@@ -154,8 +154,8 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 		return err
 	}
 
-	// Only register extensions if we're a extension repository
-	if mf.Type != configuration.TemplateRepositoryTypeExt {
+	// Only register extensions if this repository declares extensions explicitly in its type.
+	if !mf.Type.Contains(configuration.TemplateRepositoryTypeExt) {
 		return nil
 	}
 

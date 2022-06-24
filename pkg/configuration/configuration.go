@@ -69,22 +69,6 @@ type ServiceManifest struct {
 	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
-// TemplateRepositoryType specifies what type of a template
-// repository a repository is.
-type TemplateRepositoryType string
-
-// This block contains all of the TemplateRepositoryType values
-const (
-	// TemplateRepositoryTypeExt denotes a repository as being
-	// an extension repository. This means that it contains
-	// a go extension. This repository may also contain go-templates.
-	TemplateRepositoryTypeExt TemplateRepositoryType = "extension"
-
-	// TemplateRepositoryTypeStd denotes a repository as being a
-	// standard template repository. This is the default
-	TemplateRepositoryTypeStd TemplateRepositoryType = ""
-)
-
 // TemplateRepository is a repository of template files.
 type TemplateRepository struct {
 	// Name is the name of this module. This should be a valid go import path
@@ -112,8 +96,9 @@ type TemplateRepositoryManifest struct {
 	// Modules are template repositories that this manifest requires
 	Modules []*TemplateRepository `yaml:"modules"`
 
-	// Type is the type of repository this is
-	Type TemplateRepositoryType `yaml:"type,omitempty"`
+	// Type stores a comma-separated list of template repository types served by the current module.
+	// Use the TemplateRepositoryTypes.Contains method to check.
+	Type TemplateRepositoryTypes `yaml:"type,omitempty"`
 
 	// PostRunCommand is a command to be ran after rendering and post-processors
 	// have been ran on the project
