@@ -19,6 +19,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/assert"
@@ -41,6 +42,9 @@ type Template struct {
 
 	// args are the arguments to the template.
 	args map[string]interface{}
+
+	// exts holds the inproc extensions
+	exts map[string]apiv1.Implementation
 
 	// errStr is the string an error should contain, if this is set then the template
 	// MUST error.
@@ -76,12 +80,23 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 		path:                templatePath,
 		additionalTemplates: additionalTemplates,
 		persist:             true,
+		exts:                map[string]apiv1.Implementation{},
 	}
 }
 
 // Args sets the arguments to the template.
 func (t *Template) Args(args map[string]interface{}) *Template {
 	t.args = args
+	return t
+}
+
+// Ext registers an in-proc extension with the current stencil template. The stenciltest library
+// does not load the real extensions (because extensions can invoke outbound network calls).
+// It is up to the unit test to provide each extension used by their template with this API.
+// Unit tests can decide if they can use the real implementation of the extension AS IS or if a
+// mock extension is needed to feed fake data per test case.
+func (t *Template) Ext(name string, ext apiv1.Implementation) *Template {
+	t.exts[name] = ext
 	return t
 }
 
@@ -104,6 +119,10 @@ func (t *Template) Run(save bool) {
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
 			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
 		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+
+		for name, ext := range t.exts {
+			st.RegisterInprocExtensions(name, ext)
+		}
 
 		tpls, err := st.Render(context.Background(), logrus.New())
 		if err != nil {
