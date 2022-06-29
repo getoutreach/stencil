@@ -154,7 +154,11 @@ func (t *Template) Run(save bool) {
 					continue
 				}
 
-				success := got.Run(f.Name(), func(got *testing.T) {
+				// Create snapshots with .snapshot ext to keep them away from regular linters until we find a better way
+				// to invoke linters on these snapshots. See Jira below for extra details
+				// TODO(jaredallard)[DTSS-2086]: figure out what to do with the snapshot codegen.File directive
+				snapshotName := f.Name() + ".snapshot"
+				success := got.Run(snapshotName, func(got *testing.T) {
 					snapshot := cupaloy.New(cupaloy.ShouldUpdate(func() bool { return save }), cupaloy.CreateNewAutomatically(true))
 					snapshot.SnapshotT(got, f)
 				})
