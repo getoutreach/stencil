@@ -154,8 +154,7 @@ func (t *Template) Run(save bool) {
 					continue
 				}
 
-				// Create snapshots with .snapshot ext to keep them away from regular linters until we find a better way
-				// to invoke linters on these snapshots. See Jira below for extra details
+				// Create snapshots with a .snapshot ext to keep them away from linters, see Jira for more details.
 				// TODO(jaredallard)[DTSS-2086]: figure out what to do with the snapshot codegen.File directive
 				snapshotName := f.Name() + ".snapshot"
 				success := got.Run(snapshotName, func(got *testing.T) {
