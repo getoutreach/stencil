@@ -134,6 +134,13 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	return nil
 }
 
+// RegisterInprocExtension registers an extension that is implemented within the same process
+// directly with the host. Please limit the use of this API for unit testing only!
+func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
+	h.log.WithField("extension", name).Debug("Registered inproc extension")
+	h.extensions[name] = ext
+}
+
 // getExtensionPath returns the path to an extension binary
 func (h *Host) getExtensionPath(version, name, repo string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet

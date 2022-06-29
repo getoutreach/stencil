@@ -16,6 +16,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
+	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/pkg/errors"
@@ -64,6 +65,13 @@ func (s *Stencil) RegisterExtensions(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// RegisterInprocExtensions registers the input ext extension directly. This API is used in
+// unit tests to render modules with templates that invoke native extensions: input 'ext' can be
+// either an actual extension or a mock one (feeding fake data into the template).
+func (s *Stencil) RegisterInprocExtensions(name string, ext apiv1.Implementation) {
+	s.ext.RegisterInprocExtension(name, ext)
 }
 
 // GenerateLockfile generates a stencil.Lockfile based
@@ -199,7 +207,7 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 		if err != nil {
 			return nil, err
 		}
-		if mf.Type != configuration.TemplateRepositoryTypeStd {
+		if !mf.Type.Contains(configuration.TemplateRepositoryTypeTemplates) {
 			log.Debugf("Skipping template discovery for module %q, not a template module (type %s)", m.Name, mf.Type)
 			continue
 		}
