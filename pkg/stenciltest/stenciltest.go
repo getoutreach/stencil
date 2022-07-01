@@ -157,13 +157,11 @@ func (t *Template) Run(save bool) {
 				// Create snapshots with a .snapshot ext to keep them away from linters, see Jira for more details.
 				// TODO(jaredallard)[DTSS-2086]: figure out what to do with the snapshot codegen.File directive
 				snapshotName := f.Name() + ".snapshot"
-				success := got.Run(snapshotName, func(got *testing.T) {
+				// if a sub-test fails, it will report its own error, no need to check its success return
+				got.Run(snapshotName, func(got *testing.T) {
 					snapshot := cupaloy.New(cupaloy.ShouldUpdate(func() bool { return save }), cupaloy.CreateNewAutomatically(true))
 					snapshot.SnapshotT(got, f)
 				})
-				if !success {
-					got.Fatalf("Generated file %q did not match snapshot", f.Name())
-				}
 			}
 
 			// only ever process one template
