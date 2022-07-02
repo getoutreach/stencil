@@ -157,13 +157,14 @@ func (t *Template) Run(save bool) {
 				// Create snapshots with a .snapshot ext to keep them away from linters, see Jira for more details.
 				// TODO(jaredallard)[DTSS-2086]: figure out what to do with the snapshot codegen.File directive
 				snapshotName := f.Name() + ".snapshot"
-				success := got.Run(snapshotName, func(got *testing.T) {
+				// Run each template file as a sub-test, if the sub-test fails, it will report its own error.
+				// Even if one of the templates fail, we let the test continue - otherwise devs need to go thru
+				// 'onion peeling' excercise to create a bulk of new snapshots or re-run test multiple times to
+				// reveal distinct errors for all the templates changed in one PR.
+				got.Run(snapshotName, func(got *testing.T) {
 					snapshot := cupaloy.New(cupaloy.ShouldUpdate(func() bool { return save }), cupaloy.CreateNewAutomatically(true))
 					snapshot.SnapshotT(got, f)
 				})
-				if !success {
-					got.Fatalf("Generated file %q did not match snapshot", f.Name())
-				}
 			}
 
 			// only ever process one template
