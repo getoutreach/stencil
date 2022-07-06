@@ -51,15 +51,16 @@ func parseBlocks(filePath string) (map[string]string, error) {
 				curBlockName = blockName
 			case "EndBlock":
 				blockName := matches[3]
+
+				if curBlockName == "" {
+					return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i+1)
+				}
+
 				if blockName != curBlockName {
 					return nil, fmt.Errorf(
 						"invalid EndBlock, found EndBlock with name %q while inside of block with name %q, at %s:%d",
 						blockName, curBlockName, filePath, i+1,
 					)
-				}
-
-				if curBlockName == "" {
-					return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i+1)
 				}
 
 				curBlockName = ""
