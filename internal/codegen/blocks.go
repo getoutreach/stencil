@@ -46,20 +46,21 @@ func parseBlocks(filePath string) (map[string]string, error) {
 			case "Block":
 				blockName := matches[3]
 				if curBlockName != "" {
-					return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i)
+					return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i+1)
 				}
 				curBlockName = blockName
 			case "EndBlock":
 				blockName := matches[3]
+
+				if curBlockName == "" {
+					return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i+1)
+				}
+
 				if blockName != curBlockName {
 					return nil, fmt.Errorf(
 						"invalid EndBlock, found EndBlock with name %q while inside of block with name %q, at %s:%d",
-						blockName, curBlockName, filePath, i,
+						blockName, curBlockName, filePath, i+1,
 					)
-				}
-
-				if curBlockName == "" {
-					return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i)
 				}
 
 				curBlockName = ""
@@ -84,6 +85,10 @@ func parseBlocks(filePath string) (map[string]string, error) {
 		} else {
 			args[curBlockName] = line
 		}
+	}
+
+	if curBlockName != "" {
+		return nil, fmt.Errorf("found dangling Block (%s) in %s", curBlockName, filePath)
 	}
 
 	return args, nil
