@@ -15,3 +15,15 @@ func TestParseBlocks(t *testing.T) {
 	assert.NilError(t, err, "expected parseBlocks() not to fail")
 	assert.Equal(t, blocks["helloWorld"], "Hello, world!", "expected parseBlocks() to parse basic block")
 }
+
+func TestDanglingBlock(t *testing.T) {
+	_, err := parseBlocks("testdata/danglingblock-test.txt")
+	assert.Error(t, err, "found dangling Block (dangles) in testdata/danglingblock-test.txt", "expected parseBlocks() to fail")
+}
+
+func TestDanglingEndBlock(t *testing.T) {
+	_, err := parseBlocks("testdata/danglingendblock-test.txt")
+	assert.Error(t, err,
+		"invalid EndBlock, found EndBlock with name \"dangles\" while inside of block with name \"\", at testdata/danglingendblock-test.txt:8",
+		"expected parseBlocks() to fail")
+}
