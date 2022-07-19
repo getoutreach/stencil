@@ -55,8 +55,9 @@ func (f *TplFile) Block(name string) string {
 //
 // Note: The $_ is required to ensure <nil> isn't outputted into
 // the template.
-func (f *TplFile) SetPath(path string) error {
-	return f.f.SetPath(path)
+func (f *TplFile) SetPath(path string) (out, err error) {
+	err = f.f.SetPath(path)
+	return err, err
 }
 
 // SetContents sets the contents of file being rendered to the value
@@ -94,13 +95,14 @@ func (f *TplFile) Delete() error {
 // the file in the future.
 //
 //   {{ $_ := file.Static }}
-func (f *TplFile) Static() error {
+func (f *TplFile) Static() (out, err error) {
 	// if the file already exists, skip it
 	if _, err := os.Stat(f.f.path); err == nil {
-		return f.Skip("Static file, output already exists")
+		err := f.Skip("Static file, output already exists")
+		return err, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // Path returns the current path of the file we're writing to
@@ -131,23 +133,22 @@ func (f *TplFile) Path() string {
 //   {{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
 //   {{- stencil.ApplyTemplate "command" | file.SetContents }}
 //   {{- end }}
-func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) error {
-	var err error
+func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out, err error) {
 	f.f, err = NewFile(path, mode, modTime)
 	if err != nil {
-		return err
+		return err, err
 	}
 
 	f.t.Files = append(f.t.Files, f.f)
-	return nil
+	return nil, nil
 }
 
 // RemoveAll deletes all the contents in the provided path
 //
 //   {{ file.RemoveAll }}
-func (f *TplFile) RemoveAll(path string) error {
+func (f *TplFile) RemoveAll(path string) (out, err error) {
 	if err := os.RemoveAll(path); err != nil {
-		return err
+		return err, err
 	}
-	return nil
+	return nil, nil
 }
