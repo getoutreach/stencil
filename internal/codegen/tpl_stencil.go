@@ -65,10 +65,10 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 //
 //   {{- /* This writes to a module hook */}}
 //   {{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
-func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) error {
+func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out, err error) {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
-		return nil
+		return nil, nil
 	}
 
 	// key is <module>/<name>
@@ -78,13 +78,15 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) erro
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {
-		return fmt.Errorf("third parameter, data, must be set")
+		err := fmt.Errorf("third parameter, data, must be set")
+		return err, err
 	}
 
 	// we only allow slices or maps to allow multiple templates to
 	// write to the same block
 	if v.Kind() != reflect.Slice {
-		return fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
+		err := fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
+		return err, err
 	}
 
 	// convert the slice into a []interface{}
@@ -100,7 +102,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) erro
 		s.s.sharedData[k] = interfaceSlice
 	}
 
-	return nil
+	return nil, nil
 }
 
 // Arg returns the value of an argument in the service's manifest
