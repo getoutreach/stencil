@@ -1,5 +1,5 @@
 # This file contains tool versions for use with asdf
-golang 1.18.3
+golang 1.17.9
 nodejs 16.13.0
 terraform 0.13.5
 ruby 2.6.6
