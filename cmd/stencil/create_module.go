@@ -74,6 +74,10 @@ func NewCreateModule() *cli.Command {
 				return errors.Wrap(err, "ask for description")
 			}
 
+			releaseOpts := map[string]interface{}{
+				"enablePrereleases": true,
+			}
+
 			tm := &configuration.ServiceManifest{
 				Name: path.Base(c.Args().Get(0)),
 				Modules: []*configuration.TemplateRepository{{
@@ -82,14 +86,14 @@ func NewCreateModule() *cli.Command {
 				Arguments: map[string]interface{}{
 					"reportingTeam": reportingTeam,
 					"description":   description,
-					"releaseOptions": map[string]interface{}{
-						"enablePrereleases": true,
-					},
 				},
 			}
+
 			if c.Bool("native-extension") {
-				tm.Arguments["type"] = "native"
+				tm.Arguments["plugin"] = true
+				releaseOpts["force"] = true
 			}
+			tm.Arguments["releaseOptions"] = releaseOpts
 
 			if _, err := os.Stat(manifestFileName); err == nil {
 				return fmt.Errorf("%s already exists", manifestFileName)
