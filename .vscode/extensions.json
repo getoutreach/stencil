@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "editorconfig.editorconfig",
+    "esbenp.prettier-vscode",
     "hashicorp.terraform",
     "golang.go",
     "heptio.jsonnet",

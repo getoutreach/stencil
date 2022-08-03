@@ -1,5 +1,5 @@
 name: stencil
-reportingTeam: fnd-dtss
+reportingTeam: fnd-dt
 description: microservice lifecycle manager
 oss: true
 slack: dev-tooling-notifications
@@ -8,6 +8,8 @@ commands:
   - stencil
 circleAPIKey: ""
 lintroller: platinum
+tracing: honeycomb
+metrics: datadog
 releaseType: ""
 releaseOptions:
   allowPrereleases: false
@@ -20,6 +22,7 @@ arguments:
   circleAPIKey: ""
   commands:
     - stencil
+  commitGuard: false
   dependencies:
     optional: []
     required: []
@@ -28,6 +31,7 @@ arguments:
   kubernetes:
     groups: []
   lintroller: platinum
+  metrics: datadog
   opslevel:
     confluenceSpaceKey: DTSS
     datadogDashboards:
@@ -37,9 +41,10 @@ arguments:
   releaseOptions:
     allowMajorVersions: true
     enablePrereleases: false
-  reportingTeam: fnd-dtss
+  reportingTeam: fnd-dt
   resources: {}
   service: false
+  tracing: honeycomb
   tutorial: false
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb
@@ -47,12 +52,12 @@ arguments:
     - deploy/mint/%(environment)s/validation/mint-validator-payload
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
-  - name: github.com/getoutreach/stencil-outreach
-  - name: github.com/getoutreach/stencil-circleci
-  - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-base
   - name: github.com/getoutreach/stencil-golang
   - name: github.com/getoutreach/stencil-opslevel
+  - name: github.com/getoutreach/stencil-outreach
+  - name: github.com/getoutreach/stencil-circleci
+  - name: github.com/getoutreach/stencil-actions
 opsLevel:
   serviceTier: 0
   lifecycle: ""
