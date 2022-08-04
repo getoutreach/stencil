@@ -14,6 +14,7 @@ func TestParseBlocks(t *testing.T) {
 	blocks, err := parseBlocks("testdata/blocks-test.txt")
 	assert.NilError(t, err, "expected parseBlocks() not to fail")
 	assert.Equal(t, blocks["helloWorld"], "Hello, world!", "expected parseBlocks() to parse basic block")
+	assert.Equal(t, blocks["e2e"], "content", "expected parseBlocks() to parse e2e block")
 }
 
 func TestDanglingBlock(t *testing.T) {

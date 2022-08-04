@@ -1,3 +1,7 @@
 ###Block(helloWorld)
 Hello, world!
 ###EndBlock(helloWorld)
+
+###Block(e2e)
+content
+###EndBlock(e2e)
