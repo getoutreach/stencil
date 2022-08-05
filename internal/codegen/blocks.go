@@ -15,7 +15,7 @@ import (
 
 // blockPattern is the regex used for parsing block commands.
 // For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
-var blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z ]+)\)`)
+var blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)`)
 
 // parseBlocks reads the blocks from an existing file
 func parseBlocks(filePath string) (map[string]string, error) {
