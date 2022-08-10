@@ -139,7 +139,7 @@ func TestTplStencil_Arg(t *testing.T) {
 			fields: fakeTemplate(t, map[string]interface{}{
 				"hello": map[string]interface{}{
 					"world": map[string]interface{}{
-						"abc": []string{"def"},
+						"abc": []interface{}{"def"},
 					},
 				},
 			}, map[string]configuration.Argument{
@@ -162,7 +162,7 @@ func TestTplStencil_Arg(t *testing.T) {
 			args: args{
 				pth: "hello",
 			},
-			want:    map[string]interface{}{"world": map[string]interface{}{"abc": []string{"def"}}},
+			want:    map[string]interface{}{"world": map[string]interface{}{"abc": []interface{}{"def"}}},
 			wantErr: false,
 		},
 		{
