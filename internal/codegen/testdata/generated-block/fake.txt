@@ -1,0 +1,10 @@
+
+###Block(a)
+a-string
+###EndBlock(a)
+###Block(b)
+another-string
+###EndBlock(b)
+###Block(c)
+wow
+###EndBlock(c)
