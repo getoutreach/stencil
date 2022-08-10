@@ -8,6 +8,7 @@ package codegen
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,10 +17,11 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/getoutreach/stencil/internal/dotnotation"
+	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
+	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/sirupsen/logrus"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 // TplStencil contains the global functions available to a template for
@@ -167,7 +169,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 			v = []interface{}{}
 		case "boolean", "bool":
 			v = false
-		case "integer", "int":
+		case "integer", "int", "number":
 			v = 0
 		case "string":
 			v = ""
@@ -178,20 +180,54 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 
 	// validate the data
 	if arg.Schema != nil {
-		schema := gojsonschema.NewGoLoader(arg.Schema)
-		document := gojsonschema.NewGoLoader(v)
-		result, err := gojsonschema.Validate(schema, document)
-		if err != nil {
-			return nil, errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)
-		}
-
-		// return the invalid response
-		if !result.Valid() {
-			return nil, fmt.Errorf("module %q argument %q validation failed: %s", s.t.Module.Name, pth, result.Errors())
+		if err := s.validateArg(pth, &arg, v); err != nil {
+			return nil, err
 		}
 	}
 
 	return v, nil
+}
+
+// validateArg validates an argument against the schema
+func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v interface{}) error {
+	schemaBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(schemaBuf).Encode(arg.Schema); err != nil {
+		return errors.Wrap(err, "failed to encode schema into JSON")
+	}
+
+	jsc := jsonschema.NewCompiler()
+	jsc.Draft = jsonschema.Draft2020
+
+	schemaURL := "manifest.yaml/arguments/" + pth
+	if err := jsc.AddResource(schemaURL, schemaBuf); err != nil {
+		return errors.Wrapf(err, "failed to add argument '%s' json schema to compiler", pth)
+	}
+
+	schema, err := jsc.Compile(schemaURL)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compile argument '%s' schema", pth)
+	}
+
+	if err := schema.Validate(v); err != nil {
+		var validationError *jsonschema.ValidationError
+		if errors.As(err, &validationError) {
+			// If there's only one error, return it directly, otherwise
+			// return the full list of errors.
+			errs := validationError.DetailedOutput().Errors
+			out := ""
+			if len(errs) == 1 {
+				out = errs[0].Error
+			} else {
+				out = fmt.Sprintf("%#v", validationError.DetailedOutput().Errors)
+			}
+
+			return fmt.Errorf("module %q argument %q validation failed: %s", s.t.Module.Name, pth, out)
+		}
+
+		return errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)
+	}
+
+	return nil
 }
 
 // Deprecated: Use Arg instead.
