@@ -1,27 +1,24 @@
 version: v1.21.1
-generated: 2022-08-03T20:25:17.364135Z
+generated: 2022-08-10T14:54:59.255432Z
 modules:
     - name: github.com/getoutreach/stencil-actions
       url: https://github.com/getoutreach/stencil-actions
-      version: v0.1.0
+      version: v0.2.0-rc.2
     - name: github.com/getoutreach/stencil-base
       url: https://github.com/getoutreach/stencil-base
-      version: v0.5.0
+      version: v0.6.0-rc.4
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
-      version: v1.2.1
+      version: v1.2.2-rc.1
     - name: github.com/getoutreach/stencil-discovery
       url: https://github.com/getoutreach/stencil-discovery
       version: v1.2.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: v1.2.0
-    - name: github.com/getoutreach/stencil-opslevel
-      url: https://github.com/getoutreach/stencil-opslevel
-      version: v0.1.1
+      version: v1.3.0-rc.17
     - name: github.com/getoutreach/stencil-outreach
       url: https://github.com/getoutreach/stencil-outreach
-      version: v0.2.2
+      version: v0.3.0-rc.7
 files:
     - name: .air.toml
       template: .air.toml.tpl
@@ -59,6 +56,9 @@ files:
     - name: .goreleaser.yml
       template: .goreleaser.yml.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: .prettierignore
+      template: .prettierignore.tpl
+      module: github.com/getoutreach/stencil-golang
     - name: .prettierrc.yaml
       template: .prettierrc.yaml.tpl
       module: github.com/getoutreach/stencil-golang
@@ -79,10 +79,10 @@ files:
       module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-golang
+      module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
-      module: github.com/getoutreach/stencil-outreach
+      module: github.com/getoutreach/stencil-golang
     - name: .vscode/settings.json
       template: .vscode/settings.json.tpl
       module: github.com/getoutreach/stencil-golang
@@ -100,16 +100,16 @@ files:
       module: github.com/getoutreach/stencil-base
     - name: _helpers
       template: _helpers.tpl
-      module: github.com/getoutreach/stencil-golang
-    - name: _helpers
-      template: _helpers.tpl
-      module: github.com/getoutreach/stencil-opslevel
+      module: github.com/getoutreach/stencil-outreach
     - name: _helpers
       template: _helpers.tpl
       module: github.com/getoutreach/stencil-circleci
     - name: _helpers
       template: _helpers.tpl
       module: github.com/getoutreach/stencil-base
+    - name: _helpers
+      template: _helpers.tpl
+      module: github.com/getoutreach/stencil-golang
     - name: api/clients/node/.eslintrc.js
       template: api/clients/node/.eslintrc.js.tpl
       module: github.com/getoutreach/stencil-golang
@@ -212,15 +212,36 @@ files:
     - name: api/stencil/doc.go
       template: api/rpc/doc.go.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: atlantis.yaml
+      template: atlantis.yaml.tpl
+      module: github.com/getoutreach/stencil-outreach
     - name: cmd/main.go
       template: cmd/main.go.tpl
       module: github.com/getoutreach/stencil-golang
     - name: cmd/stencil/stencil.go
       template: cmd/main_cli.go.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: concourse/pipeline.jsonnet
+      template: concourse/pipeline.jsonnet.tpl
+      module: github.com/getoutreach/stencil-outreach
+    - name: concourse/segments.libsonnet
+      template: concourse/segments.libsonnet.tpl
+      module: github.com/getoutreach/stencil-outreach
+    - name: deployments/docker.yaml
+      template: deployments/docker.yaml.tpl
+      module: github.com/getoutreach/stencil-golang
     - name: deployments/stencil/Dockerfile.dev
       template: deployments/appname/Dockerfile.dev.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: deployments/stencil/mixins/accounts.jsonnet
+      template: deployments/app/mixins/accounts.jsonnet.tpl
+      module: github.com/getoutreach/stencil-outreach
+    - name: deployments/stencil/mixins/mint.jsonnet
+      template: deployments/app/mixins/mint.jsonnet.tpl
+      module: github.com/getoutreach/stencil-outreach
+    - name: deployments/stencil/mixins/tollgate.jsonnet
+      template: deployments/app/mixins/tollgate.jsonnet.tpl
+      module: github.com/getoutreach/stencil-outreach
     - name: deployments/stencil/resources.libsonnet
       template: deployments/appname/resources.libsonnet.tpl
       module: github.com/getoutreach/stencil-golang
@@ -332,12 +353,30 @@ files:
     - name: internal/stencil/shutdown.go
       template: internal/appName/shutdown.go.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: monitoring/dashboard.tf
+      template: monitoring/dashboard.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/datadog.tf
+      template: monitoring/datadog.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/main.tf
+      template: monitoring/main.tf.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/terraform.tfvars
+      template: monitoring/terraform.tfvars.tpl
+      module: github.com/getoutreach/stencil-golang
+    - name: monitoring/versions.tf
+      template: monitoring/versions.tf.tpl
+      module: github.com/getoutreach/stencil-golang
     - name: opslevel.yml
       template: opslevel.yml.tpl
-      module: github.com/getoutreach/stencil-opslevel
+      module: github.com/getoutreach/stencil-outreach
     - name: package.json
       template: package.json.tpl
       module: github.com/getoutreach/stencil-base
+    - name: pipeline.yaml
+      template: pipeline.yaml.tpl
+      module: github.com/getoutreach/stencil-outreach
     - name: scripts/bootstrap-lib.sh
       template: scripts/bootstrap-lib.sh.tpl
       module: github.com/getoutreach/stencil-base
