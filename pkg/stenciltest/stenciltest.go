@@ -107,7 +107,7 @@ func (t *Template) Ext(name string, ext apiv1.Implementation) *Template {
 // ErrorContains denotes that this test run should fail, and the message
 // should contain the provided string.
 //
-//   t.ErrorContains("i am an error")
+//	t.ErrorContains("i am an error")
 func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }

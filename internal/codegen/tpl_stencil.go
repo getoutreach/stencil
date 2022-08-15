@@ -43,11 +43,11 @@ type TplStencil struct {
 // for your module. The value returned by this function is always a
 // []interface{}, aka a list.
 //
-//   {{- /* This returns a []interface{} */}}
-//   {{ $hook := stencil.GetModuleHook "myModuleHook" }}
-//   {{- range $hook }}
-//     {{ . }}
-//   {{- end }}
+//	{{- /* This returns a []interface{} */}}
+//	{{ $hook := stencil.GetModuleHook "myModuleHook" }}
+//	{{- range $hook }}
+//	  {{ . }}
+//	{{- end }}
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	k := path.Join(s.t.Module.Name, name)
 	v := s.s.sharedData[k]
@@ -65,8 +65,8 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 // be written to with a list to ensure that they can always be written to multiple
 // times.
 //
-//   {{- /* This writes to a module hook */}}
-//   {{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
+//	{{- /* This writes to a module hook */}}
+//	{{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
 func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out, err error) {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
@@ -109,7 +109,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 
 // Arg returns the value of an argument in the service's manifest
 //
-//   {{- stencil.Arg "name" }}
+//	{{- stencil.Arg "name" }}
 func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	if pth == "" {
 		return s.Args(), nil
@@ -236,14 +236,14 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v inte
 // Note: This doesn't set default values and is instead
 // representative of _all_ data passed in its raw form.
 //
-//   {{- (stencil.Args).name }}
+//	{{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {
 	return s.s.m.Arguments
 }
 
 // ReadFile reads a file from the current directory and returns it's contents
 //
-//   {{ stencil.ReadFile "myfile.txt" }}
+//	{{ stencil.ReadFile "myfile.txt" }}
 func (s *TplStencil) ReadFile(name string) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -268,18 +268,18 @@ func (s *TplStencil) ReadFile(name string) (string, error) {
 //
 // This function does not support rendering a template from another module.
 //
-//   {{- define "command"}}
-//   package main
+//	{{- define "command"}}
+//	package main
 //
-//   import "fmt"
+//	import "fmt"
 //
-//   func main() {
-//     fmt.Println("hello, world!")
-//   }
+//	func main() {
+//	  fmt.Println("hello, world!")
+//	}
 //
-//   {{- end }}
+//	{{- end }}
 //
-//   {{- stencil.ApplyTemplate "command" | file.SetContents }}
+//	{{- stencil.ApplyTemplate "command" | file.SetContents }}
 func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
 	// We check for dataSli here because we had to set it to a range of arguments
 	// to allow it to be not set.

@@ -30,16 +30,17 @@
           "to": "/home/dev/app"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.18.3/packages/pkg/mod",
+          "from": "${env:HOME}/.asdf/installs/golang/1.19/packages/pkg/mod",
           "to": "/tmp/cache/go/mod/"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.18.3/go/src",
-          "to": "/home/dev/.asdf/installs/golang/1.18.3/go/src"
+          "from": "${env:HOME}/.asdf/installs/golang/1.19/go/src",
+          "to": "/home/dev/.asdf/installs/golang/1.19/go/src"
         }
       ]
     }
     ///Block(vscodeLaunchConfigs)
+
     ///EndBlock(vscodeLaunchConfigs)
   ]
 }

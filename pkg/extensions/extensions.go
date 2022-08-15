@@ -152,9 +152,10 @@ func (h *Host) getExtensionPath(version, name, repo string) string {
 // downloadFromRemote downloads a release from github and extracts it to disk
 //
 // using the example extension module: github.com/getoutreach/stencil-plugin
-// 	org: getoutreach
-// 	repo: stencil-plugin
-// 	name: github.com/getoutreach/stencil-plugin
+//
+//	org: getoutreach
+//	repo: stencil-plugin
+//	name: github.com/getoutreach/stencil-plugin
 func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
 	ghc, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(h.log))
 	if err != nil {

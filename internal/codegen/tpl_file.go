@@ -30,28 +30,28 @@ type TplFile struct {
 
 // Block returns the contents of a given block
 //
-//   ###Block(name)
-//   Hello, world!
-//   ###EndBlock(name)
+//	###Block(name)
+//	Hello, world!
+//	###EndBlock(name)
 //
-//   ###Block(name)
-//   {{- /* Only output if the block is set */}}
-//   {{- if not (empty (file.Block "name")) }}
-//   {{ file.Block "name" }}
-//   {{- end }}
-//   ###EndBlock(name)
+//	###Block(name)
+//	{{- /* Only output if the block is set */}}
+//	{{- if not (empty (file.Block "name")) }}
+//	{{ file.Block "name" }}
+//	{{- end }}
+//	###EndBlock(name)
 //
-//   ###Block(name)
-//   {{ - /* Short hand syntax, but adds newline if no contents */}}
-//   {{ file.Block "name" }}
-//   ###EndBlock(name)
+//	###Block(name)
+//	{{ - /* Short hand syntax, but adds newline if no contents */}}
+//	{{ file.Block "name" }}
+//	###EndBlock(name)
 func (f *TplFile) Block(name string) string {
 	return f.f.Block(name)
 }
 
 // SetPath changes the path of the current file being rendered
 //
-//   {{ $_ := file.SetPath "new/path/to/file.txt" }}
+//	{{ $_ := file.SetPath "new/path/to/file.txt" }}
 //
 // Note: The $_ is required to ensure <nil> isn't outputted into
 // the template.
@@ -64,7 +64,7 @@ func (f *TplFile) SetPath(path string) (out, err error) {
 //
 // This is useful for programmatic file generation within a template.
 //
-//   {{ file.SetContents "Hello, world!" }}
+//	{{ file.SetContents "Hello, world!" }}
 func (f *TplFile) SetContents(contents string) error {
 	f.f.SetContents(contents)
 	return nil
@@ -72,7 +72,7 @@ func (f *TplFile) SetContents(contents string) error {
 
 // Skip skips the current file being rendered
 //
-//   {{ $_ := file.Skip "A reason to skip this reason" }}
+//	{{ $_ := file.Skip "A reason to skip this reason" }}
 func (f *TplFile) Skip(_ string) error {
 	f.f.Skipped = true
 	return nil
@@ -80,7 +80,7 @@ func (f *TplFile) Skip(_ string) error {
 
 // Delete deletes the current file being rendered
 //
-//   {{ file.Delete }}
+//	{{ file.Delete }}
 func (f *TplFile) Delete() error {
 	f.f.Deleted = true
 	return nil
@@ -94,7 +94,7 @@ func (f *TplFile) Delete() error {
 // recommended that you do not do this as it limits your ability to change
 // the file in the future.
 //
-//   {{ $_ := file.Static }}
+//	{{ $_ := file.Static }}
 func (f *TplFile) Static() (out, err error) {
 	// if the file already exists, skip it
 	if _, err := os.Stat(f.f.path); err == nil {
@@ -107,7 +107,7 @@ func (f *TplFile) Static() (out, err error) {
 
 // Path returns the current path of the file we're writing to
 //
-//   {{ file.Path }}
+//	{{ file.Path }}
 func (f *TplFile) Path() string {
 	return f.f.path
 }
@@ -117,22 +117,22 @@ func (f *TplFile) Path() string {
 // If the template has a single file with no contents
 // this file replaces it.
 //
-//   {{- define "command" }}
-//   package main
+//	{{- define "command" }}
+//	package main
 //
-//   import "fmt"
+//	import "fmt"
 //
-//   func main() {
-//     fmt.Println("hello, world!")
-//   }
+//	func main() {
+//	  fmt.Println("hello, world!")
+//	}
 //
-//   {{- end }}
+//	{{- end }}
 //
-//   # Generate a "<commandName>.go" file for each command in .arguments.commands
-//   {{- range $_, $commandName := (stencil.Arg "commands") }}
-//   {{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
-//   {{- stencil.ApplyTemplate "command" | file.SetContents }}
-//   {{- end }}
+//	# Generate a "<commandName>.go" file for each command in .arguments.commands
+//	{{- range $_, $commandName := (stencil.Arg "commands") }}
+//	{{- file.Create (printf "cmd/%s.go" $commandName) 0600 now }}
+//	{{- stencil.ApplyTemplate "command" | file.SetContents }}
+//	{{- end }}
 func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out, err error) {
 	f.f, err = NewFile(path, mode, modTime)
 	if err != nil {
@@ -145,7 +145,7 @@ func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out,
 
 // RemoveAll deletes all the contents in the provided path
 //
-//   {{ file.RemoveAll }}
+//	{{ file.RemoveAll }}
 func (f *TplFile) RemoveAll(path string) (out, err error) {
 	if err := os.RemoveAll(path); err != nil {
 		return err, err

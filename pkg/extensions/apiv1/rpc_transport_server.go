@@ -30,6 +30,7 @@ func (s *rpcTransportServer) GetTemplateFunctions(args interface{}, resp *[]*Tem
 }
 
 // ExecuteTemplateFunction executes a template function for this extension
+//
 //nolint:gocritic // Why: go-plugin wants this
 func (s *rpcTransportServer) ExecuteTemplateFunction(t *TemplateFunctionExec, resp *[]byte) error {
 	v, err := s.impl.ExecuteTemplateFunction(t)
