@@ -18,6 +18,10 @@ contexts: &contexts
 
   ###EndBlock(extraContexts)
 
+# Branches used for releasing code, pre-release or not
+release_branches: &release_branches
+  - "main"
+
 jobs:
   ###Block(circleJobs)
   integration:
@@ -71,18 +75,15 @@ workflows:
             - shared/test
           filters:
             branches:
-              only:
-                - master
-                - main
-      # Dryrun release for PRs
+              only: *release_branches
+
+      # Dryrun release for PRs.
       - shared/release:
           <<: *release
           dryrun: true
           filters:
             branches:
-              ignore:
-                - master
-                - main
+              ignore: *release_branches
       - shared/test:
           context: *contexts
           app_name: stencil
@@ -113,8 +114,6 @@ workflows:
           context: *contexts
           filters:
             branches:
-              ignore:
-                - master
-                - main
+              ignore: *release_branches
             tags:
               only: /v\d+(\.\d+)*(-.*)*/
