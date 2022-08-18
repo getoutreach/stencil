@@ -277,6 +277,33 @@ func TestTplStencil_Arg(t *testing.T) {
 			want:    "world",
 			wantErr: false,
 		},
+		{
+			name: "should support from schema fail",
+			fields: fakeTemplateMultipleModules(t,
+				map[string]interface{}{
+					"hello": "world",
+				},
+				// test-0
+				map[string]configuration.Argument{
+					"hello": {
+						From: "test-1",
+					},
+				},
+				// test-1
+				map[string]configuration.Argument{
+					"hello": {
+						Schema: map[string]interface{}{
+							"type": "number",
+						},
+					},
+				},
+			),
+			args: args{
+				pth: "hello",
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
