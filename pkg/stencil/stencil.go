@@ -9,7 +9,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -61,9 +60,6 @@ type Lockfile struct {
 	// Version correlates to the version of bootstrap
 	// that generated this file.
 	Version string `yaml:"version"`
-
-	// Generated was the last time this file was modified
-	Generated time.Time `yaml:"generated"`
 
 	// Modules is a list of modules and their versions that was
 	// used the last time stencil was ran.
