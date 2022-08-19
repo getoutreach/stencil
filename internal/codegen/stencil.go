@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/stencil/internal/modules"
@@ -78,12 +77,16 @@ func (s *Stencil) RegisterInprocExtensions(name string, ext apiv1.Implementation
 // on a list of templates.
 func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 	l := &stencil.Lockfile{
-		Version:   app.Info().Version,
-		Generated: time.Now().UTC(),
+		Version: app.Info().Version,
 	}
 
 	for _, tpl := range tpls {
 		for _, f := range tpl.Files {
+			// Don't write files we skipped, or deleted, to the lockfile
+			if f.Skipped || f.Deleted {
+				continue
+			}
+
 			l.Files = append(l.Files, &stencil.LockfileFileEntry{
 				Name:     f.Name(),
 				Template: tpl.Path,

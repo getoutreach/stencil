@@ -6,7 +6,6 @@ package stencil_test
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/getoutreach/stencil/pkg/stencil"
 )
@@ -20,8 +19,8 @@ func ExampleLoadLockfile() {
 		return
 	}
 
-	fmt.Println(l.Generated.UTC().Format(time.RFC3339Nano))
+	fmt.Println(l.Version)
 
 	// Output:
-	// 2022-04-01T00:25:51.047307Z
+	// v1.6.2
 }
