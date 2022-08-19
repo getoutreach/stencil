@@ -146,6 +146,12 @@ type Argument struct {
 	// Values is a list of possible values for this, if empty all input is
 	// considered valid.
 	Values []string `yaml:"values"`
+
+	// From is a reference to an argument in another module, if this is
+	// set, all other fields are ignored and instead the module referenced
+	// field's are used instead. The name of the argument, the key in the map,
+	// must be the same across both modules.
+	From string `yaml:"from"`
 }
 
 // ValidateName ensures that the name of a service in the manifest

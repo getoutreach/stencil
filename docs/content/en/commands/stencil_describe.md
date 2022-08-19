@@ -13,7 +13,7 @@ menu:
 
 ```bash
 NAME:
-   stencil describe -
+   stencil describe - 
 
 USAGE:
    stencil describe [command options] [arguments...]
@@ -23,6 +23,6 @@ DESCRIPTION:
 
 OPTIONS:
    --help, -h  show help (default: false)
-
+   
 
 ```

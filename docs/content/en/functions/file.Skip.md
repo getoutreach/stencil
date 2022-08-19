@@ -10,6 +10,9 @@ menu:
     parent: "functions"
 ---
 
+
 ```go-text-template
 {{ $_ := file.Skip "A reason to skip this reason" }}
 ```
+
+

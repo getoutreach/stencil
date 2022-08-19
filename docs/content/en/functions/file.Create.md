@@ -10,7 +10,9 @@ menu:
     parent: "functions"
 ---
 
+
 If the template has a single file with no contents this file replaces it\.
+
 
 ```go-text-template
 {{- define "command" }}
@@ -30,3 +32,5 @@ func main() {
 {{- stencil.ApplyTemplate "command" | file.SetContents }}
 {{- end }}
 ```
+
+

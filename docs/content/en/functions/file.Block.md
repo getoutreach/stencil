@@ -10,6 +10,7 @@ menu:
     parent: "functions"
 ---
 
+
 ```go-text-template
 ###Block(name)
 Hello, world!
@@ -27,3 +28,5 @@ Hello, world!
 {{ file.Block "name" }}
 ###EndBlock(name)
 ```
+
+

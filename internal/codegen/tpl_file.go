@@ -145,7 +145,7 @@ func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out,
 
 // RemoveAll deletes all the contents in the provided path
 //
-//	{{ file.RemoveAll }}
+//	{{ file.RemoveAll "path" }}
 func (f *TplFile) RemoveAll(path string) (out, err error) {
 	if err := os.RemoveAll(path); err != nil {
 		return err, err

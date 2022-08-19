@@ -10,6 +10,9 @@ menu:
     parent: "functions"
 ---
 
+
 ```go-text-template
 {{ stencil.ReadFile "myfile.txt" }}
 ```
+
+

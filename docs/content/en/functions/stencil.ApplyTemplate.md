@@ -10,7 +10,9 @@ menu:
     parent: "functions"
 ---
 
+
 This function does not support rendering a template from another module\.
+
 
 ```go-text-template
 {{- define "command"}}
@@ -26,3 +28,5 @@ func main() {
 
 {{- stencil.ApplyTemplate "command" | file.SetContents }}
 ```
+
+

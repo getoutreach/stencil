@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,9 +73,8 @@ func generateMarkdown() ([]file, error) {
 			}
 
 			if parsingCommands {
-
 				//   describe, d -> describe
-				command := strings.TrimSpace(strings.Split(line, ",")[0])
+				command := strings.Split(strings.TrimSpace(strings.Split(line, ",")[0]), " ")[0]
 
 				// skip the help command because it results in duplicates
 				if command == "help" {
@@ -84,7 +82,9 @@ func generateMarkdown() ([]file, error) {
 				}
 
 				// args + new command
-				newArgs := append(args, command)
+				newArgs := make([]string, len(args)+1)
+				copy(newArgs, args)
+				newArgs[len(newArgs)-1] = command
 				fmt.Println("Discovered command:", strings.Join(newArgs, " "))
 				commands = append(commands, newArgs)
 			}
@@ -126,7 +126,7 @@ func generateMarkdown() ([]file, error) {
 // saveMarkdown writes the markdown files to disk.
 func saveMarkdown(files []file) error {
 	for _, f := range files {
-		if err := ioutil.WriteFile(filepath.Join("content", "en", "commands", f.Name+".md"), []byte(f.Contents), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join("content", "en", "commands", f.Name+".md"), []byte(f.Contents), 0644); err != nil {
 			return err
 		}
 	}
