@@ -13,7 +13,7 @@ menu:
 
 ```bash
 NAME:
-   stencil create module -
+   stencil create module - 
 
 USAGE:
    stencil create module [command options] create module <name>
@@ -24,6 +24,6 @@ DESCRIPTION:
 OPTIONS:
    --native-extension  Generates a native extension (default: false)
    --help, -h          show help (default: false)
-
+   
 
 ```

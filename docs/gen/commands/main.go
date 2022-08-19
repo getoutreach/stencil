@@ -75,7 +75,7 @@ func generateMarkdown() ([]file, error) {
 			if parsingCommands {
 
 				//   describe, d -> describe
-				command := strings.TrimSpace(strings.Split(line, ",")[0])
+				command := strings.Split(strings.TrimSpace(strings.Split(line, ",")[0]), " ")[0]
 
 				// skip the help command because it results in duplicates
 				if command == "help" {

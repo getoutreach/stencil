@@ -55,7 +55,7 @@ The important keys that a module has are listed below, but an exhaustive list ca
   - `schema` - a JSON schema for the argument
   - `required` - whether or not the argument is required to be set
   - `default` - a default value for the argument, cannot be set when required is true
-	- `from` - aliases this argument to another module's argument. Only supports one-level deep.
+  - `from` - aliases this argument to another module's argument. Only supports one-level deep.
 
 #### Writing a JSON Schema
 
