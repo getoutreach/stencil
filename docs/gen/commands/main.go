@@ -73,7 +73,6 @@ func generateMarkdown() ([]file, error) {
 			}
 
 			if parsingCommands {
-
 				//   describe, d -> describe
 				command := strings.Split(strings.TrimSpace(strings.Split(line, ",")[0]), " ")[0]
 
@@ -83,7 +82,9 @@ func generateMarkdown() ([]file, error) {
 				}
 
 				// args + new command
-				newArgs := append(args, command)
+				newArgs := make([]string, len(args)+1)
+				copy(newArgs, args)
+				newArgs[len(newArgs)-1] = command
 				fmt.Println("Discovered command:", strings.Join(newArgs, " "))
 				commands = append(commands, newArgs)
 			}
