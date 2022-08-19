@@ -108,6 +108,8 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 // Note: This doesn't set default values and is instead
 // representative of _all_ data passed in its raw form.
 //
+// This is deprecated and will be removed in a future release.
+//
 //	{{- (stencil.Args).name }}
 func (s *TplStencil) Args() map[string]interface{} {
 	return s.s.m.Arguments

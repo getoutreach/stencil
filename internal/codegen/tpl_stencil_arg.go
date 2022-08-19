@@ -20,10 +20,13 @@ import (
 // Arg returns the value of an argument in the service's manifest
 //
 //	{{- stencil.Arg "name" }}
+//
+// Note: Using `stencil.Arg` with no path returns all arguments
+// and is equivalent to `stencil.Args`. However, that is DEPRECATED
+// along with `stencil.Args` as it doesn't provide default types, or
+// check the JSON schema, or track which module calls what argument.
 func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	if pth == "" {
-		// Deprecated: Arg(pth) will be required in the future. See note on
-		// Args().
 		return s.Args(), nil
 	}
 

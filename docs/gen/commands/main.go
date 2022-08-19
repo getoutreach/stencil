@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -126,7 +125,7 @@ func generateMarkdown() ([]file, error) {
 // saveMarkdown writes the markdown files to disk.
 func saveMarkdown(files []file) error {
 	for _, f := range files {
-		if err := ioutil.WriteFile(filepath.Join("content", "en", "commands", f.Name+".md"), []byte(f.Contents), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join("content", "en", "commands", f.Name+".md"), []byte(f.Contents), 0644); err != nil {
 			return err
 		}
 	}

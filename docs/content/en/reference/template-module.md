@@ -55,6 +55,7 @@ The important keys that a module has are listed below, but an exhaustive list ca
   - `schema` - a JSON schema for the argument
   - `required` - whether or not the argument is required to be set
   - `default` - a default value for the argument, cannot be set when required is true
+	- `from` - aliases this argument to another module's argument. Only supports one-level deep.
 
 #### Writing a JSON Schema
 
@@ -80,6 +81,29 @@ type: array
 items:
 	type: string
 ```
+
+#### Aliasing an argument with `from`
+
+Aliasing an argument allows you to reference another argument from within the module. For example, if you have an argument called `description` and you want to alias it to another argument called from the module `github.com/getoutreach/stencil-base`, you can do so like so:
+
+```yaml
+# your module
+arguments:
+	description:
+		from: github.com/getoutreach/stencil-base
+
+# github.com/getoutreach/stencil-base
+arguments:
+	description:
+		schema:
+			type: string
+```
+
+There's a few limitations with aliasing arguments:
+
+ * Aliasing an argument to another argument that is itself aliased is not allowed.
+ * When `from` is used, no other properties on the argument being aliased can be set.
+ * When aliasing to a module, that module _must_ be listed in the `modules` key of the module aliasing the argument.
 
 ## Module Hooks
 
