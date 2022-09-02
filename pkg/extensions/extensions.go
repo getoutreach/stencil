@@ -8,14 +8,18 @@ package extensions
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/getoutreach/gobox/pkg/cli/github"
-	"github.com/getoutreach/gobox/pkg/updater"
+	"github.com/getoutreach/gobox/pkg/cli/updater/archive"
+	"github.com/getoutreach/gobox/pkg/cli/updater/release"
+	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
-	gogithub "github.com/google/go-github/v43/github"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
@@ -30,14 +34,20 @@ type generatedTemplateFunc func(...interface{}) (interface{}, error)
 // registering extensions and executing them.
 type Host struct {
 	log        logrus.FieldLogger
-	extensions map[string]apiv1.Implementation
+	extensions map[string]extension
+}
+
+// extension is an extension stored on an extension host
+type extension struct {
+	impl   apiv1.Implementation
+	closer func() error
 }
 
 // NewHost creates a new extension host
 func NewHost(log logrus.FieldLogger) *Host {
 	return &Host{
 		log:        log,
-		extensions: make(map[string]apiv1.Implementation),
+		extensions: make(map[string]extension),
 	}
 }
 
@@ -74,14 +84,14 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 
 	// Call all extensions to get the template functions provided
 	for extName, ext := range h.extensions {
-		funcs, err := ext.GetTemplateFunctions()
+		funcs, err := ext.impl.GetTemplateFunctions()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get template functions from plugin '%s'", extName)
 		}
 
 		for _, f := range funcs {
 			h.log.WithField("extension", extName).WithField("function", f.Name).Debug("Registering extension function")
-			tfunc := h.createFunctionFromTemplateFunction(extName, ext, f)
+			tfunc := h.createFunctionFromTemplateFunction(extName, ext.impl, f)
 
 			if _, ok := funcMap[extName]; !ok {
 				funcMap[extName] = make(map[string]generatedTemplateFunc)
@@ -111,17 +121,13 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	if u.Scheme == "file" {
 		extPath = filepath.Join(strings.TrimPrefix(source, "file://"), "bin", "plugin")
 	} else {
-		pathSpl := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
-		if len(pathSpl) < 2 {
-			return fmt.Errorf("invalid repository, expected org/repo, got %s", u.Path)
-		}
-		extPath, err = h.downloadFromRemote(ctx, pathSpl[0], pathSpl[1], name, version)
+		extPath, err = h.downloadFromRemote(ctx, name, version)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to setup extension")
 	}
 
-	ext, err := apiv1.NewExtensionClient(ctx, extPath, h.log)
+	ext, closer, err := apiv1.NewExtensionClient(ctx, extPath, h.log)
 	if err != nil {
 		return err
 	}
@@ -129,7 +135,7 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 	if _, err := ext.GetConfig(); err != nil {
 		return errors.Wrap(err, "failed to get config from extension")
 	}
-	h.extensions[name] = ext
+	h.extensions[name] = extension{ext, closer}
 
 	return nil
 }
@@ -138,13 +144,13 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 // directly with the host. Please limit the use of this API for unit testing only!
 func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 	h.log.WithField("extension", name).Debug("Registered inproc extension")
-	h.extensions[name] = ext
+	h.extensions[name] = extension{ext, func() error { return nil }}
 }
 
 // getExtensionPath returns the path to an extension binary
-func (h *Host) getExtensionPath(version, name, repo string) string {
+func (h *Host) getExtensionPath(version, name string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
-	path := filepath.Join(homeDir, ".outreach", ".config", "stencil", "extensions", name, fmt.Sprintf("@%s", version), repo)
+	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions", name, fmt.Sprintf("@%s", version), filepath.Base(name))
 	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
@@ -156,53 +162,73 @@ func (h *Host) getExtensionPath(version, name, repo string) string {
 //	org: getoutreach
 //	repo: stencil-plugin
 //	name: github.com/getoutreach/stencil-plugin
-func (h *Host) downloadFromRemote(ctx context.Context, org, repo, name, version string) (string, error) {
-	ghc, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(h.log))
+func (h *Host) downloadFromRemote(ctx context.Context, name, version string) (string, error) {
+	token, err := github.GetToken()
 	if err != nil {
-		return "", err
+		h.log.WithError(err).Warn("Failed to get github token, falling back to anonymous")
 	}
 
-	gh := updater.NewGithubUpdaterWithClient(ctx, ghc, org, repo)
+	repoURL := "https://" + name
 
-	var rel *gogithub.RepositoryRelease
 	if version == "" {
-		var err error
-		rel, err = gh.GetLatestVersion(ctx, "v0.0.0", false)
+		v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+			URL: repoURL,
+		})
 		if err != nil {
-			return "", errors.Wrap(err, "failed to find latest extension version")
+			return "", errors.Wrap(err, "failed to get latest version")
 		}
-	} else {
-		var err error
-		rel, err = gh.GetRelease(ctx, version)
-		if err != nil {
-			return "", errors.Wrapf(err, "failed to find extension version %q", version)
-		}
+		version = v.Tag
 	}
 
-	// Check if the version we're pulling already exists and is exectuable before downloading
+	// Check if the version we're pulling already exists and is executable before downloading
 	// it again.
-	dlPath := h.getExtensionPath(rel.GetTagName(), name, repo)
+	dlPath := h.getExtensionPath(version, name)
 	if info, err := os.Stat(dlPath); err == nil && info.Mode() == 0o755 {
 		return dlPath, nil
 	}
 
-	// Binary for plugin at version we want doesn't exist on disk, need to download.
-	bin, cleanup, err := gh.DownloadRelease(ctx, rel, repo, repo)
+	h.log.WithField("version", version).WithField("repo", repoURL).Debug("Downloading native extension")
+	a, archiveName, _, err := release.Fetch(ctx, token, &release.FetchOptions{
+		AssetName: filepath.Base(name) + "_" + strings.TrimPrefix(version, "v") + "_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz",
+		RepoURL:   repoURL,
+		Tag:       version,
+	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to download extension")
+		return "", errors.Wrap(err, "failed to fetch release")
 	}
-	defer cleanup()
 
-	// Move the downloaded release from where the updater put it to where we need it
-	// for stencil.
-	if err := os.Rename(bin, dlPath); err != nil {
-		return "", errors.Wrap(err, "failed to move downloaded extension")
+	bin, _, err := archive.Extract(ctx, archiveName, a, archive.WithFilePath(filepath.Base(name)))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to extract archive")
 	}
+
+	f, err := os.Create(dlPath)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create file")
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, bin); err != nil {
+		return "", errors.Wrap(err, "failed to download binary")
+	}
+	f.Close()
 
 	// Ensure the file is executable.
 	if err := os.Chmod(dlPath, 0o755); err != nil {
-		return "", errors.Wrap(err, "ensure plugin is executable")
+		return "", errors.Wrap(err, "failed to ensure plugin is executable")
 	}
 
 	return dlPath, nil
+}
+
+// Close terminates the extension host, which in turn stops
+// all current native extensions
+func (h *Host) Close() error {
+	var result error
+	for _, ext := range h.extensions {
+		if err := ext.closer(); err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+	return result
 }

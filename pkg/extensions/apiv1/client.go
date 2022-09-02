@@ -19,7 +19,7 @@ import (
 // IDEA(jaredallard): Cleanup this to return a Implementation backed by a transport as well.
 
 // NewExtensionClient creates a new Implementation from a plugin
-func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLogger) (Implementation, error) {
+func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLogger) (Implementation, func() error, error) {
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{
@@ -40,18 +40,18 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 
 	rpcClient, err := client.Client()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create connection to extension")
+		return nil, func() error { return nil }, errors.Wrap(err, "failed to create connection to extension")
 	}
 
 	raw, err := rpcClient.Dispense(Name)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to setup extension connection over extension")
+		return nil, func() error { return nil }, errors.Wrap(err, "failed to setup extension connection over extension")
 	}
 
 	ext, ok := raw.(implementationTransport)
 	if !ok {
-		return nil, fmt.Errorf("failed to create apiv1.Implementation from type %s", reflect.TypeOf(raw).String())
+		return nil, func() error { return nil }, fmt.Errorf("failed to create apiv1.Implementation from type %s", reflect.TypeOf(raw).String())
 	}
 
-	return newImplementationTransportToImplementation(ext), nil
+	return newImplementationTransportToImplementation(ext), rpcClient.Close, nil
 }
