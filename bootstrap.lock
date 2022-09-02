@@ -3,4 +3,4 @@
 version: v10.3.0-rc.11
 generated: 2022-08-10T14:54:43Z
 versions:
-  devbase: v2.3.0-rc.10
+  devbase: jaredallard/feat/golangci-lint-asdf
