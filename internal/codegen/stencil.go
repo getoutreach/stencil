@@ -270,3 +270,9 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 
 	return tpls, nil
 }
+
+// Close closes all resources that should be closed when done
+// rendering templates.
+func (s *Stencil) Close() error {
+	return errors.Wrap(s.ext.Close(), "failed to close native extensions")
+}

@@ -107,6 +107,7 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	st := codegen.NewStencil(c.manifest, mods, c.log)
+	defer st.Close()
 
 	c.log.Info("Loading native extensions")
 	if err := st.RegisterExtensions(ctx); err != nil {
