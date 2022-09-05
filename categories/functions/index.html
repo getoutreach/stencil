@@ -177,6 +177,10 @@ stencil.Args
 stencil.GetModuleHook
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.readblocks/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.ReadBlocks
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.ReadFile
 </a>
@@ -381,6 +385,17 @@ Read More &#187;
 </h1><div class="lh-copy links">
 GetModuleHook returns a module block in the scope of this module
 <a href=/stencil/functions/stencil.getmodulehook/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.readblocks/ class="link primary-color dim">stencil.ReadBlocks</a>
+</h1><div class="lh-copy links">
+ReadBlocks parses a file and attempts to read the blocks from it, and their data.
+As a special case, if the file does not exist, an empty map is returned instead of an error.
+**NOTE**: This function does not guarantee that blocks are able to be read during runtime. for example, if you try to read the blocks of a file from another module there is no guarantee that that file will exist before you run this function.
+<a href=/stencil/functions/stencil.readblocks/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
