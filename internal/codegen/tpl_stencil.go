@@ -176,3 +176,41 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string,
 
 	return buf.String(), nil
 }
+
+// ReadBlocks parses a file and attempts to read the blocks from it, and their data.
+//
+// As a special case, if the file does not exist, an empty map is returned instead of an error.
+//
+// **NOTE**: This function does not guarantee that blocks are able to be read during runtime.
+// for example, if you try to read the blocks of a file from another module there is no guarantee
+// that that file will exist before you run this function. Nor is there the ability to tell stencil
+// to do that (stencil does not have any order guarantees). Keep that in mind when using this function.
+//
+//	{{- $blocks := stencil.ReadBlocks "myfile.txt" }}
+//	{{- range $name, $data := $blocks }}
+//	  {{- $name }}
+//	  {{- $data }}
+//	{{- end }}
+func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	// ensure that the file is within the current directory
+	// and not attempting to escape it
+	if _, err := osfs.New(cwd).Stat(fpath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return map[string]string{}, nil
+		}
+
+		return nil, err
+	}
+
+	data, err := parseBlocks(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
