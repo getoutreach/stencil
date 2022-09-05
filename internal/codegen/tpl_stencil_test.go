@@ -8,6 +8,8 @@ package codegen
 import (
 	"reflect"
 	"testing"
+
+	"github.com/go-git/go-billy/v5"
 )
 
 func TestTplStencil_ReadBlocks(t *testing.T) {
@@ -21,7 +23,7 @@ func TestTplStencil_ReadBlocks(t *testing.T) {
 		fields  fields
 		args    args
 		want    map[string]string
-		wantErr bool
+		wantErr error
 	}{
 		{
 			name: "should read blocks from a file",
@@ -38,7 +40,7 @@ func TestTplStencil_ReadBlocks(t *testing.T) {
 			args: args{
 				fpath: "../testdata/blocks-test.txt",
 			},
-			wantErr: true,
+			wantErr: billy.ErrCrossedBoundary,
 		},
 		{
 			name: "should return no data on non-existent file",
@@ -52,7 +54,9 @@ func TestTplStencil_ReadBlocks(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &TplStencil{}
 			got, err := s.ReadBlocks(tt.args.fpath)
-			if (err != nil) != tt.wantErr {
+
+			// String checking because errors.Is isn't working
+			if (tt.wantErr != nil) && err.Error() != tt.wantErr.Error() {
 				t.Errorf("TplStencil.ReadBlocks() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
