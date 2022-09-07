@@ -71,15 +71,25 @@ func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository)
 
 	if tr.Prerelease { // Use the newest, first, release.
 		rels, _, err := gh.Repositories.ListReleases(ctx, paths[1], paths[2], &gogithub.ListOptions{
-			PerPage: 1,
+			PerPage: 10,
 		})
 		if err != nil {
 			return "", errors.Wrapf(err, "failed to get releases for module %q", tr.Name)
 		}
-		if len(rels) != 1 {
-			return "", fmt.Errorf("failed to get latest release (returned >1 release) for module %q", tr.Name)
+
+		// HACK(jaredallard): find the first release that has -rc in it,
+		// will be fixed in version resolver rewrite that has channel support
+		// like the updater.
+		for _, rel := range rels {
+			// ensure release is an rc release
+			if !strings.Contains(rel.GetTagName(), "-rc") {
+				continue
+			}
+
+			return rel.GetTagName(), nil
 		}
-		return rels[0].GetTagName(), nil
+
+		// if we didn't find one, then just use the latest release below
 	}
 
 	// Use GetLatestRelease() to ensure it's the latest _released_ version.
