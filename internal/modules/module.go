@@ -22,7 +22,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
-	gogithub "github.com/google/go-github/v47/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	giturls "github.com/whilp/git-urls"
@@ -54,57 +53,14 @@ type Module struct {
 	fs billy.Filesystem
 }
 
-// getLatestVersion returns the latest version of a git repository
-// name should be a valid go import path, like github.com/<org>/<repo>
-func getLatestVersion(ctx context.Context, tr *configuration.TemplateRepository) (string, error) {
-	paths := strings.Split(tr.Name, "/")
-
-	// github.com, getoutreach, stencil-base
-	if len(paths) < 3 {
-		return "", fmt.Errorf("invalid module path %q, expected github.com/<org>/<repo>", tr.Name)
-	}
-
-	gh, err := github.NewClient(github.WithAllowUnauthenticated())
-	if err != nil {
-		return "", err
-	}
-
-	if tr.Prerelease { // Use the newest, first, release.
-		rels, _, err := gh.Repositories.ListReleases(ctx, paths[1], paths[2], &gogithub.ListOptions{
-			PerPage: 10,
-		})
-		if err != nil {
-			return "", errors.Wrapf(err, "failed to get releases for module %q", tr.Name)
-		}
-
-		// HACK(jaredallard): find the first release that has -rc in it,
-		// will be fixed in version resolver rewrite that has channel support
-		// like the updater.
-		for _, rel := range rels {
-			// ensure release is an rc release
-			if !strings.Contains(rel.GetTagName(), "-rc") {
-				continue
-			}
-
-			return rel.GetTagName(), nil
-		}
-
-		// if we didn't find one, then just use the latest release below
-	}
-
-	// Use GetLatestRelease() to ensure it's the latest _released_ version.
-	rel, _, err := gh.Repositories.GetLatestRelease(ctx, paths[1], paths[2])
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to find the latest release for module %q", tr.Name)
-	}
-
-	return rel.GetTagName(), nil
+// uriIsLocal returns true if the URI is a local file path
+func uriIsLocal(uri string) bool {
+	return !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://")
 }
 
-// New creates a new module from a TemplateRepository. If no version is specified
-// then the latest released revision is used. If `prerelease` is set to true then
-// the latest revision is used, regardless of whether it is a released version or
-// not.
+// New creates a new module from a TemplateRepository. Version must be set and can
+// be obtained via the gobox/pkg/cli/updater/resolver package, or by using the
+// GetModulesForService function.
 //
 // uri is the URI for the module. If it is an empty string https://+name is used
 // instead.
@@ -116,7 +72,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 	// check if a url based on if :// is in the uri, this is kinda hacky
 	// but the only way to do this with a URL+file path being allowed.
 	// We also support the "older" file:// scheme.
-	if !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://") { // Assume it's a path.
+	if uriIsLocal(uri) { // Assume it's a path.
 		osPath := strings.TrimPrefix(uri, "file://")
 		if _, err := os.Stat(osPath); err != nil {
 			return nil, errors.Wrapf(err, "failed to find module %s at path %q", tr.Name, osPath)
@@ -126,14 +82,10 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		uri = "file://" + osPath
 		tr.Version = localModuleVersion
 	}
-
 	if tr.Version == "" {
-		var err error
-		tr.Version, err = getLatestVersion(ctx, tr)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("version must be specified for module %q", tr.Name)
 	}
+
 	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
 }
 

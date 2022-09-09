@@ -10,123 +10,161 @@ package modules
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
-	"github.com/blang/semver/v4"
+	"github.com/getoutreach/gobox/pkg/cfg"
+	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 )
 
-// consideredModule is a module that was considered during
-// the dependency resolution process.
-type consideredModule struct {
+// resolvedModule is used to keep track of a module during the resolution
+// stage, keeping track of the constraints that were used to resolve the
+// module's version.
+type resolvedModule struct {
 	*Module
 
-	// allowedPrereleases is true if we've considered
-	// prereleases for this module
-	allowedPrereleases bool
+	// constraints is the stack of constraints that were used to resolve
+	// this module. This is used to generate a useful error message if a
+	// constraint is violated. This is sorted in descending order.
+	constraints []constraint
 }
 
-// GetModulesForService returns a list of modules that a given service manifest
-// depends on. They are not returned in the order of their import.
-func GetModulesForService(ctx context.Context, m *configuration.ServiceManifest) ([]*Module, error) {
-	// create a map of modules, this is used to avoid downloading the same module twice
-	// as well as only ever including one version of a module
-	modules := make(map[string]*consideredModule)
-	if err := getModulesForService(ctx, m, m.Modules, modules); err != nil {
-		return nil, errors.Wrap(err, "failed to fetch modules")
-	}
+type resolveModule struct {
+	// conf is the configuration to be used to resolve the module
+	conf *configuration.TemplateRepository
 
-	// map[string]*Module -> []*Module
-	rtrn := make([]*Module, 0)
-	for k := range modules {
-		rtrn = append(rtrn, modules[k].Module)
-	}
-	return rtrn, nil
+	// module is the name of the module that imported this module
+	module string
 }
 
-// IDEA(jaredallard): Log when we're skipping a module and why.
+// constraint is a constraint that can be applied to a module
+type constraint struct {
+	// str is the string representation of the constraint
+	str string
 
-// shouldSkipModule returns true if we should skip downloading this module
-func shouldSkipModule(deps map[string]*consideredModule, d *configuration.TemplateRepository) bool {
-	existingDep, ok := deps[d.Name]
-	if !ok {
-		// If it's not already been considered, always download it.
-		return false
-	}
-
-	if existingDep.Version == localModuleVersion {
-		// Never skip override a local module
-		// IDEA(jaredallard): Warn when overriding local modules.
-		return true
-	}
-
-	// If there's a version set explicitly, download it if it's newer
-	if d.Version != "" {
-		if d.Version == localModuleVersion {
-			// If it's a local version, always use it over any other version.
-			return false
-		}
-
-		// Attempt to parse the two versions as semver, if we fail
-		// skip downloading the module and use the existing one.
-		newV, err := semver.ParseTolerant(d.Version)
-		if err != nil {
-			return true
-		}
-
-		curV, err := semver.ParseTolerant(existingDep.Version)
-		if err != nil {
-			return true
-		}
-
-		// If the new version is less than the existing version, skip downloading
-		// the module/
-		if newV.LTE(curV) {
-			return true
-		}
-	}
-
-	if !existingDep.allowedPrereleases && d.Prerelease {
-		// If we haven't considered pre-releases and are asking
-		// for one, re-download with pre-releases enabled
-		return false
-	}
-
-	// otherwise, don't skip the module
-	return false
+	// module is the name of the module that this constraint originated from
+	module string
 }
 
-// getModulesForService recursively fetches all modules for a given service manifest
-// this is done by iterating over all dependencies and then recursively calling ourself
-// to download their dependencies.
-func getModulesForService(ctx context.Context, sm *configuration.ServiceManifest,
-	deps []*configuration.TemplateRepository, modules map[string]*consideredModule) error {
-	for _, d := range deps {
-		if shouldSkipModule(modules, d) {
-			continue
+// GetModulesForService returns a list of modules that have been resolved from the provided
+// service manifest, respecting constraints and channels as needed.
+func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configuration.ServiceManifest) ([]*Module, error) {
+	// start resolving the top-level modules
+	modulesToResolve := make([]resolveModule, len(sm.Modules))
+	for i := range sm.Modules {
+		modulesToResolve[i] = resolveModule{
+			conf:   sm.Modules[i],
+			module: sm.Name + " (top-level)",
+		}
+	}
+
+	// resolved contains the current modules that have been selected and is used
+	// to track previous resolutions/constraints for re-resolving modules.
+	resolved := make(map[string]*resolvedModule)
+
+	// resolve all versions, adding more to the stack as we go
+	for {
+		// done resolving the modules
+		if len(modulesToResolve) == 0 {
+			break
 		}
 
-		// create a module struct for this module, this resolves the latest version if
-		// the version wasn't set.
-		m, err := New(ctx, sm.Replacements[d.Name], d)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create dependency %q", d.Name)
+		rm := modulesToResolve[0]
+		if _, ok := resolved[rm.conf.Name]; !ok {
+			resolved[rm.conf.Name] = &resolvedModule{}
 		}
 
-		// prefetch the manifest and FS
-		mf, err := m.Manifest(ctx)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse manifest %q", d.Name)
-		}
-		modules[d.Name] = &consideredModule{m, d.Prerelease}
+		uri := "https://" + rm.conf.Name
+		version := ""
 
-		// if we have dependencies, download those now
-		if len(mf.Modules) != 0 {
-			if err := getModulesForService(ctx, sm, mf.Modules, modules); err != nil {
-				return errors.Wrapf(err, "failed to process dependency of %q", d.Name)
+		var m *Module
+
+		// if we're using a replacement, update the URI and do not resolve the version
+		// if using a file URL.
+		if sm.Replacements[rm.conf.Name] != "" {
+			uri = sm.Replacements[rm.conf.Name]
+		}
+
+		// if we're not using a local module, resolve the version
+		if !uriIsLocal(uri) {
+			var err error
+			version, err = getLatestModuleForConstraints(ctx, token, &rm, resolved)
+			if err != nil {
+				return nil, err
 			}
 		}
+
+		m, err := New(ctx, uri, &configuration.TemplateRepository{
+			Name:    rm.conf.Name,
+			Version: version,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for i := range mf.Modules {
+			modulesToResolve = append(modulesToResolve, resolveModule{
+				conf:   mf.Modules[i],
+				module: rm.conf.Name,
+			})
+		}
+
+		// set the module on our resolved module
+		resolved[rm.conf.Name].Module = m
+
+		// resolve the next module
+		modulesToResolve = modulesToResolve[1:]
 	}
 
-	return nil
+	// convert the resolved modules to a list of modules
+	modules := make([]*Module, 0, len(resolved))
+	for _, m := range resolved {
+		modules = append(modules, m.Module)
+	}
+	return modules, nil
+}
+
+// getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
+func getLatestModuleForConstraints(ctx context.Context, token cfg.SecretData,
+	m *resolveModule, resolved map[string]*resolvedModule) (string, error) {
+	constraints := resolved[m.conf.Name].constraints
+	if len(constraints) == 0 {
+		constraints = make([]constraint, 0)
+	}
+
+	// if we have a constraint, use it to resolve the version
+	if m.conf.Version != "" {
+		constraints = append(constraints, constraint{
+			str:    m.conf.Version,
+			module: m.module,
+		})
+		resolved[m.conf.Name].constraints = constraints
+	}
+
+	constraintsStr := make([]string, len(constraints))
+	for i := range constraints {
+		constraintsStr[i] = constraints[i].str
+	}
+
+	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+		URL:         "https://" + m.conf.Name,
+		Channel:     m.conf.Channel,
+		Constraints: constraintsStr,
+	})
+	if err != nil {
+		errorString := ""
+		for i := range constraints {
+			errorString += strings.Repeat(" ", i*2) + "└─ "
+			errorString += fmt.Sprintln(constraints[i].module, "wants", constraints[i].str)
+		}
+		return "", errors.Wrapf(err, "failed to resolve module with constraints\n%s", errorString)
+	}
+
+	return v.Tag, nil
 }

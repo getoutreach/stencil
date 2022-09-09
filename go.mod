@@ -2,6 +2,8 @@ module github.com/getoutreach/stencil
 
 go 1.17
 
+replace github.com/getoutreach/gobox => ../gobox
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/Masterminds/sprig/v3 v3.2.2
@@ -16,7 +18,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.3.2-0.20210804024030-7ab80d7c013d
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-cmp v0.5.8
-	github.com/google/go-github/v47 v47.0.0
+	github.com/google/go-github/v47 v47.0.0 // indirect
 	github.com/hashicorp/go-hclog v1.3.0
 	github.com/hashicorp/go-plugin v1.4.5
 	github.com/pkg/errors v0.9.1
