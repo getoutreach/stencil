@@ -65,7 +65,6 @@ type ServiceManifest struct {
 	// Expected format:
 	// - local file: file://path/to/module
 	// - remote file: https://github.com/getoutreach/stencil-base
-	// - remote file w/ different protocol: git@github.com:getoutreach/stencil-base
 	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 

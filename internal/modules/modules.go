@@ -35,8 +35,8 @@ type resolveModule struct {
 	// conf is the configuration to be used to resolve the module
 	conf *configuration.TemplateRepository
 
-	// module is the name of the module that imported this module
-	module string
+	// parent is the name of the module that imported this module
+	parent string
 }
 
 // constraint is a constraint that can be applied to a module
@@ -44,8 +44,8 @@ type constraint struct {
 	// str is the string representation of the constraint
 	str string
 
-	// module is the name of the module that this constraint originated from
-	module string
+	// parentModule is the name of the module that this constraint originated from
+	parentModule string
 }
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
@@ -56,7 +56,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 	for i := range sm.Modules {
 		modulesToResolve[i] = resolveModule{
 			conf:   sm.Modules[i],
-			module: sm.Name + " (top-level)",
+			parent: sm.Name + " (top-level)",
 		}
 	}
 
@@ -72,22 +72,23 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		}
 
 		rm := modulesToResolve[0]
-		if _, ok := resolved[rm.conf.Name]; !ok {
-			resolved[rm.conf.Name] = &resolvedModule{}
+		importPath := rm.conf.Name
+		if _, ok := resolved[importPath]; !ok {
+			resolved[importPath] = &resolvedModule{Module: &Module{}}
 		}
 
-		uri := "https://" + rm.conf.Name
+		uri := "https://" + importPath
 		version := ""
 
 		var m *Module
 
-		// if we're using a replacement, update the URI and do not resolve the version
-		// if using a file URL.
-		if sm.Replacements[rm.conf.Name] != "" {
-			uri = sm.Replacements[rm.conf.Name]
+		// if we're using a replacement update the url of the module
+		if sm.Replacements[importPath] != "" {
+			uri = sm.Replacements[importPath]
 		}
 
 		// if we're not using a local module, resolve the version
+		// (local modules should always satisfy constraints)
 		if !uriIsLocal(uri) {
 			var err error
 			version, err = getLatestModuleForConstraints(ctx, token, &rm, resolved)
@@ -96,8 +97,17 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 			}
 		}
 
+		// check if the current module already is this version
+		// IDEA(jaredallard): In the future we probably want to see if
+		// the past version _also_ satisfies the new constraints, and if so
+		// skip re-resolving the module.
+		if version == resolved[importPath].Version {
+			modulesToResolve = modulesToResolve[1:]
+			continue
+		}
+
 		m, err := New(ctx, uri, &configuration.TemplateRepository{
-			Name:    rm.conf.Name,
+			Name:    importPath,
 			Channel: rm.conf.Channel,
 			Version: version,
 		})
@@ -109,15 +119,17 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		if err != nil {
 			return nil, err
 		}
+
+		// add the dependencies of this module to the stack to be resolved
 		for i := range mf.Modules {
 			modulesToResolve = append(modulesToResolve, resolveModule{
 				conf:   mf.Modules[i],
-				module: rm.conf.Name,
+				parent: importPath,
 			})
 		}
 
 		// set the module on our resolved module
-		resolved[rm.conf.Name].Module = m
+		resolved[importPath].Module = m
 
 		// resolve the next module
 		modulesToResolve = modulesToResolve[1:]
@@ -142,8 +154,8 @@ func getLatestModuleForConstraints(ctx context.Context, token cfg.SecretData,
 	// if we have a constraint, use it to resolve the version
 	if m.conf.Version != "" {
 		constraints = append(constraints, constraint{
-			str:    m.conf.Version,
-			module: m.module,
+			str:          m.conf.Version,
+			parentModule: m.parent,
 		})
 		resolved[m.conf.Name].constraints = constraints
 	}
@@ -162,7 +174,7 @@ func getLatestModuleForConstraints(ctx context.Context, token cfg.SecretData,
 		errorString := ""
 		for i := range constraints {
 			errorString += strings.Repeat(" ", i*2) + "└─ "
-			errorString += fmt.Sprintln(constraints[i].module, "wants", constraints[i].str)
+			errorString += fmt.Sprintln(constraints[i].parentModule, "wants", constraints[i].str)
 		}
 		return "", errors.Wrapf(err, "failed to resolve module with constraints\n%s", errorString)
 	}
