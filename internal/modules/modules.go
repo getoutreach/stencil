@@ -91,7 +91,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		// (local modules should always satisfy constraints)
 		if !uriIsLocal(uri) {
 			var err error
-			version, err = getLatestModuleForConstraints(ctx, token, &rm, resolved)
+			version, err = getLatestModuleForConstraints(ctx, uri, token, &rm, resolved)
 			if err != nil {
 				return nil, err
 			}
@@ -144,7 +144,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 }
 
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
-func getLatestModuleForConstraints(ctx context.Context, token cfg.SecretData,
+func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.SecretData,
 	m *resolveModule, resolved map[string]*resolvedModule) (string, error) {
 	constraints := resolved[m.conf.Name].constraints
 	if len(constraints) == 0 {
@@ -166,7 +166,7 @@ func getLatestModuleForConstraints(ctx context.Context, token cfg.SecretData,
 	}
 
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
-		URL:         "https://" + m.conf.Name,
+		URL:         uri,
 		Channel:     m.conf.Channel,
 		Constraints: constraintsStr,
 	})
