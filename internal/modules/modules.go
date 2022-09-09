@@ -83,7 +83,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		var m *Module
 
 		// if we're using a replacement update the url of the module
-		if sm.Replacements[importPath] != "" {
+		if _, ok := sm.Replacements[importPath]; ok {
 			uri = sm.Replacements[importPath]
 		}
 
@@ -95,15 +95,15 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 			if err != nil {
 				return nil, err
 			}
-		}
 
-		// check if the current module already is this version
-		// IDEA(jaredallard): In the future we probably want to see if
-		// the past version _also_ satisfies the new constraints, and if so
-		// skip re-resolving the module.
-		if version == resolved[importPath].Version {
-			modulesToResolve = modulesToResolve[1:]
-			continue
+			// check if the current module already is this version
+			// IDEA(jaredallard): In the future we probably want to see if
+			// the past version _also_ satisfies the new constraints, and if so
+			// skip re-resolving the module.
+			if version == resolved[importPath].Version {
+				modulesToResolve = modulesToResolve[1:]
+				continue
+			}
 		}
 
 		m, err := New(ctx, uri, &configuration.TemplateRepository{
