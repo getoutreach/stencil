@@ -98,6 +98,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 
 		m, err := New(ctx, uri, &configuration.TemplateRepository{
 			Name:    rm.conf.Name,
+			Channel: rm.conf.Channel,
 			Version: version,
 		})
 		if err != nil {
