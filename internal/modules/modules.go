@@ -25,6 +25,9 @@ import (
 type resolvedModule struct {
 	*Module
 
+	// version is the version that was resolved for this module
+	version *resolver.Version
+
 	// constraints is the stack of constraints that were used to resolve
 	// this module. This is used to generate a useful error message if a
 	// constraint is violated. This is sorted in descending order.
@@ -78,7 +81,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		}
 
 		uri := "https://" + importPath
-		version := ""
+		var version *resolver.Version
 
 		var m *Module
 
@@ -95,21 +98,18 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 			if err != nil {
 				return nil, err
 			}
-
-			// check if the current module already is this version
-			// IDEA(jaredallard): In the future we probably want to see if
-			// the past version _also_ satisfies the new constraints, and if so
-			// skip re-resolving the module.
-			if version == resolved[importPath].Version {
-				modulesToResolve = modulesToResolve[1:]
-				continue
+		} else {
+			// for local modules we don't have a version and the module New() handles this,
+			// so just create a stub mutable version
+			version = &resolver.Version{
+				Mutable: true,
 			}
 		}
 
 		m, err := New(ctx, uri, &configuration.TemplateRepository{
 			Name:    importPath,
 			Channel: rm.conf.Channel,
-			Version: version,
+			Version: version.GitRef(),
 		})
 		if err != nil {
 			return nil, err
@@ -130,6 +130,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 
 		// set the module on our resolved module
 		resolved[importPath].Module = m
+		resolved[importPath].version = version
 
 		// resolve the next module
 		modulesToResolve = modulesToResolve[1:]
@@ -145,10 +146,20 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.SecretData,
-	m *resolveModule, resolved map[string]*resolvedModule) (string, error) {
+	m *resolveModule, resolved map[string]*resolvedModule) (*resolver.Version, error) {
 	constraints := resolved[m.conf.Name].constraints
 	if len(constraints) == 0 {
 		constraints = make([]constraint, 0)
+	}
+
+	// If the last version we resolved is mutable, it's impossible for us
+	// to compare the two, so we have to use it.
+	if rm, ok := resolved[m.conf.Name]; ok {
+		if rm.version != nil && rm.version.Mutable {
+			// IDEA(jaredallard): We should log this as it's non-deterministic when we
+			// have a good interface for doing so.
+			return rm.version, nil
+		}
 	}
 
 	// if we have a constraint, use it to resolve the version
@@ -166,9 +177,10 @@ func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.Se
 	}
 
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
-		URL:         uri,
-		Channel:     m.conf.Channel,
-		Constraints: constraintsStr,
+		URL:           uri,
+		Channel:       m.conf.Channel,
+		Constraints:   constraintsStr,
+		AllowBranches: true,
 	})
 	if err != nil {
 		errorString := ""
@@ -176,8 +188,8 @@ func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.Se
 			errorString += strings.Repeat(" ", i*2) + "└─ "
 			errorString += fmt.Sprintln(constraints[i].parentModule, "wants", constraints[i].str)
 		}
-		return "", errors.Wrapf(err, "failed to resolve module with constraints\n%s", errorString)
+		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
-	return v.Tag, nil
+	return v, nil
 }
