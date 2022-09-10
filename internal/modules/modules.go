@@ -35,6 +35,7 @@ type resolvedModule struct {
 	history []resolution
 }
 
+// resolveModule is used to keep track of a module that needs to be resolved
 type resolveModule struct {
 	// conf is the configuration to be used to resolve the module
 	conf *configuration.TemplateRepository
