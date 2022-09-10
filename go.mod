@@ -2,8 +2,6 @@ module github.com/getoutreach/stencil
 
 go 1.17
 
-replace github.com/getoutreach/gobox => ../gobox
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/Masterminds/sprig/v3 v3.2.2
@@ -11,7 +9,7 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/getoutreach/gobox v1.51.0
+	github.com/getoutreach/gobox v1.53.0
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5

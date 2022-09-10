@@ -28,10 +28,11 @@ type resolvedModule struct {
 	// version is the version that was resolved for this module
 	version *resolver.Version
 
-	// constraints is the stack of constraints that were used to resolve
+	// history is the stack of history that were used to resolve
 	// this module. This is used to generate a useful error message if a
-	// constraint is violated. This is sorted in descending order.
-	constraints []constraint
+	// constraint, or other import condition,
+	//  is violated. This is sorted in descending order.
+	history []resolution
 }
 
 type resolveModule struct {
@@ -42,12 +43,16 @@ type resolveModule struct {
 	parent string
 }
 
-// constraint is a constraint that can be applied to a module
-type constraint struct {
-	// str is the string representation of the constraint
-	str string
+// resolution is an entry in the resolution stack that was used to resolve a module
+type resolution struct {
+	// constraint is the string representation of the constraint
+	// used by the parent module to resolve this module
+	constraint string
 
-	// parentModule is the name of the module that this constraint originated from
+	// channel is the channel that was used to resolve this module
+	channel string
+
+	// parentModule is the name of the module that imported this module
 	parentModule string
 }
 
@@ -74,11 +79,19 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 			break
 		}
 
-		rm := modulesToResolve[0]
-		importPath := rm.conf.Name
+		resolv := modulesToResolve[0]
+		importPath := resolv.conf.Name
 		if _, ok := resolved[importPath]; !ok {
 			resolved[importPath] = &resolvedModule{Module: &Module{}}
 		}
+		rm := resolved[importPath]
+
+		// log the resolution attempt
+		rm.history = append(rm.history, resolution{
+			constraint:   resolv.conf.Version,
+			channel:      resolv.conf.Channel,
+			parentModule: resolv.parent,
+		})
 
 		uri := "https://" + importPath
 		var version *resolver.Version
@@ -94,7 +107,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		// (local modules should always satisfy constraints)
 		if !uriIsLocal(uri) {
 			var err error
-			version, err = getLatestModuleForConstraints(ctx, uri, token, &rm, resolved)
+			version, err = getLatestModuleForConstraints(ctx, uri, token, &resolv, resolved)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +121,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 
 		m, err := New(ctx, uri, &configuration.TemplateRepository{
 			Name:    importPath,
-			Channel: rm.conf.Channel,
+			Channel: resolv.conf.Channel,
 			Version: version.GitRef(),
 		})
 		if err != nil {
@@ -129,8 +142,8 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		}
 
 		// set the module on our resolved module
-		resolved[importPath].Module = m
-		resolved[importPath].version = version
+		rm.Module = m
+		rm.version = version
 
 		// resolve the next module
 		modulesToResolve = modulesToResolve[1:]
@@ -147,9 +160,11 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.SecretData,
 	m *resolveModule, resolved map[string]*resolvedModule) (*resolver.Version, error) {
-	constraints := resolved[m.conf.Name].constraints
-	if len(constraints) == 0 {
-		constraints = make([]constraint, 0)
+	constraints := make([]string, 0)
+	for _, r := range resolved[m.conf.Name].history {
+		if r.constraint != "" {
+			constraints = append(constraints, r.constraint)
+		}
 	}
 
 	// If the last version we resolved is mutable, it's impossible for us
@@ -162,31 +177,27 @@ func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.Se
 		}
 	}
 
-	// if we have a constraint, use it to resolve the version
-	if m.conf.Version != "" {
-		constraints = append(constraints, constraint{
-			str:          m.conf.Version,
-			parentModule: m.parent,
-		})
-		resolved[m.conf.Name].constraints = constraints
-	}
-
-	constraintsStr := make([]string, len(constraints))
-	for i := range constraints {
-		constraintsStr[i] = constraints[i].str
-	}
-
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:           uri,
 		Channel:       m.conf.Channel,
-		Constraints:   constraintsStr,
+		Constraints:   constraints,
 		AllowBranches: true,
 	})
 	if err != nil {
 		errorString := ""
-		for i := range constraints {
+		history := resolved[m.conf.Name].history
+		for i := range history {
+			h := &history[i]
 			errorString += strings.Repeat(" ", i*2) + "└─ "
-			errorString += fmt.Sprintln(constraints[i].parentModule, "wants", constraints[i].str)
+
+			wants := "*"
+			if h.constraint != "" {
+				wants = h.constraint
+			} else if h.channel != "" {
+				wants = "(channel) " + h.channel
+			}
+
+			errorString += fmt.Sprintln(history[i].parentModule, "wants", wants)
 		}
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}

@@ -89,7 +89,7 @@ type TemplateRepository struct {
 	// that should be downloaded if not set then the latest version is used.
 	//
 	// Version can also be a constraint as supported by the underlying resolver:
-	// !!! <TODO link to gobox/pkg/cli/updater/resolver>
+	// https://pkg.go.dev/github.com/getoutreach/gobox/pkg/cli/updater/resolver#Resolve
 	Version string `yaml:"version,omitempty"`
 }
 
