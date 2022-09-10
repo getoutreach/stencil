@@ -68,9 +68,10 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
 	}
 
 	if usePrerelease {
-		log.Info("Using prerelease versions")
+		//nolint:lll // Why: It's a long warning string :'(
+		log.Warn("Deprecated: --use-prerelease is deprecated. Set 'rc' as the channel on each module you want to use pre-releases for in the service.yaml instead")
 		for i := range s.Modules {
-			s.Modules[i].Prerelease = true
+			s.Modules[i].Channel = "rc"
 			s.Modules[i].Version = ""
 		}
 	}
