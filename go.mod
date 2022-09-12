@@ -9,14 +9,14 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/getoutreach/gobox v1.51.0
+	github.com/getoutreach/gobox v1.53.0
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
 	github.com/go-git/go-billy/v5 v5.3.2-0.20210804024030-7ab80d7c013d
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-cmp v0.5.8
-	github.com/google/go-github/v47 v47.0.0
+	github.com/google/go-github/v47 v47.0.0 // indirect
 	github.com/hashicorp/go-hclog v1.3.0
 	github.com/hashicorp/go-plugin v1.4.5
 	github.com/pkg/errors v0.9.1

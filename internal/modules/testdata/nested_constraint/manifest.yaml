@@ -1,0 +1,4 @@
+name: nested_constraint
+modules:
+  - name: github.com/getoutreach/stencil-base
+    version: ~0.3.0

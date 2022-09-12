@@ -65,7 +65,6 @@ type ServiceManifest struct {
 	// Expected format:
 	// - local file: file://path/to/module
 	// - remote file: https://github.com/getoutreach/stencil-base
-	// - remote file w/ different protocol: git@github.com:getoutreach/stencil-base
 	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
@@ -74,6 +73,7 @@ type TemplateRepository struct {
 	// Name is the name of this module. This should be a valid go import path
 	Name string `yaml:"name"`
 
+	// Deprecated: Use 'channel' instead, prerelease sets 'channel' to 'rc'.
 	// Prerelease is a boolean indicating whether or not to consider prerelease versions
 	Prerelease bool `yaml:"prerelease"`
 
@@ -81,9 +81,15 @@ type TemplateRepository struct {
 	// URL is a full URL for a given module
 	URL string `yaml:"url,omitempty"`
 
+	// Channel is the channel to use for updates to this module
+	// Defaults to "stable"
+	Channel string `yaml:"channel,omitempty"`
+
 	// Version is a semantic version or branch of the template repository
 	// that should be downloaded if not set then the latest version is used.
-	// Note: Setting this equates to pinning the versions, this is not recommended.
+	//
+	// Version can also be a constraint as supported by the underlying resolver:
+	// https://pkg.go.dev/github.com/getoutreach/gobox/pkg/cli/updater/resolver#Resolve
 	Version string `yaml:"version,omitempty"`
 }
 

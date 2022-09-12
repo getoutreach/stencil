@@ -18,6 +18,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/blang/semver/v4"
 	"github.com/charmbracelet/glamour"
+	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
@@ -53,6 +54,9 @@ type Command struct {
 	// allowMajorVersionUpgrade denotes if we should allow major version
 	// upgrades without a prompt or not
 	allowMajorVersionUpgrades bool
+
+	// token is the github token used for fetching modules
+	token cfg.SecretData
 }
 
 // NewCommand creates a new stencil command
@@ -64,11 +68,17 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
 	}
 
 	if usePrerelease {
-		log.Info("Using prerelease versions")
+		//nolint:lll // Why: It's a long warning string :'(
+		log.Warn("Deprecated: --use-prerelease is deprecated. Set 'rc' as the channel on each module you want to use pre-releases for in the service.yaml instead")
 		for i := range s.Modules {
-			s.Modules[i].Prerelease = true
+			s.Modules[i].Channel = "rc"
 			s.Modules[i].Version = ""
 		}
+	}
+
+	token, err := github.GetToken()
+	if err != nil {
+		log.Warn("failed to get github token, using anonymous access")
 	}
 
 	return &Command{
@@ -78,6 +88,7 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
 		dryRun:                    dryRun,
 		frozenLockfile:            frozen,
 		allowMajorVersionUpgrades: allowMajorVersionUpgrades,
+		token:                     token,
 	}
 }
 
@@ -93,7 +104,7 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	c.log.Info("Fetching dependencies")
-	mods, err := modules.GetModulesForService(ctx, c.manifest)
+	mods, err := modules.GetModulesForService(ctx, c.token, c.manifest)
 	if err != nil {
 		return errors.Wrap(err, "failed to process modules list")
 	}
