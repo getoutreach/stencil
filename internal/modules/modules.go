@@ -17,6 +17,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // resolvedModule is used to keep track of a module during the resolution
@@ -59,7 +60,8 @@ type resolution struct {
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
-func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configuration.ServiceManifest) ([]*Module, error) {
+func GetModulesForService(ctx context.Context, token cfg.SecretData,
+	sm *configuration.ServiceManifest, log logrus.FieldLogger) ([]*Module, error) {
 	// start resolving the top-level modules
 	modulesToResolve := make([]resolveModule, len(sm.Modules))
 	for i := range sm.Modules {
@@ -93,6 +95,10 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 			channel:      resolv.conf.Channel,
 			parentModule: resolv.parent,
 		})
+		log.WithFields(logrus.Fields{
+			"module": importPath,
+			"parent": resolv.parent,
+		}).Debug("resolving module")
 
 		uri := "https://" + importPath
 		var version *resolver.Version
@@ -138,13 +144,18 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData, sm *configu
 		for i := range mf.Modules {
 			modulesToResolve = append(modulesToResolve, resolveModule{
 				conf:   mf.Modules[i],
-				parent: importPath,
+				parent: importPath + "@" + version.String(),
 			})
 		}
 
 		// set the module on our resolved module
 		rm.Module = m
 		rm.version = version
+
+		log.WithFields(logrus.Fields{
+			"module":  importPath,
+			"version": version.GitRef(),
+		}).Debug("resolved module")
 
 		// resolve the next module
 		modulesToResolve = modulesToResolve[1:]
@@ -168,6 +179,23 @@ func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.Se
 		}
 	}
 
+	channel := m.conf.Channel
+	for _, r := range resolved[m.conf.Name].history {
+		// if we don't have a channel, or the channel is stable, check to see if
+		// the channel we last resolved with doesn't match the current channel requested.
+		//
+		// If it doesn't match, we don't know how to resolve the module, so we error.
+		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
+			return nil, fmt.Errorf("unable to resolve module %s: "+
+				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
+				m.conf.Name, r.channel, r.parentModule, channel)
+		}
+
+		// use the first history entry that has a channel since we can't have multiple channels
+		channel = r.channel
+		break //nolint:staticcheck // Why: see above comment
+	}
+
 	// If the last version we resolved is mutable, it's impossible for us
 	// to compare the two, so we have to use it.
 	if rm, ok := resolved[m.conf.Name]; ok {
@@ -180,7 +208,7 @@ func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.Se
 
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:           uri,
-		Channel:       m.conf.Channel,
+		Channel:       channel,
 		Constraints:   constraints,
 		AllowBranches: true,
 	})
