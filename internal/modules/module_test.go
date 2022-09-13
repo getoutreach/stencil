@@ -137,7 +137,7 @@ func TestFailOnIncompatibleConstraints(t *testing.T) {
 	}, newLogger())
 	assert.Error(t, err,
 		//nolint:lll // Why: That's the error :(
-		"failed to resolve module 'github.com/getoutreach/stencil-base' with constraints\n└─ testing-service (top-level) wants >=0.5.0\n  └─ nested_constraint wants ~0.3.0\n: no version found matching criteria",
+		"failed to resolve module 'github.com/getoutreach/stencil-base' with constraints\n└─ testing-service (top-level) wants >=0.5.0\n  └─ nested_constraint@v0.0.0-+ wants ~0.3.0\n: no version found matching criteria",
 		"expected GetModulesForService() to error")
 }
 
