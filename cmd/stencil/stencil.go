@@ -110,6 +110,7 @@ func main() {
 		},
 		&cli.BoolFlag{
 			Name:    "debug",
+			Usage:   "Enables debug logging for version resolution, template render, and other useful information",
 			Aliases: []string{"d"},
 		},
 		///EndBlock(flags)
