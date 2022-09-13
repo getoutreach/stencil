@@ -108,6 +108,11 @@ func main() {
 			Name:  "allow-major-version-upgrades",
 			Usage: "Allow major version upgrades without confirmation",
 		},
+		&cli.BoolFlag{
+			Name:    "debug",
+			Usage:   "Enables debug logging for version resolution, template render, and other useful information",
+			Aliases: []string{"d"},
+		},
 		///EndBlock(flags)
 	}
 	app.Commands = []*cli.Command{
