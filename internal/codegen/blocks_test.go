@@ -47,5 +47,11 @@ func TestParseV2Blocks(t *testing.T) {
 	blocks, err := parseBlocks("testdata/v2blocks-test.txt")
 	assert.NilError(t, err, "expected parseBlocks() not to fail")
 	assert.Equal(t, blocks["helloWorld"], "Hello, world!", "expected parseBlocks() to parse basic block")
-	assert.Equal(t, blocks["e2e"], "content", "expected parseBlocks() to parse e2e block")
+}
+
+func TestV2BlocksErrors(t *testing.T) {
+	_, err := parseBlocks("testdata/v2blocks-invalid.txt")
+	if err == nil {
+		t.Fatal("expected parseBlocks() to fail")
+	}
 }
