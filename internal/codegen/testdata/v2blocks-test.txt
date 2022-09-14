@@ -1,0 +1,7 @@
+## <<Stencil::Block(helloWorld)>>
+Hello, world!
+## <<Stencil::EndBlock(helloWorld)>>
+
+## <<Stencil::Block(e2e)>>
+content
+## <<Stencil::EndBlock(e2e)>>

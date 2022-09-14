@@ -14,12 +14,16 @@ import (
 )
 
 // blockPattern is the regex used for parsing block commands.
-// For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
+// For unit testing of this regex and explanation, see https://regex101.com/r/EHkH5O/1
 var blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)`)
+
+// v2BlockPattern is the new regex for parsing blocks
+// For unit testing of this regex and explanation, see https://regex101.com/r/EHkH5O/1
+var v2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<Stencil::([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)>>`)
 
 // parseBlocks reads the blocks from an existing file
 func parseBlocks(filePath string) (map[string]string, error) {
-	args := make(map[string]string)
+	blocks := make(map[string]string)
 	f, err := os.Open(filePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return make(map[string]string), nil
@@ -33,6 +37,9 @@ func parseBlocks(filePath string) (map[string]string, error) {
 	for i := 0; scanner.Scan(); i++ {
 		line := scanner.Text()
 		matches := blockPattern.FindStringSubmatch(line)
+		if len(matches) == 0 {
+			matches = v2BlockPattern.FindStringSubmatch(line)
+		}
 		isCommand := false
 
 		// 1: Comment (###|///)
@@ -79,11 +86,11 @@ func parseBlocks(filePath string) (map[string]string, error) {
 		// and account for having an existing curVal or not. If we
 		// don't then we assign curVal to start with the line we
 		// just found.
-		curVal, ok := args[curBlockName]
+		curVal, ok := blocks[curBlockName]
 		if ok {
-			args[curBlockName] = curVal + "\n" + line
+			blocks[curBlockName] = curVal + "\n" + line
 		} else {
-			args[curBlockName] = line
+			blocks[curBlockName] = line
 		}
 	}
 
@@ -91,5 +98,5 @@ func parseBlocks(filePath string) (map[string]string, error) {
 		return nil, fmt.Errorf("found dangling Block (%s) in %s", curBlockName, filePath)
 	}
 
-	return args, nil
+	return blocks, nil
 }
