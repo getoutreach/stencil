@@ -18,7 +18,7 @@ import (
 const endStatement = "EndBlock"
 
 // blockPattern is the regex used for parsing block commands.
-// For unit testing of this regex and explanation, see https://regex101.com/r/EHkH5O/1
+// For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
 var blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)`)
 
 // v2BlockPattern is the new regex for parsing blocks
