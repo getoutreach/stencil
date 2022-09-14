@@ -42,3 +42,16 @@ func TestWrongEndBlock(t *testing.T) {
 		"invalid EndBlock, found EndBlock with name \"wrongend\" while inside of block with name \"helloWorld\", at testdata/wrongendblock-test.txt:3", //nolint:lll
 		"expected parseBlocks() to fail")
 }
+
+func TestParseV2Blocks(t *testing.T) {
+	blocks, err := parseBlocks("testdata/v2blocks-test.txt")
+	assert.NilError(t, err, "expected parseBlocks() not to fail")
+	assert.Equal(t, blocks["helloWorld"], "Hello, world!", "expected parseBlocks() to parse basic block")
+}
+
+func TestV2BlocksErrors(t *testing.T) {
+	_, err := parseBlocks("testdata/v2blocks-invalid.txt")
+	if err == nil {
+		t.Fatal("expected parseBlocks() to fail")
+	}
+}

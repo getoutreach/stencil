@@ -1,0 +1,12 @@
+# This is invalid because it passes arguments to EndBlock
+## <<Stencil::Block(pikapika)>>
+Pika pika!
+## <</Stencil::Block(pikapika)>>
+
+# This is invalid because it used EndBlock with a <</
+## <<Stencil::Block(helloWorld)>>
+## <</Stencil::EndBlock>>
+
+# This is invalid because it used EndBlock without a <</
+## <<Stencil::Block(helloWorld)>>
+## <<Stencil::EndBlock>>

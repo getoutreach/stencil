@@ -1,0 +1,3 @@
+## <<Stencil::Block(helloWorld)>>
+Hello, world!
+## <</Stencil::Block>>
