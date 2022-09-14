@@ -68,7 +68,7 @@ func parseBlocks(filePath string) (map[string]string, error) {
 					// we should error. This is because we don't want to
 					// allow users to use the old EndBlock command
 					// without a closing tag
-					return nil, errors.Errorf("line %d: EndBlock command must be used with a closing tag", i+1)
+					return nil, errors.Errorf("line %d: <<Stencil::EndBlock>> should be <</Stencil::Block>>", i+1)
 				}
 
 				// fake the old matches format so we can reuse the same code
