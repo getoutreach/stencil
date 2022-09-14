@@ -1,10 +1,11 @@
 version: 2
 updates:
+  # Golang dependencies
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "daily"
-    # Bootstrap managed dependencies
+    # stencil-golang managed dependencies
     ignore:
       - dependency-name: github.com/getoutreach/gobox
       - dependency-name: github.com/urfave/cli/v2
@@ -18,4 +19,5 @@ updates:
       - dependency-name: "*"
 
   ###Block(dependabotPackageManagers)
+
   ###EndBlock(dependabotPackageManagers)
