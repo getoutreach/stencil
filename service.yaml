@@ -1,24 +1,4 @@
 name: stencil
-reportingTeam: fnd-dt
-description: microservice lifecycle manager
-oss: true
-slack: dev-tooling-notifications
-library: true
-commands:
-  - stencil
-circleAPIKey: ""
-lintroller: platinum
-tracing: honeycomb
-metrics: datadog
-releaseType: ""
-releaseOptions:
-  allowPrereleases: false
-  prereleasesBranch: rc
-  allowMajorVersions: true
-deployTo:
-  environments: []
-versions:
-  go: 1.18.1
 arguments:
   circleAPIKey: ""
   commands:
@@ -41,7 +21,7 @@ arguments:
   oss: true
   releaseOptions:
     allowMajorVersions: true
-    enablePrereleases: false
+    enablePrereleases: true
     prereleasesBranch: rc
   reportingTeam: fnd-dt
   resources: {}
@@ -84,17 +64,16 @@ arguments:
     - deploy/mint/%(environment)s/validation/mint-validator-payload
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
-  - name: github.com/getoutreach/stencil-circleci
-  - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-base
+    channel: rc
   - name: github.com/getoutreach/stencil-golang
+    channel: rc
   - name: github.com/getoutreach/stencil-outreach
-opsLevel:
-  serviceTier: 0
-  lifecycle: ""
-  confluenceSpaceKey: DTSS
-  pagerDutyLink: ""
-  datadogDashboards:
-    mainLink: ""
-    custom: []
-  designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+    channel: rc
+  - name: github.com/getoutreach/stencil-circleci
+    channel: rc
+  - name: github.com/getoutreach/stencil-actions
+    channel: rc
+  - name: github.com/getoutreach/stencil-discovery
+    channel: rc
+migrated: true
