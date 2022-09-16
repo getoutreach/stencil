@@ -12,10 +12,13 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -58,21 +61,47 @@ func TestValues(t *testing.T) {
 
 	boxConf, _ := box.LoadBox()
 
-	vals := NewValues(context.Background(), sm)
+	vals := NewValues(context.Background(), sm, []*modules.Module{
+		{
+			Name:    "testing",
+			Version: "1.2.3",
+		},
+	})
 	assert.DeepEqual(t, &Values{
-		Git: &git{
+		Git: git{
 			Ref:           plumbing.NewBranchReferenceName("main").String(),
 			Commit:        cmt.String(),
 			Dirty:         false,
 			DefaultBranch: "main",
 		},
-		Runtime: &runtime{
+		Runtime: runtime{
 			Generator:        app.Info().Name,
 			GeneratorVersion: app.Info().Version,
 			Box:              boxConf,
+			Modules: modulesSlice{
+				{
+					Name:    "testing",
+					Version: "1.2.3",
+				},
+			},
 		},
-		Config: &config{
+		Config: config{
 			Name: sm.Name,
 		},
 	}, vals)
+}
+
+func TestGeneratedValues(t *testing.T) {
+	log := logrus.New()
+
+	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "testing", []string{}, "testdata/values/values.tpl")
+	assert.NilError(t, err, "failed to create module")
+
+	st := NewStencil(&configuration.ServiceManifest{
+		Name:      "testing",
+		Arguments: map[string]interface{}{},
+	}, []*modules.Module{m}, log)
+	tpls, err := st.Render(context.Background(), log)
+	assert.NilError(t, err, "failed to render templates")
+	assert.Equal(t, tpls[0].Files[0].String(), "vfs vfs vfs")
 }

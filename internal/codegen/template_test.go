@@ -44,7 +44,7 @@ func TestSingleFileRender(t *testing.T) {
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
 	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm))
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
 }
@@ -66,7 +66,7 @@ func TestMultiFileRender(t *testing.T) {
 	}}
 
 	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm))
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -92,7 +92,7 @@ func TestMultiFileWithInputRender(t *testing.T) {
 	}}
 
 	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm))
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -118,7 +118,7 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 	}}
 
 	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm))
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 1, "expected Render() to create 1 files")
 
@@ -150,7 +150,7 @@ func TestGeneratedBlock(t *testing.T) {
 
 	// Add the file (fake) to the template so that the template uses it for blocks
 	tpl.Files = []*File{tplf}
-	tpl.Render(st, NewValues(context.Background(), sm))
+	tpl.Render(st, NewValues(context.Background(), sm, nil))
 
 	assert.Equal(t, tpl.Files[0].String(), fakeGeneratedBlockFile, "expected fake to equal rendered output")
 }
