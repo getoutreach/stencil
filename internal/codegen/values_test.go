@@ -103,5 +103,5 @@ func TestGeneratedValues(t *testing.T) {
 	}, []*modules.Module{m}, log)
 	tpls, err := st.Render(context.Background(), log)
 	assert.NilError(t, err, "failed to render templates")
-	assert.Equal(t, tpls[0].Files[0].String(), "vfs vfs vfs")
+	assert.Equal(t, tpls[0].Files[0].String(), "vfs vfs vfs testdata/values/values.tpl")
 }

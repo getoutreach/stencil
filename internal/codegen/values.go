@@ -81,6 +81,12 @@ type module struct {
 	Version string
 }
 
+// stencilTemplate contains information about the current template
+type stencilTemplate struct {
+	// Name is the name of the template
+	Name string
+}
+
 // modulesSlice is a list of modules with helpers on top of it
 type modulesSlice []module
 
@@ -109,6 +115,9 @@ type Values struct {
 
 	// Module is information about the current module being rendered
 	Module module
+
+	// Template is the name of the template being rendered
+	Template stencilTemplate
 }
 
 // Copy returns a copy of the current values
@@ -126,6 +135,14 @@ func (v *Values) WithModule(name, version string) *Values {
 	return nv
 }
 
+// WithTemplate returns a copy of the current values with the
+// provided template information being set.
+func (v *Values) WithTemplate(name string) *Values {
+	nv := v.Copy()
+	nv.Template.Name = name
+	return nv
+}
+
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module) *Values {
@@ -140,7 +157,8 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 			Name:     sm.Name,
 			Versions: sm.Versions,
 		},
-		Module: module{},
+		Module:   module{},
+		Template: stencilTemplate{},
 	}
 
 	for _, m := range mods {

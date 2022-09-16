@@ -102,7 +102,7 @@ func (t *Template) Render(st *Stencil, vals *Values) error {
 	}
 
 	// Update the module values
-	t.args = vals.WithModule(t.Module.Name, t.Module.Version)
+	t.args = vals.WithModule(t.Module.Name, t.Module.Version).WithTemplate(t.Path)
 
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
