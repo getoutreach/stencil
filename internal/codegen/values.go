@@ -12,6 +12,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	stencilgit "github.com/getoutreach/stencil/internal/git"
+	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
 )
@@ -31,6 +32,10 @@ type runtime struct {
 
 	// Box is org wide configuration that is accessible if configured
 	Box *box.Config
+
+	// Modules contains a list of all modules that are being rendered
+	// in a stencil run
+	Modules modulesSlice
 }
 
 // git contains information about the current git repository
@@ -61,39 +66,106 @@ type config struct {
 	// Name is the name of this repository
 	Name string
 
+	// Deprecated: Versions should be treated as an argument via stencil.Arg instead
 	// Versions are versions of applications to be used over baked in defaults
 	Versions map[string]string
 }
 
-// IDEA(jaredallard): Allow extensions to provide values here? Or
-// do we just allow them to be called directly? Future consideration.
+// module contains information about the current module that
+// is rendering a template.
+type module struct {
+	// Name is the name of the current module
+	Name string
+
+	// Version is the version of the current module
+	Version string
+}
+
+// stencilTemplate contains information about the current template
+type stencilTemplate struct {
+	// Name is the name of the template
+	Name string
+}
+
+// modulesSlice is a list of modules with helpers on top of it
+type modulesSlice []module
+
+// ByName returns a module by name
+func (m modulesSlice) ByName(name string) module {
+	for _, mod := range m {
+		if mod.Name == name {
+			return mod
+		}
+	}
+
+	return module{}
+}
 
 // Values is the top level container for variables being
 // passed to a stencil template.
 type Values struct {
 	// Git is information about the current git repository, if there is one
-	Git *git
+	Git git
 
 	// Runtime is information about the current runtime environment
-	Runtime *runtime
+	Runtime runtime
 
 	// Config is strongly type values from the service manifest
-	Config *config
+	Config config
+
+	// Module is information about the current module being rendered
+	Module module
+
+	// Template is the name of the template being rendered
+	Template stencilTemplate
+}
+
+// Copy returns a copy of the current values
+func (v *Values) Copy() *Values {
+	nv := *v
+	return &nv
+}
+
+// WithModule returns a copy of the current values with the
+// provided module information being set.
+func (v *Values) WithModule(name, version string) *Values {
+	nv := v.Copy()
+	nv.Module.Name = name
+	nv.Module.Version = version
+	return nv
+}
+
+// WithTemplate returns a copy of the current values with the
+// provided template information being set.
+func (v *Values) WithTemplate(name string) *Values {
+	nv := v.Copy()
+	nv.Template.Name = name
+	return nv
 }
 
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
-func NewValues(ctx context.Context, sm *configuration.ServiceManifest) *Values {
+func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module) *Values {
 	vals := &Values{
-		Git: &git{},
-		Runtime: &runtime{
+		Git: git{},
+		Runtime: runtime{
 			Generator:        app.Info().Name,
 			GeneratorVersion: app.Info().Version,
+			Modules:          modulesSlice{},
 		},
-		Config: &config{
+		Config: config{
 			Name:     sm.Name,
 			Versions: sm.Versions,
 		},
+		Module:   module{},
+		Template: stencilTemplate{},
+	}
+
+	for _, m := range mods {
+		vals.Runtime.Modules = append(vals.Runtime.Modules, module{
+			Name:    m.Name,
+			Version: m.Version,
+		})
 	}
 
 	//nolint:errcheck // Why: expose if available
