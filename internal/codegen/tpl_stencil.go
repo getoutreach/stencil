@@ -140,7 +140,9 @@ func (s *TplStencil) ReadFile(name string) (string, error) {
 //	{{- end }}
 func (s *TplStencil) Exists(name string) bool {
 	f, ok := s.exists(name)
-	f.Close() // close the file handle, since we don't need it
+	if ok {
+		f.Close() // close the file handle, since we don't need it
+	}
 	return ok
 }
 
