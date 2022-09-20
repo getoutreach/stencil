@@ -14,6 +14,7 @@ import (
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -119,16 +120,10 @@ func (s *TplStencil) Args() map[string]interface{} {
 //
 //	{{ stencil.ReadFile "myfile.txt" }}
 func (s *TplStencil) ReadFile(name string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
+	f, ok := s.exists(name)
+	if !ok {
+		return "", errors.Errorf("file %q does not exist", name)
 	}
-
-	f, err := osfs.New(cwd).Open(name)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to read file %q", name)
-	}
-	defer f.Close()
 
 	b, err := io.ReadAll(f)
 	if err != nil {
@@ -136,6 +131,32 @@ func (s *TplStencil) ReadFile(name string) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+// Exists returns true if the file exists in the current directory
+//
+//	{{- if stencil.Exists "myfile.txt" }}
+//	{{ stencil.ReadFile "myfile.txt" }}
+//	{{- end }}
+func (s *TplStencil) Exists(name string) bool {
+	f, ok := s.exists(name)
+	f.Close() // close the file handle, since we don't need it
+	return ok
+}
+
+// exists returns a billy.File if the file exists, and true. If it doesn't,
+// nil is returned and false.
+func (s *TplStencil) exists(name string) (billy.File, bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, false
+	}
+
+	f, err := osfs.New(cwd).Open(name)
+	if err != nil {
+		return nil, false
+	}
+	return f, true
 }
 
 // ApplyTemplate executes a template inside of the current module
