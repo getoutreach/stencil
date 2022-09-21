@@ -56,7 +56,7 @@ arguments:
       pods:
         thresholds:
           availableLowCount: 0
-  tracing: honeycomb
+  tracing: opentelemetry
   tutorial: false
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb

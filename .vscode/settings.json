@@ -1,9 +1,9 @@
 {
   // Please consider contributing back all added
   // settings to stencil!
-  ///Block(settings)
+  // <<Stencil::Block(settings)>>
 
-  ///EndBlock(settings)
+  // <</Stencil::Block>>
   "go.lintTool": "golangci-lint",
   "go.lintFlags": [],
   "go.formatTool": "goimports",

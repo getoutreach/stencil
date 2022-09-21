@@ -7,5 +7,6 @@ protoc 21.5
 # Note: Versions in this block override the above. Be EXTREMELY
 # CAREFUL with this. If you override a standard version you are
 # reducing compatibility guarantees.
-###Block(toolver)
-###EndBlock(toolver)
+## <<Stencil::Block(toolver)>>
+golangci-lint 1.49.0
+## <</Stencil::Block>>
