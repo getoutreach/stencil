@@ -13,6 +13,7 @@ import "encoding/gob"
 func init() { //nolint:gochecknoinits // Why: see comment
 	gob.Register([]interface{}{})
 	gob.Register(map[string]interface{}{})
+	gob.Register(map[interface{}]interface{}{})
 }
 
 // This block contains the constants for the go-plugin
