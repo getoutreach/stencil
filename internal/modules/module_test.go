@@ -190,7 +190,7 @@ func TestCanRespectChannels(t *testing.T) {
 	}, newLogger())
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
-	if !strings.Contains(mods[0].Version, "rc") {
+	if !strings.Contains(mods[0].Version, "-rc.") {
 		t.Fatalf("expected module to be an RC, but got %s", mods[0].Version)
 	}
 }
