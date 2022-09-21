@@ -9,7 +9,7 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/getoutreach/gobox v1.53.0
+	github.com/getoutreach/gobox v1.53.2
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
@@ -21,7 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli/v2 v2.14.0
+	github.com/urfave/cli/v2 v2.16.3
 	github.com/whilp/git-urls v1.0.0
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	gopkg.in/yaml.v3 v3.0.1

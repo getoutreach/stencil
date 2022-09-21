@@ -11,19 +11,19 @@
 
 
 
-<!--- Block(jiraPrefix) --->
+<!-- <<Stencil::Block(jiraPrefix)>> -->
 
 ## Jira ID
 
 [XX-XX]
 
-<!--- EndBlock(jiraPrefix) --->
+<!-- <</Stencil::Block>> -->
 
 <!-- Notes that may be helpful for anyone reviewing this PR -->
 ## Notes for your reviewers
 
 
 
-<!--- Block(custom) -->
+<!-- <<Stencil::Block(custom)>> -->
 
-<!--- EndBlock(custom) -->
+<!-- <</Stencil::Block>> -->
