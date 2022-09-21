@@ -15,9 +15,9 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // resolvedModule is used to keep track of a module during the resolution
@@ -61,7 +61,7 @@ type resolution struct {
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
 func GetModulesForService(ctx context.Context, token cfg.SecretData,
-	sm *configuration.ServiceManifest, log logrus.FieldLogger) ([]*Module, error) {
+	sm *configuration.ServiceManifest, log log.Logger) ([]*Module, error) {
 	// start resolving the top-level modules
 	modulesToResolve := make([]resolveModule, len(sm.Modules))
 	for i := range sm.Modules {
@@ -70,6 +70,10 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData,
 			parent: sm.Name + " (top-level)",
 		}
 	}
+
+	pb := log.ProgressBar(int64(len(modulesToResolve)))
+	pb.Start()
+	defer pb.Close()
 
 	// resolved contains the current modules that have been selected and is used
 	// to track previous resolutions/constraints for re-resolving modules.
@@ -95,10 +99,7 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData,
 			channel:      resolv.conf.Channel,
 			parentModule: resolv.parent,
 		})
-		log.WithFields(logrus.Fields{
-			"module": importPath,
-			"parent": resolv.parent,
-		}).Debug("resolving module")
+		log.Debug("resolving module")
 
 		uri := "https://" + importPath
 		var version *resolver.Version
@@ -147,18 +148,19 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData,
 				parent: importPath + "@" + version.String(),
 			})
 		}
+		if len(mf.Modules) > 0 {
+			pb.UpdateMax(int64(len(mf.Modules) + len(modulesToResolve) - 1))
+		}
 
 		// set the module on our resolved module
 		rm.Module = m
 		rm.version = version
 
-		log.WithFields(logrus.Fields{
-			"module":  importPath,
-			"version": version.GitRef(),
-		}).Debug("resolved module")
+		log.Debug("resolved module")
 
 		// resolve the next module
 		modulesToResolve = modulesToResolve[1:]
+		pb.Inc()
 	}
 
 	// convert the resolved modules to a list of modules

@@ -7,14 +7,14 @@ package apiv1
 import (
 	"net/rpc"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/hashicorp/go-plugin"
-	"github.com/sirupsen/logrus"
 )
 
 // ExtensionPlugin is the high level plugin used by go-plugin
 // it stores both the server and client implementation
 type ExtensionPlugin struct {
-	log  logrus.FieldLogger
+	log  log.Logger
 	impl implementationTransport
 }
 

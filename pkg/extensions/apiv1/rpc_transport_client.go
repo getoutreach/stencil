@@ -7,7 +7,7 @@ package apiv1
 import (
 	"net/rpc"
 
-	"github.com/sirupsen/logrus"
+	"github.com/getoutreach/stencil/internal/log"
 )
 
 // _ is a compile time assertion we implement the interface
@@ -17,7 +17,7 @@ var _ implementationTransport = &rpcTransportClient{}
 // rpc. This is a low level interface responsible for transmitting
 // the implementationTransport over the wire.
 type rpcTransportClient struct {
-	log    logrus.FieldLogger
+	log    log.Logger
 	client *rpc.Client
 }
 
@@ -40,6 +40,6 @@ func (g *rpcTransportClient) ExecuteTemplateFunction(t *TemplateFunctionExec) ([
 	// IDEA(jaredallard): Actually stream this data in the future
 	var resp []byte
 	err := g.client.Call("Plugin.ExecuteTemplateFunction", t, &resp)
-	g.log.WithField("data", string(resp)).WithError(err).WithField("name", t.Name).Debug("Extension function returned data")
+	g.log.Debug("Extension function returned data")
 	return resp, err
 }

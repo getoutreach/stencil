@@ -13,11 +13,10 @@ import (
 	"path"
 	"reflect"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // TplStencil contains the global functions available to a template for
@@ -29,7 +28,7 @@ type TplStencil struct {
 	// t is the current template in the context of our render
 	t *Template
 
-	log logrus.FieldLogger
+	log log.Logger
 }
 
 // GetModuleHook returns a module block in the scope of this module
@@ -48,8 +47,7 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	k := path.Join(s.t.Module.Name, name)
 	v := s.s.sharedData[k]
 
-	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-		WithField("data", spew.Sdump(v)).Debug("getting module hook")
+	s.log.Debug("getting module hook")
 	return v
 }
 
@@ -71,8 +69,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 
 	// key is <module>/<name>
 	k := path.Join(module, name)
-	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-		WithField("data", spew.Sdump(data)).Debug("adding to module hook")
+	s.log.Debug("adding to module hook")
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {

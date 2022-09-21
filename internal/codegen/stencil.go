@@ -12,18 +12,19 @@ import (
 	"sort"
 
 	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/util"
+	"github.com/gookit/color"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // NewStencil creates a new, fully initialized Stencil renderer function
-func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log log.Logger) *Stencil {
 	return &Stencil{
 		log:         log,
 		m:           m,
@@ -37,7 +38,7 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 // Stencil provides the basic functions for
 // stencil templates
 type Stencil struct {
-	log logrus.FieldLogger
+	log log.Logger
 	m   *configuration.ServiceManifest
 
 	ext       *extensions.Host
@@ -118,7 +119,7 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 // Render renders all templates using the ServiceManifest that was
 // provided to stencil at creation time, returned is the templates
 // that were produced and their associated files.
-func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
+func (s *Stencil) Render(ctx context.Context, log log.Logger) ([]*Template, error) {
 	tplfiles, err := s.getTemplates(ctx, log)
 	if err != nil {
 		return nil, err
@@ -169,8 +170,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 
 // PostRun runs all post run commands specified in the modules that
 // this service depends on
-func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
-	log.Info("Running post-run command(s)")
+func (s *Stencil) PostRun(ctx context.Context, log *log.StepLogger) error {
 	for _, m := range s.modules {
 		mf, err := m.Manifest(ctx)
 		if err != nil {
@@ -178,15 +178,16 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 		}
 
 		for _, cmdStr := range mf.PostRunCommand {
-			log.Infof(" - %s", cmdStr.Name)
+			log.Println(color.Gray.Sprint("[...] ") + cmdStr.Name)
 			//nolint:gosec // Why: This is by design
 			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
-			cmd.Stdin = os.Stdin
-			cmd.Stderr = os.Stderr
-			cmd.Stdout = os.Stdout
+			cmd.Stderr = log
+			cmd.Stdout = log
 			if err := cmd.Run(); err != nil {
+				log.Reset()
 				return errors.Wrapf(err, "failed to run post run command for module %q", m.Name)
 			}
+			log.Reset()
 		}
 	}
 
@@ -195,7 +196,7 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 
 // getTemplates takes all modules attached to this stencil
 // struct and returns all templates exposed by it.
-func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
+func (s *Stencil) getTemplates(ctx context.Context, log log.Logger) ([]*Template, error) {
 	tpls := make([]*Template, 0)
 	for _, m := range s.modules {
 		log.Debugf("Fetching module %q", m.Name)

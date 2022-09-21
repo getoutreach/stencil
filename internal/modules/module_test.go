@@ -9,16 +9,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
 // newLogger creates a new logger for testing
-func newLogger() logrus.FieldLogger {
-	log := logrus.New()
-	log.SetLevel(logrus.DebugLevel)
+func newLogger() log.Logger {
+	log := log.New()
 	return log
 }
 

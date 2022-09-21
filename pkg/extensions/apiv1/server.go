@@ -6,9 +6,9 @@
 package apiv1
 
 import (
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/sirupsen/logrus"
 )
 
 // NewHandshake returns a plugin.HandshakeConfig for
@@ -23,7 +23,7 @@ func NewHandshake() plugin.HandshakeConfig {
 
 // NewExtensionImplementation implements a new extension
 // and starts serving it.
-func NewExtensionImplementation(impl Implementation, log logrus.FieldLogger) error {
+func NewExtensionImplementation(impl Implementation, log log.Logger) error {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:       hclog.Trace,
 		Output:      &logger{fn: log.Debug},

@@ -2,6 +2,6 @@
 # your markdown files, manually include them by adding prefixed ! entries.
 *.md
 
-###Block(prettierignoreExtras)
+## <<Stencil::Block(prettierignoreExtras)>>
 
-###EndBlock(prettierignoreExtras)
+## <</Stencil::Block>>

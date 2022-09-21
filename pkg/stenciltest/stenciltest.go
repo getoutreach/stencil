@@ -16,11 +16,11 @@ import (
 
 	"github.com/bradleyjkemp/cupaloy"
 	"github.com/getoutreach/stencil/internal/codegen"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/assert"
 )
@@ -120,15 +120,16 @@ func (t *Template) Run(save bool) {
 			got.Fatalf("failed to create module from template %q", t.path)
 		}
 
+		logger := log.New()
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
 			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
-		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+		st := codegen.NewStencil(mf, []*modules.Module{m}, logger)
 
 		for name, ext := range t.exts {
 			st.RegisterInprocExtensions(name, ext)
 		}
 
-		tpls, err := st.Render(context.Background(), logrus.New())
+		tpls, err := st.Render(context.Background(), logger)
 		if err != nil {
 			if t.errStr != "" {
 				// if t.errStr was set then we expected an error, since that

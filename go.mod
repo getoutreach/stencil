@@ -8,7 +8,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/getoutreach/gobox v1.53.0
 
 	// This version has util.Walk
@@ -21,7 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli/v2 v2.14.0
+	github.com/urfave/cli/v2 v2.16.3
 	github.com/whilp/git-urls v1.0.0
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	gopkg.in/yaml.v3 v3.0.1
@@ -29,7 +29,12 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require github.com/hashicorp/go-multierror v1.1.1
+require (
+	atomicgo.dev/cursor v0.1.1
+	github.com/gookit/color v1.5.2
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/schollz/progressbar/v3 v3.9.0
+)
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -94,12 +99,12 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/schollz/progressbar/v3 v3.9.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
+	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yuin/goldmark v1.4.4 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect

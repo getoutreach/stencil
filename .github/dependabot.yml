@@ -18,6 +18,6 @@ updates:
     ignore:
       - dependency-name: "*"
 
-  ###Block(dependabotPackageManagers)
+  ## <<Stencil::Block(dependabotPackageManagers)>>
 
-  ###EndBlock(dependabotPackageManagers)
+  ## <</Stencil::Block>>

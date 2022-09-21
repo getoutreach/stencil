@@ -12,13 +12,13 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -92,7 +92,7 @@ func TestValues(t *testing.T) {
 }
 
 func TestGeneratedValues(t *testing.T) {
-	log := logrus.New()
+	log := log.New()
 
 	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "testing", []string{}, "testdata/values/values.tpl")
 	assert.NilError(t, err, "failed to create module")

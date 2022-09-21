@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
-	"github.com/sirupsen/logrus"
 )
 
 // Template is a file that has been processed by stencil
@@ -24,7 +24,7 @@ type Template struct {
 	args *Values
 
 	// log is the logger to use for debug logging
-	log logrus.FieldLogger
+	log log.Logger
 
 	// mode is the os file mode of the template, this is used
 	// for the default file if not modified during render time
@@ -50,7 +50,7 @@ type Template struct {
 // NewTemplate creates a new Template with the current file being the same name
 // with the extension .tpl being removed.
 func NewTemplate(m *modules.Module, fpath string, mode os.FileMode,
-	modTime time.Time, contents []byte, log logrus.FieldLogger) (*Template, error) {
+	modTime time.Time, contents []byte, log log.Logger) (*Template, error) {
 	return &Template{
 		log:      log,
 		mode:     mode,

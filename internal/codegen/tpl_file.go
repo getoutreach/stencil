@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/getoutreach/stencil/internal/log"
 )
 
 // TplFile is the current file we're writing output to in a
@@ -25,7 +25,7 @@ type TplFile struct {
 	t *Template
 
 	// log is the logger to use for debugging
-	log logrus.FieldLogger
+	log log.Logger
 }
 
 // Block returns the contents of a given block

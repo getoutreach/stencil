@@ -10,16 +10,16 @@ import (
 	"os/exec"
 	"reflect"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // IDEA(jaredallard): Cleanup this to return a Implementation backed by a transport as well.
 
 // NewExtensionClient creates a new Implementation from a plugin
-func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLogger) (Implementation, func() error, error) {
+func NewExtensionClient(ctx context.Context, extPath string, log log.Logger) (Implementation, func() error, error) {
 	// create a connection to the extension
 	client := plugin.NewClient(&plugin.ClientConfig{
 		Logger: hclog.New(&hclog.LoggerOptions{

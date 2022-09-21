@@ -13,6 +13,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/gobox/pkg/cli/github"
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
@@ -110,7 +111,7 @@ func (m *Module) GetTemplate() *template.Template {
 // by the given module. If the module is a local file
 // URI then extensions will be sourced from the `./bin`
 // directory of the base of the path.
-func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger, ext *extensions.Host) error {
+func (m *Module) RegisterExtensions(ctx context.Context, log log.Logger, ext *extensions.Host) error {
 	mf, err := m.Manifest(ctx)
 	if err != nil {
 		return err

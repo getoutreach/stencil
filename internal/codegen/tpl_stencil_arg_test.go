@@ -11,16 +11,16 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/sirupsen/logrus"
 )
 
 type testTpl struct {
 	s   *Stencil
 	t   *Template
-	log logrus.FieldLogger
+	log log.Logger
 }
 
 // fakeTemplate returns a faked struct suitable for testing
@@ -28,7 +28,7 @@ type testTpl struct {
 func fakeTemplate(t *testing.T, args map[string]interface{},
 	requestArgs map[string]configuration.Argument) *testTpl {
 	test := &testTpl{}
-	log := logrus.New()
+	log := log.New()
 
 	m, err := modulestest.NewModuleFromTemplates(requestArgs, "test", nil)
 	if err != nil {
@@ -73,7 +73,7 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]interface{},
 	args ...map[string]configuration.Argument) *testTpl {
 	test := &testTpl{}
-	log := logrus.New()
+	log := log.New()
 
 	mods := make([]*modules.Module, len(args))
 	importList := []string{}

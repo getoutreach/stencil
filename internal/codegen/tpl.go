@@ -8,12 +8,12 @@ package codegen
 import (
 	"text/template"
 
+	"github.com/getoutreach/stencil/internal/log"
 	"github.com/getoutreach/stencil/pkg/extensions"
-	"github.com/sirupsen/logrus"
 )
 
 // NewFuncMap returns the standard func map for a template
-func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncMap {
+func NewFuncMap(st *Stencil, t *Template, log log.Logger) template.FuncMap {
 	// We allow tplst & tplf to be nil in the case of
 	// .Parse() of a template, where they need to be present
 	// but aren't actually executed by the template
