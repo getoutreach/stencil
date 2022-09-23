@@ -57,6 +57,12 @@ func describeFile(filePath string) error {
 		return errors.Wrap(err, "failed to load lockfile")
 	}
 
+	// check if the file exists on disk before we try to find
+	// it in the lockfile
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("file %q does not exist", filePath)
+	}
+
 	relativeFilePath, err := cleanPath(filePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to clean path for searching lockfile")
