@@ -45,6 +45,9 @@ type File struct {
 	// true then f.contents should not be used.
 	Skipped bool
 
+	// SkippedReason is the reason why this file was skipped
+	SkippedReason string
+
 	// Warnings is an array of warnings that were created
 	// while rendering this template
 	Warnings []string

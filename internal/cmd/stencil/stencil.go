@@ -316,6 +316,9 @@ func (c *Command) writeFile(f *codegen.File) error {
 		msg += " (dry-run)"
 	}
 	c.log.Info(msg)
+	if f.Skipped {
+		c.log.Debug("Skipped: ", f.SkippedReason)
+	}
 	return nil
 }
 
@@ -323,7 +326,6 @@ func (c *Command) writeFile(f *codegen.File) error {
 func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) error {
 	c.log.Infof("Writing template(s) to disk")
 	for _, tpl := range tpls {
-		c.log.Debugf(" -> %s (%s)", tpl.Module.Name, tpl.Path)
 		for i := range tpl.Files {
 			if err := c.writeFile(tpl.Files[i]); err != nil {
 				return err
