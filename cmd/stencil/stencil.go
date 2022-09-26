@@ -36,7 +36,7 @@ var TeleforkAPIKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile
 // <<Stencil::Block(honeycombDataset)>>
 
 // HoneycombDataset is the dataset to use when talking to Honeycomb
-const HoneycombDataset = ""
+const HoneycombDataset = "dev-tooling-team"
 
 // <</Stencil::Block>>
 
