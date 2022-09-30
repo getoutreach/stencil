@@ -109,6 +109,28 @@ func TestCommand_useModulesFromLock(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "should return stable version returned by channel that's not longer selectable",
+			fields: fields{
+				lock: &stencil.Lockfile{
+					Modules: []*stencil.LockfileModuleEntry{
+						{
+							Name:    "testing",
+							Version: "1.0.0",
+						},
+					},
+				},
+				manifest: &configuration.ServiceManifest{
+					Modules: []*configuration.TemplateRepository{
+						{
+							Name:    "testing",
+							Channel: "rc",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

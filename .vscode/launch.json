@@ -7,7 +7,7 @@
     {
       "name": "Launch Debug Server",
       "type": "go",
-      "cwd": "<DIRECTORY_TO_RUN_IN>",
+      "cwd": "${workspaceFolder}",
       "request": "launch",
       "mode": "debug",
       "args": [""],

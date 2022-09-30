@@ -206,6 +206,12 @@ func (c *Command) useModulesFromLock() error {
 		// to =<version> so the resolver only considers
 		// the version from the lockfile.
 		for _, m := range c.manifest.Modules {
+			// Set channel and pre-release to false to avoid accidentally
+			// de-selecting the version from the lockfile.
+			m.Channel = ""
+			//nolint:staticcheck // Why: Resetting value to false
+			m.Prerelease = false
+
 			if m.Name == l.Name {
 				m.Version = l.Version
 			}
