@@ -4,6 +4,8 @@ arguments:
   commands:
     - stencil
   commitGuard: false
+  coverage:
+    provider: codecov
   dependencies:
     optional: []
     required: []
@@ -65,15 +67,10 @@ arguments:
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
-    channel: rc
   - name: github.com/getoutreach/stencil-golang
-    channel: rc
   - name: github.com/getoutreach/stencil-outreach
-    channel: rc
   - name: github.com/getoutreach/stencil-circleci
-    channel: rc
+    channel: main
   - name: github.com/getoutreach/stencil-actions
-    channel: rc
   - name: github.com/getoutreach/stencil-discovery
-    channel: rc
 migrated: true

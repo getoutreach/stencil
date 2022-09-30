@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	giturls "github.com/whilp/git-urls"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
@@ -152,30 +150,70 @@ func (c *Command) useModulesFromLock() error {
 		return fmt.Errorf("frozen lockfile requires a lockfile to exist")
 	}
 
+	desiredModulesHM := make(map[string]bool)
 	for _, m := range c.manifest.Modules {
-		// Convert m.URL -> m.Name
-		//nolint:staticcheck // Why: We're implementing compat here.
-		if m.URL != "" {
-			u, err := giturls.Parse(m.URL) //nolint:staticcheck // Why: We're implementing compat here.
-			if err != nil {
-				//nolint:staticcheck // Why: We're implementing compat here.
-				return errors.Wrapf(err, "failed to parse deprecated url module syntax %q as a URL", m.URL)
-			}
-			m.Name = path.Join(u.Host, u.Path)
+		desiredModulesHM[m.Name] = true
+	}
+
+	lockfileModulesHM := make(map[string]*stencil.LockfileModuleEntry)
+	for _, m := range c.lock.Modules {
+		lockfileModulesHM[m.Name] = m
+	}
+
+	outOfSync := false
+	outOfSyncReasons := make([]string, 0)
+
+	// iterate over all of the modules that are desired, if
+	// they are not in the lockfile, then the user is unable
+	// to use a frozen lockfile.
+	for _, m := range c.manifest.Modules {
+		if _, ok := lockfileModulesHM[m.Name]; !ok {
+			outOfSync = true
+			outOfSyncReasons = append(outOfSyncReasons,
+				fmt.Sprintf("module %s requested by service.yaml but is not in the lockfile", m.Name))
+		}
+	}
+
+	if outOfSync {
+		c.log.WithField("reasons", outOfSyncReasons).Debug("lockfile out of sync reasons")
+		c.log.Error("Unable to use frozen lockfile, the lockfile is out of sync with the service.yaml")
+		return fmt.Errorf("lockfile out of sync")
+	}
+
+	// use the versions from the lockfile
+	for _, l := range c.lock.Modules {
+		if _, ok := desiredModulesHM[l.Name]; !ok {
+			// need to add the module as a top-level dependency so the version
+			// resolver respects it.
+			//
+			// HACK: Ideally we'd do a system to provide constraints, but that'd
+			// require rethinking about how we track the resolution history and how
+			// we present it. This seems good enough for now.
+			c.manifest.Modules = append(c.manifest.Modules, &configuration.TemplateRepository{
+				Name:    l.Name,
+				Version: l.Version,
+			})
 		}
 
-		for _, l := range c.lock.Modules {
+		// ensure that a user doesn't try to frozen-lockfile a replaced
+		// module that uses a directory path, as that would be non-deterministic.
+		if strings.HasPrefix(l.URL, "file://") {
+			return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
+		}
+
+		// set a constraint on the module that is equal
+		// to =<version> so the resolver only considers
+		// the version from the lockfile.
+		for _, m := range c.manifest.Modules {
+			// Set channel and pre-release to false to avoid accidentally
+			// de-selecting the version from the lockfile.
+			m.Channel = ""
+			//nolint:staticcheck // Why: Resetting value to false
+			m.Prerelease = false
+
 			if m.Name == l.Name {
-				if strings.HasPrefix(l.URL, "file://") {
-					return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
-				}
-
 				m.Version = l.Version
-				break
 			}
-		}
-		if m.Version == "" {
-			return fmt.Errorf("frozen lockfile, but no version found for module %q", m.Name)
 		}
 	}
 

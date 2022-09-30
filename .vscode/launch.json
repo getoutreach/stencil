@@ -7,8 +7,10 @@
     {
       "name": "Launch Debug Server",
       "type": "go",
+      "cwd": "${workspaceFolder}",
       "request": "launch",
       "mode": "debug",
+      "args": [""],
       "envFile": "${workspaceRoot}/.vscode/private.env",
       "go.testEnvFile": "${workspaceRoot}/.vscode/private.env",
       "program": "${workspaceRoot}/cmd/stencil/",
