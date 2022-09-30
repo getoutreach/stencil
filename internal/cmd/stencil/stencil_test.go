@@ -129,6 +129,12 @@ func TestCommand_useModulesFromLock(t *testing.T) {
 					},
 				},
 			},
+			want: []*configuration.TemplateRepository{
+				{
+					Name:    "testing",
+					Version: "1.0.0",
+				},
+			},
 			wantErr: false,
 		},
 	}
