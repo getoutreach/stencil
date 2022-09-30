@@ -171,7 +171,6 @@ func (c *Command) useModulesFromLock() error {
 			outOfSync = true
 			outOfSyncReasons = append(outOfSyncReasons,
 				fmt.Sprintf("module %s requested by service.yaml but is not in the lockfile", m.Name))
-			break
 		}
 	}
 
