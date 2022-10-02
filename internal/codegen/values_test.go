@@ -94,13 +94,14 @@ func TestValues(t *testing.T) {
 func TestGeneratedValues(t *testing.T) {
 	log := logrus.New()
 
-	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "testing", []string{}, "testdata/values/values.tpl")
+	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "testing", nil, "testdata/values/values.tpl")
 	assert.NilError(t, err, "failed to create module")
 
-	st := NewStencil(&configuration.ServiceManifest{
+	st, err := NewStencil(&configuration.ServiceManifest{
 		Name:      "testing",
 		Arguments: map[string]interface{}{},
 	}, []*modules.Module{m}, log)
+	assert.NilError(t, err, "failed to create stencil")
 	tpls, err := st.Render(context.Background(), log)
 	assert.NilError(t, err, "failed to render templates")
 	assert.Equal(t, tpls[0].Files[0].String(), "vfs vfs vfs testdata/values/values.tpl")

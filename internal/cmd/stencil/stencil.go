@@ -115,7 +115,10 @@ func (c *Command) Run(ctx context.Context) error {
 		c.log.Infof(" -> %s %s", m.Name, m.Version)
 	}
 
-	st := codegen.NewStencil(c.manifest, mods, c.log)
+	st, err := codegen.NewStencil(c.manifest, mods, c.log)
+	if err != nil {
+		return errors.Wrap(err, "failed to create stencil")
+	}
 	defer st.Close()
 
 	c.log.Info("Loading native extensions")

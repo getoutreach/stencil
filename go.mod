@@ -6,7 +6,6 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/blang/semver/v4 v4.0.0
-	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/getoutreach/gobox v1.53.0
@@ -29,7 +28,12 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require github.com/hashicorp/go-multierror v1.1.1
+require (
+	github.com/bmatcuk/doublestar/v4 v4.2.0
+	github.com/bradleyjkemp/cupaloy/v2 v2.8.0
+	github.com/hashicorp/go-multierror v1.1.1
+	gopkg.in/yaml.v2 v2.4.0
+)
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -123,5 +127,4 @@ require (
 	google.golang.org/grpc v1.46.2 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

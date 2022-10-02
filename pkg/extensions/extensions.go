@@ -144,6 +144,17 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name, version stri
 // directly with the host. Please limit the use of this API for unit testing only!
 func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 	h.log.WithField("extension", name).Debug("Registered inproc extension")
+
+	// If the extension has already been registered, close and replace it.
+	//
+	// This is generally only ever used for testing, and would only be hit
+	// if the same module was registered twice, which is not allowed.
+	if ext, ok := h.extensions[name]; ok {
+		if ext.closer != nil {
+			ext.closer() //nolint:errcheck // Why: Best effort
+		}
+	}
+
 	h.extensions[name] = extension{ext, func() error { return nil }}
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/sirupsen/logrus"
+	"gotest.tools/v3/assert"
 )
 
 type testTpl struct {
@@ -47,11 +48,13 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 		t.Fatal(err)
 	}
 
-	test.s = NewStencil(&configuration.ServiceManifest{
+	st, err := NewStencil(&configuration.ServiceManifest{
 		Name:      "testing",
 		Arguments: args,
 		Modules:   []*configuration.TemplateRepository{{Name: m.Name}},
 	}, []*modules.Module{m}, log)
+	assert.NilError(t, err, "failed to create stencil")
+	test.s = st
 
 	// use the first template from the module
 	// which we've created earlier after loading the module in the
@@ -76,7 +79,7 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 	log := logrus.New()
 
 	mods := make([]*modules.Module, len(args))
-	importList := []string{}
+	importList := []*configuration.TemplateRepository{}
 	for i := range args {
 		if i == 0 {
 			continue
@@ -86,7 +89,7 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 		if err != nil {
 			t.Fatal(err)
 		}
-		importList = append(importList, m.Name)
+		importList = append(importList, &configuration.TemplateRepository{Name: m.Name})
 		mods[i] = m
 	}
 
@@ -101,11 +104,13 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 		moduleTr[i] = &configuration.TemplateRepository{Name: mods[i].Name}
 	}
 
-	test.s = NewStencil(&configuration.ServiceManifest{
+	st, err := NewStencil(&configuration.ServiceManifest{
 		Name:      "testing",
 		Arguments: serviceManifestArgs,
 		Modules:   moduleTr,
 	}, mods, log)
+	assert.NilError(t, err, "failed to create stencil")
+	test.s = st
 
 	// use the first template from the module
 	// which we've created earlier after loading the module in the

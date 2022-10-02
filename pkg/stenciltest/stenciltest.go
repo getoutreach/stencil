@@ -9,17 +9,16 @@ package stenciltest
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/bradleyjkemp/cupaloy"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
+	"github.com/getoutreach/stencil/pkg/stenciltest/config"
+	"github.com/getoutreach/stencil/pkg/stenciltest/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/assert"
@@ -50,41 +49,49 @@ type Template struct {
 	// MUST error.
 	errStr string
 
+	// validators is a list of validators to run on the output.
+	validators []config.Validator
+
 	// persist denotes if we should save a snapshot or not
 	// This is meant for tests.
-	persist bool
+	persist *bool
 }
 
-// New creates a new test for a given template.
+// New creates a new test for a given template. A module is created
+// on the fly using the manifest at the root of the directory, meaning
+// the only dependencies that are available are the ones in the manifest.
 func New(t *testing.T, templatePath string, additionalTemplates ...string) *Template {
-	// GOMOD: <module path>/go.mod
-	b, err := exec.Command("go", "env", "GOMOD").Output()
-	if err != nil {
-		t.Fatalf("failed to determine path to manifest: %v", err)
-	}
-	basepath := strings.TrimSuffix(strings.TrimSpace(string(b)), "/go.mod")
+	repoDir, err := config.GetRepositoryDirectory()
+	assert.NilError(t, err, errors.WrapString("failed to get repository directory"))
 
-	b, err = os.ReadFile(filepath.Join(basepath, "manifest.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, err := os.ReadFile(filepath.Join(repoDir, "manifest.yaml"))
+	assert.NilError(t, err, errors.WrapString("failed to read manifest.yaml"))
 
 	var m configuration.TemplateRepositoryManifest
 	if err := yaml.Unmarshal(b, &m); err != nil {
-		t.Fatal(err)
+		t.Fatalf(errors.Wrap(err, "failed to unmarshal manifest.yaml").Error())
 	}
 
+	if _, err := os.Stat(templatePath); err != nil {
+		t.Fatalf(errors.Wrap(err, "failed to stat template").Error())
+	}
+
+	tr := true
 	return &Template{
 		t:                   t,
 		m:                   &m,
 		path:                templatePath,
 		additionalTemplates: additionalTemplates,
-		persist:             true,
+		persist:             &tr,
 		exts:                map[string]apiv1.Implementation{},
 	}
 }
 
 // Args sets the arguments to the template.
+//
+//	t.Args(map[string]interface{}{
+//	  "foo": "bar",
+//	})
 func (t *Template) Args(args map[string]interface{}) *Template {
 	t.args = args
 	return t
@@ -97,7 +104,7 @@ func (t *Template) Args(args map[string]interface{}) *Template {
 // mock extension is needed to feed fake data per test case.
 //
 // Note: even though input extension is registered inproc, its response to ExecuteTemplateFunction
-// will be encoded as JSON and decoded back as a plain inteface{} to simulate the GRPC transport
+// will be encoded as JSON and decoded back as a plain interface{} to simulate the GRPC transport
 // layer between stencil and the same extension. Refer to the inprocExt struct docs for details.
 func (t *Template) Ext(name string, ext apiv1.Implementation) *Template {
 	t.exts[name] = inprocExt{ext: ext}
@@ -112,62 +119,76 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
+// Validator adds a validator to be ran against the output of the template.
+// Can be a go-function via Func, or a command via Command.
+//
+// For more information on validators, see the documentation for the
+// config.Validator type.
+func (t *Template) Validator(v config.Validator) {
+	t.validators = append(t.validators, v)
+}
+
+// expectedError bubbles up an error unless it was expected
+func (t *Template) expectedError(test *testing.T, err error) {
+	if t.errStr != "" {
+		// if t.errStr was set then we expected an error, since that
+		// was set via t.ErrorContains()
+		if err == nil {
+			test.Fatal("expected error, got nil")
+		}
+		assert.ErrorContains(test, err, t.errStr, "expected render to fail with error containing %q", t.errStr)
+		return
+	}
+
+	test.Fatalf(errors.Wrap(err, "unexpected error").Error())
+}
+
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
-		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, "modulestest", nil, append([]string{t.path}, t.additionalTemplates...)...)
-		if err != nil {
-			got.Fatalf("failed to create module from template %q", t.path)
-		}
+		// We pass the modules we depend on here, but we don't actually resolve or use them,
+		// as we're not trying to render our dependencies files. This, however, satisfies
+		// template functions that check the dependency tree for validation purposes.
+		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, "modulestest",
+			t.m.Modules, append([]string{t.path}, t.additionalTemplates...)...)
+		assert.NilError(got, err, errors.WrapString("failed to create module"))
 
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
 			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
-		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+		st, err := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+		assert.NilError(got, err, errors.WrapString("failed to create stencil"))
 
+		// Register all in-process extensions.
 		for name, ext := range t.exts {
 			st.RegisterInprocExtensions(name, ext)
 		}
 
 		tpls, err := st.Render(context.Background(), logrus.New())
 		if err != nil {
-			if t.errStr != "" {
-				// if t.errStr was set then we expected an error, since that
-				// was set via t.ErrorContains()
-				if err == nil {
-					got.Fatal("expected error, got nil")
-				}
-				assert.ErrorContains(t.t, err, t.errStr, "expected render to fail with error containing %q", t.errStr)
-			} else {
-				got.Fatalf("failed to render: %v", err)
-			}
+			t.expectedError(got, err)
 		}
 
 		for _, tpl := range tpls {
-			// skip templates that aren't the one we are testing
+			// Skip templates that aren't the one we are testing, so we don't
+			// snapshot dependencies.
 			if tpl.Path != t.path {
 				continue
 			}
 
+			// Generate a snapshot for each file rendered by this template
 			for _, f := range tpl.Files {
-				// skip the snapshot
-				if !t.persist {
-					continue
-				}
-
-				// Create snapshots with a .snapshot ext to keep them away from linters, see Jira for more details.
-				// TODO(jaredallard)[DTSS-2086]: figure out what to do with the snapshot codegen.File directive
+				// Create snapshots with a .snapshot ext to keep them away from linters
 				snapshotName := f.Name() + ".snapshot"
-				// Run each template file as a sub-test, if the sub-test fails, it will report its own error.
-				// Even if one of the templates fail, we let the test continue - otherwise devs need to go thru
-				// 'onion peeling' excercise to create a bulk of new snapshots or re-run test multiple times to
-				// reveal distinct errors for all the templates changed in one PR.
 				got.Run(snapshotName, func(got *testing.T) {
-					snapshot := cupaloy.New(cupaloy.ShouldUpdate(func() bool { return save }), cupaloy.CreateNewAutomatically(true))
-					snapshot.SnapshotT(got, f)
+					if err := snapshot(got, f,
+						&snapshotOptions{Save: save, Validators: t.validators, Persist: t.persist},
+					); err != nil {
+						t.expectedError(got, err)
+					}
 				})
 			}
 
-			// only ever process one template
+			// only ever process one template, the one that was provided first earlier.
 			break
 		}
 	})

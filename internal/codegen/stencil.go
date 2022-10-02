@@ -23,7 +23,15 @@ import (
 )
 
 // NewStencil creates a new, fully initialized Stencil renderer function
-func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) (*Stencil, error) {
+	registeredModules := make(map[string]struct{})
+	for _, m := range mods {
+		if _, ok := registeredModules[m.Name]; ok {
+			return nil, errors.Errorf("module %q was imported twice", m.Name)
+		}
+
+		registeredModules[m.Name] = struct{}{}
+	}
 	return &Stencil{
 		log:         log,
 		m:           m,
@@ -31,7 +39,7 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 		modules:     mods,
 		isFirstPass: true,
 		sharedData:  make(map[string][]interface{}),
-	}
+	}, nil
 }
 
 // Stencil provides the basic functions for

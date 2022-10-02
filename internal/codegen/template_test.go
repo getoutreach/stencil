@@ -43,7 +43,8 @@ func TestSingleFileRender(t *testing.T) {
 
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	st, err := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	assert.NilError(t, err, "failed to create stencil")
 	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
@@ -65,7 +66,8 @@ func TestMultiFileRender(t *testing.T) {
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	st, err := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	assert.NilError(t, err, "failed to create stencil")
 	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
@@ -91,7 +93,8 @@ func TestMultiFileWithInputRender(t *testing.T) {
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	st, err := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	assert.NilError(t, err, "failed to create stencil")
 	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
@@ -117,7 +120,8 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	st, err := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	assert.NilError(t, err, "failed to create stencil")
 	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 1, "expected Render() to create 1 files")
@@ -137,7 +141,8 @@ func TestGeneratedBlock(t *testing.T) {
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{}}
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	st, err := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	assert.NilError(t, err, "failed to create stencil")
 	assert.NilError(t, os.WriteFile(fakeFilePath, []byte(fakeGeneratedBlockFile), 0o644),
 		"failed to write generated file")
 
