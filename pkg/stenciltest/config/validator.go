@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/pkg/stenciltest/errors"
 )
 
@@ -53,10 +52,10 @@ func NewGoValidator(f ValidatorFunc) Validator {
 }
 
 // ValidatorFunc is a function that validates a template.
-type ValidatorFunc func(f *codegen.File) error
+type ValidatorFunc func(contents string) error
 
 // Validate validates the template at the given path.
-func (v Validator) Validate(t *testing.T, f *codegen.File) error {
+func (v Validator) Validate(t *testing.T, name, contents string) error {
 	if v.Path == "" {
 		v.Path = "**"
 	}
@@ -65,14 +64,14 @@ func (v Validator) Validate(t *testing.T, f *codegen.File) error {
 	}
 
 	// Check if the path matches the glob
-	if matched, err := doublestar.Match(v.Path, f.Name()); !matched || err != nil {
+	if matched, err := doublestar.Match(v.Path, name); !matched || err != nil {
 		return nil
 	}
 
 	// Check if the extension matches the extensions list
 	matchedExtensions := false
 	for _, ext := range v.Extensions {
-		if matched, err := filepath.Match(ext, filepath.Ext(f.Name())); matched && err == nil {
+		if matched, err := filepath.Match(ext, filepath.Ext(name)); matched && err == nil {
 			matchedExtensions = true
 			break
 		}
@@ -83,7 +82,7 @@ func (v Validator) Validate(t *testing.T, f *codegen.File) error {
 
 	// If a function is set, use that instead of a command
 	if v.Func != nil {
-		return v.Func(f)
+		return v.Func(contents)
 	}
 
 	repoDir, err := GetRepositoryDirectory()
@@ -93,11 +92,11 @@ func (v Validator) Validate(t *testing.T, f *codegen.File) error {
 
 	// Create a temporary file to write the rendered template to
 	// for the validator to run on.
-	tempFile, err := os.CreateTemp(t.TempDir(), filepath.Base(f.Name()))
+	tempFile, err := os.CreateTemp(t.TempDir(), filepath.Base(name))
 	if err != nil {
 		return errors.Wrap(err, "failed to create temp file")
 	}
-	if _, err := tempFile.Write(f.Bytes()); err != nil {
+	if _, err := tempFile.WriteString(contents); err != nil {
 		return errors.Wrap(err, "failed to write to temp file")
 	}
 	tempFile.Close()                 //nolint:errcheck // Why: Best effort

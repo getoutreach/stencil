@@ -209,7 +209,7 @@ import (
 
 func TestRenderAFile(t \*testing.T) {
 	st := stenciltest.New(t, "helloWorld.tpl")
-	st.Validator(config.NewGoValidator(func(f *codegen.File) error {
+	st.Validator(config.NewGoValidator(func(contents string) error {
 		// check if yaml, return error if not
 		return nil
 	}))

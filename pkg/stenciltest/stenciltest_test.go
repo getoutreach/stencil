@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/stenciltest/config"
@@ -71,9 +70,9 @@ func TestGoValidator(t *testing.T) {
 		t:                   t,
 		persist:             &fal,
 	}
-	st.Validator(config.NewGoValidator(func(f *codegen.File) error {
-		if f.String() != "hello" {
-			return fmt.Errorf("expected hello, got %s", f.String())
+	st.Validator(config.NewGoValidator(func(contents string) error {
+		if contents != "hello" {
+			return fmt.Errorf("expected hello, got %s", contents)
 		}
 
 		// matched
@@ -90,9 +89,9 @@ func TestGoValidatorError(t *testing.T) {
 		t:                   t,
 		persist:             &fal,
 	}
-	st.Validator(config.NewGoValidator(func(f *codegen.File) error {
-		if f.String() != "dontmatch" {
-			return fmt.Errorf("expected dontmatch, got %s", f.String())
+	st.Validator(config.NewGoValidator(func(contents string) error {
+		if contents != "dontmatch" {
+			return fmt.Errorf("expected dontmatch, got %s", contents)
 		}
 
 		// matched
@@ -141,9 +140,9 @@ func TestInProcExtension(t *testing.T) {
 		exts:                make(map[string]apiv1.Implementation),
 	}
 	st.Ext("inproc", &apiv1.EchoExtension{})
-	st.Validator(config.NewGoValidator(func(f *codegen.File) error {
-		if f.String() != "true" {
-			return fmt.Errorf("expected true, got %q", f.String())
+	st.Validator(config.NewGoValidator(func(contents string) error {
+		if contents != "true" {
+			return fmt.Errorf("expected true, got %q", contents)
 		}
 
 		// matched

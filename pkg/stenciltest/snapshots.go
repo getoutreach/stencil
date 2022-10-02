@@ -55,7 +55,7 @@ func snapshot(t *testing.T, f *codegen.File, opts *snapshotOptions) error {
 	validators = append(validators, opts.Validators...)
 
 	for _, v := range validators {
-		if err := v.Validate(t, f); err != nil {
+		if err := v.Validate(t, f.Name(), f.String()); err != nil {
 			return errors.Wrap(err, "failed to validate file")
 		}
 	}
