@@ -1,7 +1,7 @@
 ---
 title: stencil updater get-channels
 linktitle: stencil updater get-channels
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,6 @@ USAGE:
 
 OPTIONS:
    --help, -h  show help (default: false)
-   
+
 
 ```

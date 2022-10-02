@@ -1,7 +1,7 @@
 ---
 title: stencil updater use
 linktitle: stencil updater use
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,6 @@ USAGE:
 
 OPTIONS:
    --list  List available versions (default: false)
-   
+
 
 ```

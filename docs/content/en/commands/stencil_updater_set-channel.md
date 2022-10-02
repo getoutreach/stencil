@@ -1,7 +1,7 @@
 ---
 title: stencil updater set-channel
 linktitle: stencil updater set-channel
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,6 @@ USAGE:
 
 OPTIONS:
    --reset  Reset the channel to the default (default: false)
-   
+
 
 ```

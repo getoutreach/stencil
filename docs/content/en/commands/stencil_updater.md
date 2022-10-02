@@ -1,7 +1,7 @@
 ---
 title: stencil updater
 linktitle: stencil updater
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -28,6 +28,6 @@ COMMANDS:
 
 OPTIONS:
    --help, -h  show help (default: false)
-   
+
 
 ```

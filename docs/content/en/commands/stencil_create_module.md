@@ -23,6 +23,6 @@ DESCRIPTION:
 
 OPTIONS:
    --native-extension  Generates a native extension (default: false)
-   
+
 
 ```

@@ -10,12 +10,8 @@ menu:
     parent: "functions"
 ---
 
-
 ```go-text-template
 {{ $_ := file.SetPath "new/path/to/file.txt" }}
 ```
 
-
 Note: The $\_ is required to ensure \<nil\> isn't outputted into the template\.
-
-

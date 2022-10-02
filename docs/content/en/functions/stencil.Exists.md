@@ -10,11 +10,8 @@ menu:
     parent: "functions"
 ---
 
-
 ```go-text-template
 {{- if stencil.Exists "myfile.txt" }}
 {{ stencil.ReadFile "myfile.txt" }}
 {{- end }}
 ```
-
-

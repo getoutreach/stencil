@@ -1,7 +1,7 @@
 ---
 title: stencil updater status
 linktitle: stencil updater status
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,6 @@ USAGE:
 
 OPTIONS:
    --debug  Show debug information (default: false)
-   
+
 
 ```

@@ -70,8 +70,8 @@ For more complex types, like objects, and arrays the schema is an object with pr
 ```yaml
 type: object
 properties:
-	name:
-		type: string
+  name:
+    type: string
 ```
 
 For example, array of strings:
@@ -79,7 +79,7 @@ For example, array of strings:
 ```yaml
 type: array
 items:
-	type: string
+  type: string
 ```
 
 #### Aliasing an argument with `from`
@@ -89,21 +89,21 @@ Aliasing an argument allows you to reference another argument from within the mo
 ```yaml
 # your module
 arguments:
-	description:
-		from: github.com/getoutreach/stencil-base
+  description:
+    from: github.com/getoutreach/stencil-base
 
 # github.com/getoutreach/stencil-base
 arguments:
-	description:
-		schema:
-			type: string
+  description:
+    schema:
+      type: string
 ```
 
 There's a few limitations with aliasing arguments:
 
- * Aliasing an argument to another argument that is itself aliased is not allowed.
- * When `from` is used, no other properties on the argument being aliased can be set.
- * When aliasing to a module, that module _must_ be listed in the `modules` key of the module aliasing the argument.
+- Aliasing an argument to another argument that is itself aliased is not allowed.
+- When `from` is used, no other properties on the argument being aliased can be set.
+- When aliasing to a module, that module _must_ be listed in the `modules` key of the module aliasing the argument.
 
 ## Module Hooks
 
@@ -138,24 +138,24 @@ hello, world!
 package main
 
 import (
-	"testing"
+  "testing"
 
   "github.com/getoutreach/stencil/pkg/stenciltest"
 )
 
 func TestRenderAFile(t \*testing.T) {
-	// Create a renderer with the specified file being the file to test.
-	//
-	// More files may be provided if they are depended as variadic arguments
-	// but their output will not be saved.
-	st := stenciltest.New(t, "helloWorld.tpl")
+  // Create a renderer with the specified file being the file to test.
+  //
+  // More files may be provided if they are depended as variadic arguments
+  // but their output will not be saved.
+  st := stenciltest.New(t, "helloWorld.tpl")
 
-	// Define the arguments to pass to stencil
-	st.Args(map[string]interface{}{"org": "getoutreach"})
+  // Define the arguments to pass to stencil
+  st.Args(map[string]interface{}{"org": "getoutreach"})
 
-	// Run the test, persisting the snapshot to disk if it changed.
-	// Default is set to false.
-	st.Run(false)
+  // Run the test, persisting the snapshot to disk if it changed.
+  // Default is set to false.
+  st.Run(false)
 }
 ```
 
@@ -179,16 +179,16 @@ Here's a quick example, using the previous example:
 package main
 
 import (
-	"testing"
+  "testing"
 
   "github.com/getoutreach/stencil/pkg/stenciltest"
 )
 
 func TestRenderAFile(t \*testing.T) {
-	st := stenciltest.New(t, "helloWorld.tpl")
-	// enables: {{ extensions.Call "inproc.echo" }}
-	st.InProc("inproc", &apiv1.EchoExtension{})
-	st.Run(false)
+  st := stenciltest.New(t, "helloWorld.tpl")
+  // enables: {{ extensions.Call "inproc.echo" }}
+  st.InProc("inproc", &apiv1.EchoExtension{})
+  st.Run(false)
 }
 ```
 
@@ -202,18 +202,18 @@ Here's an example of a validator that validates that the output of a file is a v
 package main
 
 import (
-	"testing"
+  "testing"
 
-	"github.com/getoutreach/stencil/pkg/stenciltest"
+  "github.com/getoutreach/stencil/pkg/stenciltest"
 )
 
 func TestRenderAFile(t \*testing.T) {
-	st := stenciltest.New(t, "helloWorld.tpl")
-	st.Validator(config.NewGoValidator(func(contents string) error {
-		// check if yaml, return error if not
-		return nil
-	}))
-	st.Run(false)
+  st := stenciltest.New(t, "helloWorld.tpl")
+  st.Validator(config.NewGoValidator(func(contents string) error {
+    // check if yaml, return error if not
+    return nil
+  }))
+  st.Run(false)
 }
 ```
 
@@ -223,8 +223,8 @@ Here's an example of a global validator that ensures that Go code has been forma
 # stenciltest.yaml
 validators:
 - command: gofmt -l -s -w
-	extensions:
-	- go
+  extensions:
+  - go
 ```
 
 ### Testing a Module used in a Stencil Application
@@ -235,11 +235,11 @@ For example, if an application uses the `github.com/stencil/example-module` modu
 
 ```yaml
 replacements:
-	# Replace it with a file path
-	github.com/stencil/example-module: ../example-module
+  # Replace it with a file path
+  github.com/stencil/example-module: ../example-module
 
-	# Replace it with a different URL
-	github.com/stencil/example-module: github.com/myname/example-module
+  # Replace it with a different URL
+  github.com/stencil/example-module: github.com/myname/example-module
 ```
 
 If you want to lock the dependency to a specific version currently replacements don't support setting the version, but instead you'd specify this in the `version` field of the module field of the `service.yaml`. For the example above:
@@ -247,7 +247,7 @@ If you want to lock the dependency to a specific version currently replacements 
 ```yaml
 modules:
 - name: github.com/stencil/example-module
-	version: v1.0.0
+  version: v1.0.0
 ```
 
 ## Releasing a Module

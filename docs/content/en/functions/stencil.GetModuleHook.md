@@ -10,9 +10,7 @@ menu:
     parent: "functions"
 ---
 
-
 This is incredibly useful for allowing other modules to write to files that your module owns\. Think of them as extension points for your module\. The value returned by this function is always a \[\]interface\{\}\, aka a list\.
-
 
 ```go-text-template
 {{- /* This returns a []interface{} */}}
@@ -21,5 +19,3 @@ This is incredibly useful for allowing other modules to write to files that your
   {{ . }}
 {{- end }}
 ```
-
-

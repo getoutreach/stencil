@@ -1,7 +1,7 @@
 ---
 title: stencil updater rollback
 linktitle: stencil updater rollback
-description: 
+description:
 date: 2022-05-04
 categories: [commands]
 menu:
@@ -20,6 +20,6 @@ USAGE:
 
 OPTIONS:
    --version value  The version to rollback to (default: "v1.28.0-rc.2")
-   
+
 
 ```

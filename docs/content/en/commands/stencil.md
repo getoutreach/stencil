@@ -25,9 +25,9 @@ DESCRIPTION:
    a smart templating engine for service development
 
 COMMANDS:
-   describe  
-   create    
-   docs      
+   describe
+   create
+   docs
    updater   Commands for interacting with the built-in updater
    help, h   Shows a list of commands or help for one command
 
@@ -41,6 +41,6 @@ GLOBAL OPTIONS:
    --skip-update                   skips the updater check (default: false)
    --use-prerelease                Use prerelease versions of stencil modules (default: false)
    --version, -v                   print the version (default: false)
-   
+
 
 ```

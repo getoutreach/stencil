@@ -10,9 +10,6 @@ menu:
     parent: "functions"
 ---
 
-
 ```go-text-template
 {{ file.RemoveAll "path" }}
 ```
-
-

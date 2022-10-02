@@ -10,12 +10,8 @@ menu:
     parent: "functions"
 ---
 
-
 This is useful for programmatic file generation within a template\.
-
 
 ```go-text-template
 {{ file.SetContents "Hello, world!" }}
 ```
-
-
