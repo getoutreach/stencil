@@ -22,8 +22,8 @@ DESCRIPTION:
    Commands for generating documentation
 
 COMMANDS:
-   generate  Generate documentation
-   help, h   Shows a list of commands or help for one command
+     generate  Generate documentation
+     help, h   Shows a list of commands or help for one command
 
 OPTIONS:
    --help, -h  show help (default: false)

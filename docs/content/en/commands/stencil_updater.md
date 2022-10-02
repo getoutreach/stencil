@@ -19,11 +19,12 @@ USAGE:
    stencil updater command [command options] [arguments...]
 
 COMMANDS:
-   set-channel    Set the channel to check for updates: release or rc
-   get-channel    Returns the current channel: release or rc
-   rollback       Rollback to the previous version
-   list-releases  List all releases
-   help, h        Shows a list of commands or help for one command
+     set-channel   Set the channel to check for updates
+     get-channels  Returns the valid channels
+     rollback      Rollback to the previous version
+     use           Use a specific version of the application
+     status        Returns the current status of the updater
+     help, h       Shows a list of commands or help for one command
 
 OPTIONS:
    --help, -h  show help (default: false)

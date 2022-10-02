@@ -22,8 +22,8 @@ DESCRIPTION:
    Commands to create template repositories, or stencil powered repositories
 
 COMMANDS:
-   module, templaterepository  
-   help, h                     Shows a list of commands or help for one command
+     module, templaterepository  
+     help, h                     Shows a list of commands or help for one command
 
 OPTIONS:
    --help, -h  show help (default: false)
