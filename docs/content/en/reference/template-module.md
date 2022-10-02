@@ -227,6 +227,8 @@ validators:
   - go
 ```
 
+For more information, see the [go docs](https://pkg.go.dev/github.com/getoutreach/stencil/pkg/stenciltest/config#Validator)
+
 ### Testing a Module used in a Stencil Application
 
 A `service.yaml` supports a `replacements` key that can be used to replace the source of a module with a different module. This is useful for testing a module that is used in a stencil application.
