@@ -1,4 +1,4 @@
-version: v1.28.1-rc.1
+version: v1.28.1-rc.1-4-g0c6daa1
 modules:
     - name: github.com/getoutreach/devbase
       url: https://github.com/getoutreach/devbase
@@ -8,7 +8,7 @@ modules:
       version: v0.1.0
     - name: github.com/getoutreach/stencil-base
       url: https://github.com/getoutreach/stencil-base
-      version: v0.7.0-rc.2
+      version: rc
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
       version: v1.4.0-rc.1
