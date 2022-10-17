@@ -179,8 +179,19 @@ func TestCanUseBranch(t *testing.T) {
 		},
 	}, newLogger())
 	assert.NilError(t, err, "failed to call GetModulesForService()")
-	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
-	assert.Equal(t, mods[0].Version, "main", "expected module to match")
+
+	var mod *modules.Module
+	for _, m := range mods {
+		if m.Name == "github.com/getoutreach/stencil-base" {
+			mod = m
+			break
+		}
+	}
+	if mod == nil {
+		t.Fatal("failed to find module")
+	}
+
+	assert.Equal(t, mod.Version, "main", "expected module to match")
 }
 
 func TestCanRespectChannels(t *testing.T) {

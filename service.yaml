@@ -1,24 +1,14 @@
 name: stencil
 arguments:
-  circleAPIKey: ""
   commands:
     - stencil
-  commitGuard: false
   coverage:
     provider: codecov
-  dependencies:
-    optional: []
-    required: []
   description: microservice lifecycle manager
-  grpcClients: []
-  kubernetes:
-    groups: []
   lintroller: platinum
   metrics: datadog
   opslevel:
     confluenceSpaceKey: DTSS
-    datadogDashboards:
-      mainLink: ""
     designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
   oss: true
   releaseOptions:
@@ -26,40 +16,8 @@ arguments:
     enablePrereleases: true
     prereleasesBranch: rc
   reportingTeam: fnd-dt
-  resources: {}
-  service: false
   slack: dev-tooling-notifications
-  terraform:
-    datadog:
-      grpc:
-        evaluationWindow: ""
-        latency:
-          percentiles:
-            highTraffic: 0
-            lowTraffic: 0
-          thresholds:
-            highTraffic: 0
-            lowTraffic: 0
-        lowTrafficCountThreshold: 0
-        qos:
-          thresholds:
-            highTraffic: 0
-            lowTraffic: 0
-        tags: []
-      http:
-        evaluationWindow: ""
-        percentiles:
-          highTraffic: 0
-          lowTraffic: 0
-        thresholds:
-          highTraffic: 0
-          lowCount: 0
-          lowTraffic: 0
-      pods:
-        thresholds:
-          availableLowCount: 0
   tracing: opentelemetry
-  tutorial: false
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb
     - deploy/launchdarkly/%(environment)s/launchdarkly
@@ -67,10 +25,10 @@ arguments:
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
+    channel: rc
   - name: github.com/getoutreach/stencil-golang
   - name: github.com/getoutreach/stencil-outreach
   - name: github.com/getoutreach/stencil-circleci
-    channel: main
   - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-discovery
 migrated: true
