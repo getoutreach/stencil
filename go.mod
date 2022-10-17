@@ -3,7 +3,7 @@ module github.com/getoutreach/stencil
 go 1.17
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.5
+	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
