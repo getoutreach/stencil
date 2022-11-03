@@ -205,17 +205,8 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v inte
 	if err := schema.Validate(v); err != nil {
 		var validationError *jsonschema.ValidationError
 		if errors.As(err, &validationError) {
-			// If there's only one error, return it directly, otherwise
-			// return the full list of errors.
-			errs := validationError.DetailedOutput().Errors
-			out := ""
-			if len(errs) == 1 {
-				out = errs[0].Error
-			} else {
-				out = fmt.Sprintf("%#v", validationError.DetailedOutput().Errors)
-			}
-
-			return fmt.Errorf("module %q argument %q validation failed: %s", s.t.Module.Name, pth, out)
+			return fmt.Errorf("module %q argument %q validation failed: %#v",
+				s.t.Module.Name, pth, validationError.DetailedOutput())
 		}
 
 		return errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)
