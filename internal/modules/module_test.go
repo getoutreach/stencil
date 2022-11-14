@@ -69,7 +69,7 @@ func TestCanGetLatestVersion(t *testing.T) {
 		},
 	}, newLogger())
 	assert.NilError(t, err, "failed to call GetModulesForService()")
-	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
+	assert.Equal(t, len(mods), 3, "expected module and dependencies")
 }
 
 func TestHandleMultipleConstraints(t *testing.T) {

@@ -57,6 +57,47 @@ func TestArgs(t *testing.T) {
 	st.Run(false)
 }
 
+func TestGetTemplateRepositoryNames(t *testing.T) {
+	trs := []*configuration.TemplateRepository{
+		{
+			Name:    "test1",
+			Version: "test",
+		},
+		{
+			Name: "test2",
+		},
+	}
+
+	result := getTemplateRepositoryNames(trs)
+
+	assert.DeepEqual(t, result, []string{"test1", "test2"})
+}
+
+func TestModulesFromTemplateRepository(t *testing.T) {
+	trs := []*configuration.TemplateRepository{
+		{
+			Name:    "test1",
+			Version: "test",
+		},
+		{
+			Name: "test2",
+		},
+	}
+
+	result, err := modulesFromTemplateRepository(trs)
+	if err != nil {
+		t.Fatalf("unexpected error while creating modules: %v", err)
+	}
+
+	// Ensure we respect the passed in version
+	assert.Equal(t, result[0].Name, "test1")
+	assert.Equal(t, result[0].Version, "test")
+
+	// Ensure we default to main
+	assert.Equal(t, result[1].Name, "test2")
+	assert.Equal(t, result[1].Version, "main")
+}
+
 // Doing this just to bump up coverage numbers, we essentially test this w/ the Template
 // constructors in each test.
 func TestCoverageHack(t *testing.T) {

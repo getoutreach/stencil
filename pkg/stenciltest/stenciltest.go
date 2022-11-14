@@ -8,6 +8,7 @@ package stenciltest
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -112,17 +113,55 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
+// getTemplateRepositoryNames retrieves the naems from the passed in TemplateRepositories
+func getTemplateRepositoryNames(trs []*configuration.TemplateRepository) []string {
+	deps := make([]string, len(trs))
+	for i, tr := range trs {
+		deps[i] = tr.Name
+	}
+	return deps
+}
+
+// modulesFromTemplateRepository creates new modules from the passed in TemplateRepositories
+func modulesFromTemplateRepository(trs []*configuration.TemplateRepository) ([]*modules.Module, error) {
+	var mods []*modules.Module
+	for _, tr := range trs {
+		// Use the present version or main
+		if tr.Version == "" {
+			tr.Version = "main"
+		}
+
+		m, err := modules.New(context.Background(), "", tr)
+		if err != nil {
+			return nil, fmt.Errorf("could not create a new modules for %s: %w", tr.Name, err)
+		}
+
+		mods = append(mods, m)
+	}
+
+	return mods, nil
+}
+
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
-		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, "modulestest", nil, append([]string{t.path}, t.additionalTemplates...)...)
+		deps := getTemplateRepositoryNames(t.m.Modules)
+
+		m, err := modulestest.NewModuleFromTemplates(
+			t.m.Arguments, "modulestest", deps, append([]string{t.path}, t.additionalTemplates...)...)
 		if err != nil {
 			got.Fatalf("failed to create module from template %q", t.path)
 		}
 
+		mods, err := modulesFromTemplateRepository(t.m.Modules)
+		if err != nil {
+			got.Fatalf("could not get modules: %v ", err)
+		}
+		mods = append(mods, m)
+
 		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
 			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
-		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+		st := codegen.NewStencil(mf, mods, logrus.New())
 
 		for name, ext := range t.exts {
 			st.RegisterInprocExtensions(name, ext)
