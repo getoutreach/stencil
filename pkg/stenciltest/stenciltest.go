@@ -113,7 +113,7 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
-// getTemplateRepositoryNames retrieves the naems from the passed in TemplateRepositories
+// getTemplateRepositoryNames retrieves the names from the passed in TemplateRepositories
 func getTemplateRepositoryNames(trs []*configuration.TemplateRepository) []string {
 	deps := make([]string, len(trs))
 	for i, tr := range trs {
