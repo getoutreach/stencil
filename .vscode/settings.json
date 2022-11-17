@@ -10,9 +10,7 @@
   "go.useLanguageServer": true,
   "go.testEnvFile": "${workspaceFolder}/.vscode/private.env",
   "go.alternateTools": {
-    // This makes sure we use the correct version
-    // of golangci-lint in our editors.
-    "golangci-lint": "${workspaceFolder}/.bootstrap/shell/golangci-lint.sh"
+    "golangci-lint": "${workspaceFolder}/.bootstrap/shell/vscode/golang-linters.sh"
   },
   "go.buildTags": "or_dev",
   "go.testTags": "or_test,or_int,or_e2e",
