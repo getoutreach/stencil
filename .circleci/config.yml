@@ -51,7 +51,6 @@ jobs:
     resource_class: medium+
     steps:
       - shared/setup_environment
-      - shared/with_go_cache
       - run:
           name: Run integration tests
           no_output_timeout: 30m
