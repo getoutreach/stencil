@@ -136,10 +136,10 @@ package main
 func main() {
 	fmt.Println("Hello, world!")
 
-	///Block(additionalMessage)
+	// <<Stencil::Block(additionalMessage)>>
 	{{- /* It's important to not indent the file.Block to prevent the indentation from being copied over and.. over again. */ }}
 {{ file.Block "additionalMessage" }}
-	///EndBlock(additionalMessage)
+	// <</Stencil::Block>>
 }
 ```
 
@@ -150,9 +150,9 @@ package main
 
 func main() {
 	fmt.Println("Hello, world!")
-	///Block(additionalMessage)
+	// <<Stencil::Block(additionalMessage)>>
 
-	///EndBlock(additionalMessage)
+	// <</Stencil::Block>>
 }
 ```
 
