@@ -34,6 +34,10 @@ linters-settings:
       - style
     disabled-checks:
       - whyNoLint # Doesn't seem to work properly
+      # Suggests bad simplifications (After is not identical to !Before).
+      # TODO(jkinkead): Remove when we have a version of go-critic with
+      # https://github.com/go-critic/go-critic/pull/1281 merged.
+      - timeCmpSimplify
   funlen:
     lines: 500
     statements: 50
