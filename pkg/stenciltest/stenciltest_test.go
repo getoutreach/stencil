@@ -5,6 +5,7 @@ import (
 
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/google/go-cmp/cmp"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -15,6 +16,7 @@ func TestMain(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.Run(false)
 }
@@ -26,6 +28,7 @@ func TestErrorHandling(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.ErrorContains("sad")
 	st.Run(false)
@@ -36,6 +39,7 @@ func TestErrorHandling(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.ErrorContains("sad pikachu")
 	st.Run(false)
@@ -52,6 +56,7 @@ func TestArgs(t *testing.T) {
 		}},
 		t:       t,
 		persist: false,
+		log:     logrus.New(),
 	}
 	st.Args(map[string]interface{}{"hello": "world"})
 	st.Run(false)
@@ -71,31 +76,6 @@ func TestGetTemplateRepositoryNames(t *testing.T) {
 	result := getTemplateRepositoryNames(trs)
 
 	assert.DeepEqual(t, result, []string{"test1", "test2"})
-}
-
-func TestModulesFromTemplateRepository(t *testing.T) {
-	trs := []*configuration.TemplateRepository{
-		{
-			Name:    "test1",
-			Version: "test",
-		},
-		{
-			Name: "test2",
-		},
-	}
-
-	result, err := modulesFromTemplateRepository(trs)
-	if err != nil {
-		t.Fatalf("unexpected error while creating modules: %v", err)
-	}
-
-	// Ensure we respect the passed in version
-	assert.Equal(t, result[0].Name, "test1")
-	assert.Equal(t, result[0].Version, "test")
-
-	// Ensure we default to main
-	assert.Equal(t, result[1].Name, "test2")
-	assert.Equal(t, result[1].Version, "main")
 }
 
 // Doing this just to bump up coverage numbers, we essentially test this w/ the Template

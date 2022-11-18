@@ -102,7 +102,11 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	c.log.Info("Fetching dependencies")
-	mods, err := modules.GetModulesForService(ctx, c.token, c.manifest, c.log)
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: c.manifest,
+		Token:           c.token,
+		Log:             c.log,
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to process modules list")
 	}

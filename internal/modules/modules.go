@@ -26,13 +26,20 @@ import (
 type resolvedModule struct {
 	*Module
 
+	// dontResolve is used to prevent a module from being resolved
+	// if it's already been resolved.
+	//
+	// This is generally only used if a module doesn't make sense to be
+	// resolved again. Examples: local modules and in-memory (vfs) modules.
+	dontResolve bool
+
 	// version is the version that was resolved for this module
 	version *resolver.Version
 
-	// history is the stack of history that were used to resolve
+	// history is the stack of the criteria that was used to resolve
 	// this module. This is used to generate a useful error message if a
-	// constraint, or other import condition,
-	//  is violated. This is sorted in descending order.
+	// constraint, or other import condition, is violated.
+	// This is sorted in descending order.
 	history []resolution
 }
 
@@ -58,22 +65,79 @@ type resolution struct {
 	parentModule string
 }
 
+// ModuleResolveOptions contains options for resolving modules
+type ModuleResolveOptions struct {
+	// Token is the token to use to resolve modules
+	Token cfg.SecretData
+
+	// Log is the logger to use
+	Log logrus.FieldLogger
+
+	// ServiceManifest is the manifest to resolve modules for.
+	// This can only be supplied if Module is not set.
+	ServiceManifest *configuration.ServiceManifest
+
+	// Module is the module to resolve dependencies for.
+	// This can only be supplied if ServiceManifest is not
+	// set. This module is automatically added as a
+	// Replacement.
+	Module *Module
+
+	// Replacements is a map of modules to use instead of ones specified
+	// in the manifest. This is mainly meant for tests/importing of stencil
+	// as this is not resolved and instead requires a module type to be
+	// passed.
+	Replacements map[string]*Module
+}
+
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
-func GetModulesForService(ctx context.Context, token cfg.SecretData,
-	sm *configuration.ServiceManifest, log logrus.FieldLogger) ([]*Module, error) {
+func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
 	// start resolving the top-level modules
-	modulesToResolve := make([]resolveModule, len(sm.Modules))
-	for i := range sm.Modules {
-		modulesToResolve[i] = resolveModule{
-			conf:   sm.Modules[i],
-			parent: sm.Name + " (top-level)",
-		}
-	}
+	modulesToResolve := make([]resolveModule, 0)
+
+	// strReplacements are replacements that replace the URL for a module's
+	// provided import path.
+	strReplacements := make(map[string]string)
 
 	// resolved contains the current modules that have been selected and is used
 	// to track previous resolutions/constraints for re-resolving modules.
 	resolved := make(map[string]*resolvedModule)
+
+	if opts.ServiceManifest != nil {
+		sm := opts.ServiceManifest
+
+		// for each module required by the service manifest
+		// add it to the list of module to be resolved
+		for i := range sm.Modules {
+			modulesToResolve = append(modulesToResolve, resolveModule{
+				conf:   sm.Modules[i],
+				parent: sm.Name + " (top-level)",
+			})
+		}
+
+		// add the replacements to the string list of replacements
+		for k, v := range sm.Replacements {
+			strReplacements[k] = v
+		}
+	} else if opts.Module != nil {
+		if opts.Replacements == nil {
+			opts.Replacements = make(map[string]*Module)
+		}
+
+		// add the module to the replacements map so that it can be
+		// used as a replacement for itself
+		opts.Replacements[opts.Module.Name] = opts.Module
+
+		// add ourself as the top-level module to resolve our
+		// dependencies without duplicating code here
+		modulesToResolve = append(modulesToResolve, resolveModule{
+			conf:   &configuration.TemplateRepository{Name: opts.Module.Name, Version: "vfs"},
+			parent: opts.Module.Name + " (top-level)",
+		})
+	}
+
+	log := opts.Log
 
 	// resolve all versions, adding more to the stack as we go
 	for {
@@ -88,6 +152,17 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData,
 			resolved[importPath] = &resolvedModule{Module: &Module{}}
 		}
 		rm := resolved[importPath]
+
+		// if the module has already been resolved and is marked as
+		// "dontResolve", then re-use it.
+		if rm.dontResolve {
+			// this module has already been resolved and should always be used
+			log.WithFields(logrus.Fields{
+				"module": importPath,
+			}).Debug("Using in-memory module")
+			modulesToResolve = modulesToResolve[1:]
+			continue
+		}
 
 		// log the resolution attempt
 		rm.history = append(rm.history, resolution{
@@ -105,34 +180,52 @@ func GetModulesForService(ctx context.Context, token cfg.SecretData,
 
 		var m *Module
 
-		// if we're using a replacement update the url of the module
-		if _, ok := sm.Replacements[importPath]; ok {
-			uri = sm.Replacements[importPath]
+		// use a different url for the module if it's been replaced
+		if _, ok := strReplacements[importPath]; ok {
+			uri = strReplacements[importPath]
 		}
 
-		// if we're not using a local module, resolve the version
-		// (local modules should always satisfy constraints)
-		if !uriIsLocal(uri) {
+		// if we're not using a local or in-memory replaced module, resolve the version
+		// (local modules & in-memory modules should be treated as always satisfying constraints)
+		if !uriIsLocal(uri) && opts.Replacements[importPath] == nil {
 			var err error
-			version, err = getLatestModuleForConstraints(ctx, uri, token, &resolv, resolved)
+			version, err = getLatestModuleForConstraints(ctx, uri, opts.Token, &resolv, resolved)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			// for local modules we don't have a version and the module New() handles this,
-			// so just create a stub mutable version
+			// for local + in-memory modules we don't have a version so just stub it
 			version = &resolver.Version{
 				Mutable: true,
 			}
+
+			// if uri is local, represent it as "local" instead of the full path
+			if uriIsLocal(uri) {
+				version.Tag = "local"
+			} else {
+				// otherwise assume in-memory
+				version.Tag = "in-memory"
+			}
+			version.Branch = version.Tag
+
+			// don't attempt to resolve this module again
+			rm.dontResolve = true
 		}
 
-		m, err := New(ctx, uri, &configuration.TemplateRepository{
-			Name:    importPath,
-			Channel: resolv.conf.Channel,
-			Version: version.GitRef(),
-		})
-		if err != nil {
-			return nil, err
+		// if we have a replacement for the module in-memory, use that instead
+		// of creating a new module that's to be resolved
+		if _, ok := opts.Replacements[importPath]; ok {
+			m = opts.Replacements[importPath]
+		} else {
+			var err error
+			m, err = New(ctx, uri, &configuration.TemplateRepository{
+				Name:    importPath,
+				Channel: resolv.conf.Channel,
+				Version: version.GitRef(),
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		mf, err := m.Manifest(ctx)
