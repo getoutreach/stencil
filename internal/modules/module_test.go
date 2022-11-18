@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -51,7 +52,7 @@ func TestReplacementLocalModule(t *testing.T) {
 		},
 	}
 
-	mods, err := modules.GetModulesForService(context.Background(), "", sm, newLogger())
+	mods, err := modules.GetModulesForService(context.Background(), &modules.ModuleResolveOptions{ServiceManifest: sm, Log: newLogger()})
 	assert.NilError(t, err, "expected GetModulesForService() to not error")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	assert.Equal(t, mods[0].URI, sm.Replacements["github.com/getoutreach/stencil-base"],
@@ -60,35 +61,41 @@ func TestReplacementLocalModule(t *testing.T) {
 
 func TestCanGetLatestVersion(t *testing.T) {
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name: "github.com/getoutreach/stencil-base",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name: "github.com/getoutreach/stencil-base",
+				},
 			},
 		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 3, "expected module and dependencies")
 }
 
 func TestHandleMultipleConstraints(t *testing.T) {
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Version: "=<0.5.0",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "=<0.5.0",
+				},
+				{
+					Name: "nested_constraint",
+				},
 			},
-			{
-				Name: "nested_constraint",
+			Replacements: map[string]string{
+				"nested_constraint": "file://testdata/nested_constraint",
 			},
 		},
-		Replacements: map[string]string{
-			"nested_constraint": "file://testdata/nested_constraint",
-		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 2, "expected exactly two modules to be returned")
 
@@ -108,18 +115,21 @@ func TestHandleMultipleConstraints(t *testing.T) {
 
 func TestHandleNestedModules(t *testing.T) {
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name: "a",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name: "a",
+				},
+			},
+			Replacements: map[string]string{
+				"a": "file://testdata/nested_modules/a",
+				"b": "file://testdata/nested_modules/b",
 			},
 		},
-		Replacements: map[string]string{
-			"a": "file://testdata/nested_modules/a",
-			"b": "file://testdata/nested_modules/b",
-		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 2, "expected exactly two modules to be returned")
 	assert.Equal(t, mods[0].Name, "a", "expected module to match")
@@ -128,22 +138,25 @@ func TestHandleNestedModules(t *testing.T) {
 
 func TestFailOnIncompatibleConstraints(t *testing.T) {
 	ctx := context.Background()
-	_, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Version: ">=0.5.0",
+	_, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.5.0",
+				},
+				{
+					// wants patch of 0.3.0
+					Name: "nested_constraint",
+				},
 			},
-			{
-				// wants patch of 0.3.0
-				Name: "nested_constraint",
+			Replacements: map[string]string{
+				"nested_constraint": "file://testdata/nested_constraint",
 			},
 		},
-		Replacements: map[string]string{
-			"nested_constraint": "file://testdata/nested_constraint",
-		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.Error(t, err,
 		//nolint:lll // Why: That's the error :(
 		"failed to resolve module 'github.com/getoutreach/stencil-base' with constraints\n└─ testing-service (top-level) wants >=0.5.0\n  └─ nested_constraint@v0.0.0-+ wants ~0.3.0\n: no version found matching criteria",
@@ -152,16 +165,19 @@ func TestFailOnIncompatibleConstraints(t *testing.T) {
 
 func TestSupportChannelAndConstraint(t *testing.T) {
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Channel: "rc",
-				Version: "v0.6.0-rc.4",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "rc",
+					Version: "v0.6.0-rc.4",
+				},
 			},
 		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	assert.Equal(t, mods[0].Version, "v0.6.0-rc.4", "expected module to match")
@@ -169,15 +185,18 @@ func TestSupportChannelAndConstraint(t *testing.T) {
 
 func TestCanUseBranch(t *testing.T) {
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Channel: "main",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "main",
+				},
 			},
 		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 
 	var mod *modules.Module
@@ -197,18 +216,21 @@ func TestCanUseBranch(t *testing.T) {
 func TestCanRespectChannels(t *testing.T) {
 	t.Skip("Breaks when a module isn't currently on an rc version")
 	ctx := context.Background()
-	mods, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Channel: "rc",
-			},
-			{
-				Name: "github.com/getoutreach/stencil-base",
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "rc",
+				},
+				{
+					Name: "github.com/getoutreach/stencil-base",
+				},
 			},
 		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	if !strings.Contains(mods[0].Version, "-rc.") {
@@ -216,20 +238,54 @@ func TestCanRespectChannels(t *testing.T) {
 	}
 }
 
+func TestShouldResolveInMemoryModule(t *testing.T) {
+	ctx := context.Background()
+
+	// require test-dep which is also an in-memory module to make sure that we can resolve at least once
+	// an in-memory module
+	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "test", []string{"test-dep"})
+	assert.NilError(t, err, "failed to create module")
+
+	// this relies on the top-level to ensure that re-resolving still picks
+	// the in-memory module
+	mDep, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "test-dep", []string{"test"})
+	assert.NilError(t, err, "failed to create dep module")
+
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		Module:       m,
+		Replacements: map[string]*modules.Module{"test-dep": mDep},
+		Log:          newLogger(),
+	})
+	assert.NilError(t, err, "failed to call GetModulesForService()")
+	assert.Equal(t, len(mods), 2, "expected exactly two modules to be returned")
+
+	var mod *modules.Module
+	for _, m := range mods {
+		if m.Name == "test" {
+			mod = m
+			break
+		}
+	}
+	assert.Equal(t, mod.Name, m.Name, "expected module to match")
+}
+
 func TestShouldErrorOnTwoDifferentChannels(t *testing.T) {
 	ctx := context.Background()
-	_, err := modules.GetModulesForService(ctx, "", &configuration.ServiceManifest{
-		Name: "testing-service",
-		Modules: []*configuration.TemplateRepository{
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Channel: "rc",
-			},
-			{
-				Name:    "github.com/getoutreach/stencil-base",
-				Channel: "unstable",
+	_, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "rc",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "unstable",
+				},
 			},
 		},
-	}, newLogger())
+		Log: newLogger(),
+	})
 	assert.ErrorContains(t, err, "previously resolved with channel", "expected GetModulesForService() to error")
 }
