@@ -5,6 +5,7 @@ import (
 
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/google/go-cmp/cmp"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -15,6 +16,7 @@ func TestMain(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.Run(false)
 }
@@ -26,6 +28,7 @@ func TestErrorHandling(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.ErrorContains("sad")
 	st.Run(false)
@@ -36,6 +39,7 @@ func TestErrorHandling(t *testing.T) {
 		m:                   &configuration.TemplateRepositoryManifest{Name: "testing"},
 		t:                   t,
 		persist:             false,
+		log:                 logrus.New(),
 	}
 	st.ErrorContains("sad pikachu")
 	st.Run(false)
@@ -52,6 +56,7 @@ func TestArgs(t *testing.T) {
 		}},
 		t:       t,
 		persist: false,
+		log:     logrus.New(),
 	}
 	st.Args(map[string]interface{}{"hello": "world"})
 	st.Run(false)

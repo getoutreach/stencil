@@ -8,6 +8,7 @@ package stenciltest
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/bradleyjkemp/cupaloy"
+	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
@@ -50,6 +52,9 @@ type Template struct {
 	// MUST error.
 	errStr string
 
+	// log is the logger to use when running stencil
+	log logrus.FieldLogger
+
 	// persist denotes if we should save a snapshot or not
 	// This is meant for tests.
 	persist bool
@@ -74,12 +79,16 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 		t.Fatal(err)
 	}
 
+	log := logrus.New()
+	log.SetLevel(logrus.DebugLevel)
+
 	return &Template{
 		t:                   t,
 		m:                   &m,
 		path:                templatePath,
 		additionalTemplates: additionalTemplates,
 		persist:             true,
+		log:                 log,
 		exts:                map[string]apiv1.Implementation{},
 	}
 }
@@ -112,23 +121,49 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
+// getModuleDependencies returns modules that are dependencies of the current module
+// the top-level manifest should be used to create the module that is passed in to ensure
+// that the version criteria is met.
+func (t *Template) getModuleDependencies(ctx context.Context, m *modules.Module) ([]*modules.Module, error) {
+	token, err := github.GetToken()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to get github token: %v", err)
+	}
+
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		Token:  token,
+		Module: m,
+		Log:    t.log,
+	})
+	return mods, err
+}
+
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
-		m, err := modulestest.NewModuleFromTemplates(t.m.Arguments, "modulestest", nil, append([]string{t.path}, t.additionalTemplates...)...)
+		m, err := modulestest.NewModuleFromTemplates(t.m, append([]string{t.path}, t.additionalTemplates...)...)
 		if err != nil {
 			got.Fatalf("failed to create module from template %q", t.path)
 		}
 
-		mf := &configuration.ServiceManifest{Name: "testing", Arguments: t.args,
-			Modules: []*configuration.TemplateRepository{{Name: m.Name}}}
-		st := codegen.NewStencil(mf, []*modules.Module{m}, logrus.New())
+		mods, err := t.getModuleDependencies(context.Background(), m)
+		if err != nil {
+			got.Fatalf("could not get modules: %v ", err)
+		}
+		mods = append(mods, m)
+
+		mf := &configuration.ServiceManifest{
+			Name:      "testing",
+			Arguments: t.args,
+			Modules:   []*configuration.TemplateRepository{{Name: m.Name}},
+		}
+		st := codegen.NewStencil(mf, mods, t.log)
 
 		for name, ext := range t.exts {
 			st.RegisterInprocExtensions(name, ext)
 		}
 
-		tpls, err := st.Render(context.Background(), logrus.New())
+		tpls, err := st.Render(context.Background(), t.log)
 		if err != nil {
 			if t.errStr != "" {
 				// if t.errStr was set then we expected an error, since that

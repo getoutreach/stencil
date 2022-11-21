@@ -41,8 +41,8 @@ func addTemplateToFS(fs billy.Filesystem, tpl string) error {
 
 // NewModuleFromTemplate creates a module with the provided template
 // being the only file in the module.
-func NewModuleFromTemplates(arguments map[string]configuration.Argument, name string,
-	deps []string, templates ...string) (*modules.Module, error) {
+func NewModuleFromTemplates(manifest *configuration.TemplateRepositoryManifest,
+	templates ...string) (*modules.Module, error) {
 	fs := memfs.New()
 	for _, tpl := range templates {
 		if err := addTemplateToFS(fs, tpl); err != nil {
@@ -56,18 +56,9 @@ func NewModuleFromTemplates(arguments map[string]configuration.Argument, name st
 	}
 	defer mf.Close()
 
-	depsList := make([]*configuration.TemplateRepository, len(deps))
-	for i, dep := range deps {
-		depsList[i] = &configuration.TemplateRepository{Name: dep}
-	}
-
 	// write a manifest file so that we can handle arguments
 	enc := yaml.NewEncoder(mf)
-	if err := enc.Encode(&configuration.TemplateRepositoryManifest{
-		Name:      name,
-		Arguments: arguments,
-		Modules:   depsList,
-	}); err != nil {
+	if err := enc.Encode(manifest); err != nil {
 		return nil, errors.Wrap(err, "failed to encode generated module manifest")
 	}
 	if err := enc.Close(); err != nil {
@@ -75,5 +66,5 @@ func NewModuleFromTemplates(arguments map[string]configuration.Argument, name st
 	}
 
 	// create the module
-	return modules.NewWithFS(context.Background(), name, fs), nil
+	return modules.NewWithFS(context.Background(), manifest.Name, fs), nil
 }

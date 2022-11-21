@@ -68,11 +68,17 @@ func TestModuleHookRender(t *testing.T) {
 	ctx := context.Background()
 
 	// create modules
-	m1, err := modulestest.NewModuleFromTemplates(nil, "testing1", nil, "testdata/module-hook/m1.tpl")
+	m1man := &configuration.TemplateRepositoryManifest{
+		Name: "testing1",
+	}
+	m1, err := modulestest.NewModuleFromTemplates(m1man, "testdata/module-hook/m1.tpl")
 	if err != nil {
 		t.Errorf("failed to create module 1: %v", err)
 	}
-	m2, err := modulestest.NewModuleFromTemplates(nil, "testing2", nil, "testdata/module-hook/m2.tpl")
+	m2man := &configuration.TemplateRepositoryManifest{
+		Name: "testing2",
+	}
+	m2, err := modulestest.NewModuleFromTemplates(m2man, "testdata/module-hook/m2.tpl")
 	if err != nil {
 		t.Errorf("failed to create module 2: %v", err)
 	}
