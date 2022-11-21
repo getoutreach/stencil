@@ -30,7 +30,11 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 	test := &testTpl{}
 	log := logrus.New()
 
-	m, err := modulestest.NewModuleFromTemplates(requestArgs, "test", nil)
+	man := &configuration.TemplateRepositoryManifest{
+		Name:      "test",
+		Arguments: requestArgs,
+	}
+	m, err := modulestest.NewModuleFromTemplates(man)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +86,11 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 			continue
 		}
 
-		m, err := modulestest.NewModuleFromTemplates(args[i], fmt.Sprintf("test-%d", i), nil, "testdata/args/test.tpl")
+		man := &configuration.TemplateRepositoryManifest{
+			Name:      fmt.Sprintf("test-%d", i),
+			Arguments: args[i],
+		}
+		m, err := modulestest.NewModuleFromTemplates(man, "testdata/args/test.tpl")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -90,8 +98,17 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 		mods[i] = m
 	}
 
+	var trs []*configuration.TemplateRepository
+	for _, imp := range importList {
+		trs = append(trs, &configuration.TemplateRepository{Name: imp})
+	}
+	man := &configuration.TemplateRepositoryManifest{
+		Name:      "test-0",
+		Arguments: args[0],
+		Modules:   trs,
+	}
 	var err error
-	mods[0], err = modulestest.NewModuleFromTemplates(args[0], "test-0", importList, "testdata/args/test.tpl")
+	mods[0], err = modulestest.NewModuleFromTemplates(man, "testdata/args/test.tpl")
 	if err != nil {
 		t.Fatal(err)
 	}

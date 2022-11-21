@@ -62,22 +62,6 @@ func TestArgs(t *testing.T) {
 	st.Run(false)
 }
 
-func TestGetTemplateRepositoryNames(t *testing.T) {
-	trs := []*configuration.TemplateRepository{
-		{
-			Name:    "test1",
-			Version: "test",
-		},
-		{
-			Name: "test2",
-		},
-	}
-
-	result := getTemplateRepositoryNames(trs)
-
-	assert.DeepEqual(t, result, []string{"test1", "test2"})
-}
-
 // Doing this just to bump up coverage numbers, we essentially test this w/ the Template
 // constructors in each test.
 func TestCoverageHack(t *testing.T) {

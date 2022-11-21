@@ -243,12 +243,25 @@ func TestShouldResolveInMemoryModule(t *testing.T) {
 
 	// require test-dep which is also an in-memory module to make sure that we can resolve at least once
 	// an in-memory module
-	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "test", []string{"test-dep"})
+
+	man := &configuration.TemplateRepositoryManifest{
+		Name: "test",
+		Modules: []*configuration.TemplateRepository{
+			{Name: "test-dep"},
+		},
+	}
+	m, err := modulestest.NewModuleFromTemplates(man)
 	assert.NilError(t, err, "failed to create module")
 
 	// this relies on the top-level to ensure that re-resolving still picks
 	// the in-memory module
-	mDep, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "test-dep", []string{"test"})
+	man = &configuration.TemplateRepositoryManifest{
+		Name: "test-dep",
+		Modules: []*configuration.TemplateRepository{
+			{Name: "test"},
+		},
+	}
+	mDep, err := modulestest.NewModuleFromTemplates(man)
 	assert.NilError(t, err, "failed to create dep module")
 
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
