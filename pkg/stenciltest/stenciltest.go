@@ -121,15 +121,6 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
-// getTemplateRepositoryNames retrieves the names from the passed in TemplateRepositories
-func getTemplateRepositoryNames(trs []*configuration.TemplateRepository) []string {
-	deps := make([]string, len(trs))
-	for i, tr := range trs {
-		deps[i] = tr.Name
-	}
-	return deps
-}
-
 // getModuleDependencies returns modules that are dependencies of the current module
 // the top-level manifest should be used to create the module that is passed in to ensure
 // that the version criteria is met.
@@ -150,10 +141,7 @@ func (t *Template) getModuleDependencies(ctx context.Context, m *modules.Module)
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
-		deps := getTemplateRepositoryNames(t.m.Modules)
-
-		m, err := modulestest.NewModuleFromTemplates(
-			t.m.Arguments, t.m.Name, deps, append([]string{t.path}, t.additionalTemplates...)...)
+		m, err := modulestest.NewModuleFromTemplates(t.m, append([]string{t.path}, t.additionalTemplates...)...)
 		if err != nil {
 			got.Fatalf("failed to create module from template %q", t.path)
 		}

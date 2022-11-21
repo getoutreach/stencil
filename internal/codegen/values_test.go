@@ -94,7 +94,10 @@ func TestValues(t *testing.T) {
 func TestGeneratedValues(t *testing.T) {
 	log := logrus.New()
 
-	m, err := modulestest.NewModuleFromTemplates(map[string]configuration.Argument{}, "testing", []string{}, "testdata/values/values.tpl")
+	man := &configuration.TemplateRepositoryManifest{
+		Name: "testing",
+	}
+	m, err := modulestest.NewModuleFromTemplates(man, "testdata/values/values.tpl")
 	assert.NilError(t, err, "failed to create module")
 
 	st := NewStencil(&configuration.ServiceManifest{
