@@ -55,18 +55,26 @@ type Stencil struct {
 	sharedData *sharedData
 }
 
+// global is an explicit type used to define global variables in the sharedData
+// type (specifically the globals struct field) so that we can track not only the
+// value of the global but also the template it came from.
+type global struct {
+	template string
+	value    interface{}
+}
+
 // sharedData stores data that is injected by templates from modules
 // for both module hooks and template module globals.
 type sharedData struct {
 	moduleHooks map[string][]interface{}
-	globals     map[string]interface{}
+	globals     map[string]global
 }
 
 // newSharedData returns an initialized (empty underlying maps) sharedData type.
 func newSharedData() *sharedData {
 	return &sharedData{
 		moduleHooks: make(map[string][]interface{}),
-		globals:     make(map[string]interface{}),
+		globals:     make(map[string]global),
 	}
 }
 

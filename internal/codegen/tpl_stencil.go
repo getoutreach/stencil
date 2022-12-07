@@ -77,13 +77,14 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {
-		err := fmt.Errorf("third parameter, data, must be set")
+		err := fmt.Errorf("second parameter, data, must be set")
 		return err
 	}
 
-	// We just use the same map that AddToModuleHook uses, so we put it into a []interface{}
-	// even though we'll never actually use the data like that.
-	s.s.sharedData.globals[k] = data
+	s.s.sharedData.globals[k] = global{
+		template: s.t.Path,
+		value:    v,
+	}
 
 	return nil
 }
@@ -99,12 +100,10 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 
 	if v, ok := s.s.sharedData.globals[k]; ok {
 		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-			WithField("data", spew.Sdump(v)).Debug("retrieved data from global store")
+			WithField("data", spew.Sdump(v)).WithField("definingTemplate", v.template).
+			Debug("retrieved data from global store")
 
-		// Since we're reusing the same map that AddToModuleHook uses but we're only storing
-		// one piece of data per global, if we know the key exists we can rely on index 0
-		// existing and holding the data that was set by SetGlobal.
-		return v
+		return v.value
 	}
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
