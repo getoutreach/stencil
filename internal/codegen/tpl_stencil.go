@@ -53,6 +53,62 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	return v
 }
 
+// SetGlobal sets a global to be used in the context of the current template module
+// repository. This is useful because sometimes you want to define variables inside
+// of a helpers template file after doing manifest argument processing and then use
+// them within one or more template files to be rendered; however, go templates limit
+// the scope of symbols to the current template they are defined in, so this is not
+// possible without external tooling like this function.
+//
+// This template function stores (and its inverse, GetGlobal, retrieves) data that is
+// not strongly typed, so use this at your own risk and be averse to panics that could
+// occur if you're using the data it returns in the wrong way.
+func (s *TplStencil) SetGlobal(name string, data interface{}) error {
+	// Only modify on first pass
+	if !s.s.isFirstPass {
+		return nil
+	}
+
+	// key is <module(self)>/<name>
+	k := path.Join(s.t.Module.Name, name)
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		WithField("data", spew.Sdump(data)).Debug("adding to global store")
+
+	v := reflect.ValueOf(data)
+	if !v.IsValid() {
+		err := fmt.Errorf("third parameter, data, must be set")
+		return err
+	}
+
+	// We just use the same map that AddToModuleHook uses, so we put it into a []interface{}
+	// even though we'll never actually use the data like that.
+	s.s.sharedData[k] = []interface{}{data}
+
+	return nil
+}
+
+// GetGlobal retrieves a global variable set by SetGlobal. The data returned from this function
+// is unstructured so by averse to panics - look at where it was set to ensure you're dealing
+// with the proper type of data that you think it is.
+func (s *TplStencil) GetGlobal(name string) interface{} {
+	k := path.Join(s.t.Module.Name, name)
+
+	if v, ok := s.s.sharedData[k]; ok {
+		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+			WithField("data", spew.Sdump(v[0])).Debug("retrieved data from global store")
+
+		// Since we're reusing the same map that AddToModuleHook uses but we're only storing
+		// one piece of data per global, if we know the key exists we can rely on index 0
+		// existing and holding the data that was set by SetGlobal.
+		return v[0]
+	}
+
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		Warn("failed to retrieved data from global store")
+
+	return nil
+}
+
 // AddToModuleHook adds to a hook in another module
 //
 // This functions write to module hook owned by another module for
