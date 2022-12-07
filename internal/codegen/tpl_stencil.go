@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
@@ -45,8 +44,8 @@ type TplStencil struct {
 //	  {{ . }}
 //	{{- end }}
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
-	k := path.Join(s.t.Module.Name, name)
-	v := s.s.sharedData[k]
+	k := s.s.sharedData.key(s.t.Module.Name, name)
+	v := s.s.sharedData.moduleHooks[k]
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
@@ -63,14 +62,16 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 // This template function stores (and its inverse, GetGlobal, retrieves) data that is
 // not strongly typed, so use this at your own risk and be averse to panics that could
 // occur if you're using the data it returns in the wrong way.
+//
+//	{{- /* This writes a global into the current context of the template module repository */}}
+//	{{ stencil.SetGlobal "IsGeorgeCool" true }}
 func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return nil
 	}
 
-	// key is <module(self)>/<name>
-	k := path.Join(s.t.Module.Name, name)
+	k := s.s.sharedData.key(s.t.Module.Name, name)
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(data)).Debug("adding to global store")
 
@@ -82,7 +83,7 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 
 	// We just use the same map that AddToModuleHook uses, so we put it into a []interface{}
 	// even though we'll never actually use the data like that.
-	s.s.sharedData[k] = []interface{}{data}
+	s.s.sharedData.globals[k] = data
 
 	return nil
 }
@@ -90,17 +91,20 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 // GetGlobal retrieves a global variable set by SetGlobal. The data returned from this function
 // is unstructured so by averse to panics - look at where it was set to ensure you're dealing
 // with the proper type of data that you think it is.
+//
+//	{{- /* This retrieves a global from the current context of the template module repository */}}
+//	{{ $isGeorgeCool := stencil.GetGlobal "IsGeorgeCool" }}
 func (s *TplStencil) GetGlobal(name string) interface{} {
-	k := path.Join(s.t.Module.Name, name)
+	k := s.s.sharedData.key(s.t.Module.Name, name)
 
-	if v, ok := s.s.sharedData[k]; ok {
+	if v, ok := s.s.sharedData.globals[k]; ok {
 		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-			WithField("data", spew.Sdump(v[0])).Debug("retrieved data from global store")
+			WithField("data", spew.Sdump(v)).Debug("retrieved data from global store")
 
 		// Since we're reusing the same map that AddToModuleHook uses but we're only storing
 		// one piece of data per global, if we know the key exists we can rely on index 0
 		// existing and holding the data that was set by SetGlobal.
-		return v[0]
+		return v
 	}
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
@@ -125,8 +129,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 		return nil, nil
 	}
 
-	// key is <module>/<name>
-	k := path.Join(module, name)
+	k := s.s.sharedData.key(module, name)
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(data)).Debug("adding to module hook")
 
@@ -150,10 +153,10 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 	}
 
 	// if set, append, otherwise assign
-	if _, ok := s.s.sharedData[k]; ok {
-		s.s.sharedData[k] = append(s.s.sharedData[k], interfaceSlice...)
+	if _, ok := s.s.sharedData.moduleHooks[k]; ok {
+		s.s.sharedData.moduleHooks[k] = append(s.s.sharedData.moduleHooks[k], interfaceSlice...)
 	} else {
-		s.s.sharedData[k] = interfaceSlice
+		s.s.sharedData.moduleHooks[k] = interfaceSlice
 	}
 
 	return nil, nil
