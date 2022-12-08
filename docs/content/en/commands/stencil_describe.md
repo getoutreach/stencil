@@ -13,7 +13,7 @@ menu:
 
 ```bash
 NAME:
-   stencil describe - 
+   stencil describe
 
 USAGE:
    stencil describe [command options] [arguments...]
