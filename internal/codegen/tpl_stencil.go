@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
@@ -45,12 +44,72 @@ type TplStencil struct {
 //	  {{ . }}
 //	{{- end }}
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
-	k := path.Join(s.t.Module.Name, name)
-	v := s.s.sharedData[k]
+	k := s.s.sharedData.key(s.t.Module.Name, name)
+	v := s.s.sharedData.moduleHooks[k]
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
 	return v
+}
+
+// SetGlobal sets a global to be used in the context of the current template module
+// repository. This is useful because sometimes you want to define variables inside
+// of a helpers template file after doing manifest argument processing and then use
+// them within one or more template files to be rendered; however, go templates limit
+// the scope of symbols to the current template they are defined in, so this is not
+// possible without external tooling like this function.
+//
+// This template function stores (and its inverse, GetGlobal, retrieves) data that is
+// not strongly typed, so use this at your own risk and be averse to panics that could
+// occur if you're using the data it returns in the wrong way.
+//
+//	{{- /* This writes a global into the current context of the template module repository */}}
+//	{{ stencil.SetGlobal "IsGeorgeCool" true }}
+func (s *TplStencil) SetGlobal(name string, data interface{}) error {
+	// Only modify on first pass
+	if !s.s.isFirstPass {
+		return nil
+	}
+
+	k := s.s.sharedData.key(s.t.Module.Name, name)
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		WithField("data", spew.Sdump(data)).Debug("adding to global store")
+
+	v := reflect.ValueOf(data)
+	if !v.IsValid() {
+		err := fmt.Errorf("second parameter, data, must be set")
+		return err
+	}
+
+	s.s.sharedData.globals[k] = global{
+		template: s.t.Path,
+		value:    v,
+	}
+
+	return nil
+}
+
+// GetGlobal retrieves a global variable set by SetGlobal. The data returned from this function
+// is unstructured so by averse to panics - look at where it was set to ensure you're dealing
+// with the proper type of data that you think it is.
+//
+//	{{- /* This retrieves a global from the current context of the template module repository */}}
+//	{{ $isGeorgeCool := stencil.GetGlobal "IsGeorgeCool" }}
+func (s *TplStencil) GetGlobal(name string) interface{} {
+	k := s.s.sharedData.key(s.t.Module.Name, name)
+
+	if v, ok := s.s.sharedData.globals[k]; ok {
+		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+			WithField("data", spew.Sdump(v)).WithField("definingTemplate", v.template).
+			Debug("retrieved data from global store")
+
+		return v.value
+	}
+
+	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+		Warn("failed to retrieved data from global store")
+
+	return nil
 }
 
 // AddToModuleHook adds to a hook in another module
@@ -69,8 +128,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 		return nil, nil
 	}
 
-	// key is <module>/<name>
-	k := path.Join(module, name)
+	k := s.s.sharedData.key(module, name)
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(data)).Debug("adding to module hook")
 
@@ -94,10 +152,10 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 	}
 
 	// if set, append, otherwise assign
-	if _, ok := s.s.sharedData[k]; ok {
-		s.s.sharedData[k] = append(s.s.sharedData[k], interfaceSlice...)
+	if _, ok := s.s.sharedData.moduleHooks[k]; ok {
+		s.s.sharedData.moduleHooks[k] = append(s.s.sharedData.moduleHooks[k], interfaceSlice...)
 	} else {
-		s.s.sharedData[k] = interfaceSlice
+		s.s.sharedData.moduleHooks[k] = interfaceSlice
 	}
 
 	return nil, nil

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -30,7 +31,7 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 		ext:         extensions.NewHost(log),
 		modules:     mods,
 		isFirstPass: true,
-		sharedData:  make(map[string][]interface{}),
+		sharedData:  newSharedData(),
 	}
 }
 
@@ -50,8 +51,39 @@ type Stencil struct {
 	// pass mode
 	isFirstPass bool
 
-	// sharedData stores data that is injected by templates from modules
-	sharedData map[string][]interface{}
+	// store for module hook data and globals
+	sharedData *sharedData
+}
+
+// global is an explicit type used to define global variables in the sharedData
+// type (specifically the globals struct field) so that we can track not only the
+// value of the global but also the template it came from.
+type global struct {
+	template string
+	value    interface{}
+}
+
+// sharedData stores data that is injected by templates from modules
+// for both module hooks and template module globals.
+type sharedData struct {
+	moduleHooks map[string][]interface{}
+	globals     map[string]global
+}
+
+// newSharedData returns an initialized (empty underlying maps) sharedData type.
+func newSharedData() *sharedData {
+	return &sharedData{
+		moduleHooks: make(map[string][]interface{}),
+		globals:     make(map[string]global),
+	}
+}
+
+// key returns the key name for data stored in both modulesHooks and globals.
+//
+// The module parameter should just be the name of the module. Key is the actual
+// key passed as the identifier for either the module hook or the global.
+func (*sharedData) key(module, key string) string {
+	return path.Join(module, key)
 }
 
 // RegisterExtensions registers all extensions on the currently loaded
