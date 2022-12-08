@@ -19,8 +19,7 @@ USAGE:
    stencil updater rollback [command options] [arguments...]
 
 OPTIONS:
-   --version value  The version to rollback to
-   --help, -h       show help (default: false)
+   --version value  The version to rollback to (default: "v1.28.0")
    
 
 ```

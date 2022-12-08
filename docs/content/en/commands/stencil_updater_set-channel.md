@@ -13,13 +13,13 @@ menu:
 
 ```bash
 NAME:
-   stencil updater set-channel - Set the channel to check for updates: release or rc
+   stencil updater set-channel - Set the channel to check for updates
 
 USAGE:
    stencil updater set-channel [command options] [arguments...]
 
 OPTIONS:
-   --help, -h  show help (default: false)
+   --reset  Reset the channel to the default (default: false)
    
 
 ```
