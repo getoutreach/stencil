@@ -75,15 +75,9 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(data)).Debug("adding to global store")
 
-	v := reflect.ValueOf(data)
-	if !v.IsValid() {
-		err := fmt.Errorf("second parameter, data, must be set")
-		return err
-	}
-
 	s.s.sharedData.globals[k] = global{
 		template: s.t.Path,
-		value:    v,
+		value:    data,
 	}
 
 	return nil
