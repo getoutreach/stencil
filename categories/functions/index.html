@@ -6,7 +6,7 @@
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
 <meta http-equiv=x-ua-compatible content="IE=edge">
 <title>functions | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
-<meta name=generator content="Hugo 0.98.0">
+<meta name=generator content="Hugo 0.108.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=alternate type=application/rss+xml href=https://engineering.outreach.io/stencil/categories/functions/index.xml>
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
@@ -20,10 +20,10 @@
 <meta property="og:title" content="functions">
 <meta property="og:description" content="A smart templating engine for service development">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://engineering.outreach.io/stencil/categories/functions/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_4216458283599698261.png">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/categories/functions/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_1366199860208608511.png">
 <meta itemprop=name content="functions">
 <meta itemprop=description content="A smart templating engine for service development"><meta name=twitter:card content="summary_large_image">
-<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_4216458283599698261.png">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_1366199860208608511.png">
 <meta name=twitter:title content="functions">
 <meta name=twitter:description content="A smart templating engine for service development">
 </head><body class="ma0 sans-serif bg-primary-color-light">
@@ -173,6 +173,14 @@ stencil.Arg
 stencil.Args
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.exists/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Exists
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetGlobal
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
@@ -183,6 +191,10 @@ stencil.ReadBlocks
 </li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.ReadFile
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.setglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.SetGlobal
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
@@ -224,6 +236,10 @@ stencil updater
 stencil updater get-channel
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_get-channels/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater get-channels
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_list-releases/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater list-releases
 </a>
@@ -234,6 +250,14 @@ stencil updater rollback
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater set-channel
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_status/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater status
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_use/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater use
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>
@@ -375,7 +399,27 @@ Read More &#187;
 Deprecated: Use Arg instead. Args returns all arguments passed to stencil from the service&rsquo;s manifest
 Note: This doesn&rsquo;t set default values and is instead representative of _all_ data passed in its raw form.
 This is deprecated and will be removed in a future release.
+{{- (stencil.Args).name }}
 <a href=/stencil/functions/stencil.args/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.exists/ class="link primary-color dim">stencil.Exists</a>
+</h1><div class="lh-copy links">
+Exists returns true if the file exists in the current directory
+<a href=/stencil/functions/stencil.exists/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.getglobal/ class="link primary-color dim">stencil.GetGlobal</a>
+</h1><div class="lh-copy links">
+GetGlobal retrieves a global variable set by SetGlobal. The data returned from this function is unstructured so by averse to panics - look at where it was set to ensure you&rsquo;re dealing with the proper type of data that you think it is.
+{{- /* This retrieves a global from the current context of the template module repository */}} {{ $isGeorgeCool := stencil.GetGlobal "IsGeorgeCool" }}
+<a href=/stencil/functions/stencil.getglobal/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
@@ -405,6 +449,15 @@ Read More &#187;
 </h1><div class="lh-copy links">
 ReadFile reads a file from the current directory and returns it&rsquo;s contents
 <a href=/stencil/functions/stencil.readfile/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.setglobal/ class="link primary-color dim">stencil.SetGlobal</a>
+</h1><div class="lh-copy links">
+SetGlobal sets a global to be used in the context of the current template module repository. This is useful because sometimes you want to define variables inside of a helpers template file after doing manifest argument processing and then use them within one or more template files to be rendered; however, go templates limit the scope of symbols to the current template they are defined in, so this is not possible without external tooling like this function.
+<a href=/stencil/functions/stencil.setglobal/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div></section></div></div></div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>

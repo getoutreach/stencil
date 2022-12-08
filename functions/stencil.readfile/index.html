@@ -6,7 +6,7 @@
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
 <meta http-equiv=x-ua-compatible content="IE=edge">
 <title>stencil.ReadFile | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
-<meta name=generator content="Hugo 0.98.0">
+<meta name=generator content="Hugo 0.108.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
 <meta name=description content="ReadFile reads a file from the current directory and returns it's contents
@@ -21,16 +21,16 @@
 <meta property="og:description" content="ReadFile reads a file from the current directory and returns it's contents
 ">
 <meta property="og:type" content="article">
-<meta property="og:url" content="https://engineering.outreach.io/stencil/functions/stencil.readfile/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_14242637262895163821.png"><meta property="article:section" content="functions">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/functions/stencil.readfile/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_678205002785997687.png"><meta property="article:section" content="functions">
 <meta property="article:published_time" content="2022-05-18T00:00:00-07:00">
 <meta property="article:modified_time" content="2022-08-19T10:40:59+02:00">
 <meta itemprop=name content="stencil.ReadFile">
 <meta itemprop=description content="ReadFile reads a file from the current directory and returns it's contents
 "><meta itemprop=datePublished content="2022-05-18T00:00:00-07:00">
 <meta itemprop=dateModified content="2022-08-19T10:40:59+02:00">
-<meta itemprop=wordCount content="1"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=wordCount content="4"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
-<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_14242637262895163821.png">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_678205002785997687.png">
 <meta name=twitter:title content="stencil.ReadFile">
 <meta name=twitter:description content="ReadFile reads a file from the current directory and returns it's contents
 ">
@@ -66,11 +66,13 @@ GitHub
 <div date-pref>
 <a href=https://engineering.outreach.io/stencil/functions/stencil.readblocks/ class="dib f6 pl1 hover-bg-light-gray br-100" title="stencil.ReadBlocks "><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
 </a>
+<a href=https://engineering.outreach.io/stencil/functions/stencil.setglobal/ class="dib f6 pr1 hover-bg-light-gray br-100" title=stencil.SetGlobal><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+</a>
 </div></aside></div><div class="order-1 w-60-l mw7 ph0 ph5-ns mid-gray nested-copy-line-height no-underline nested-links nested-img nested-copy-seperator nested-blockquote mt0-ns" style=flex-grow:1>
 <div class="documentation-copy center measure-wide-l">
 <div id=readout class="fixed right-0 bottom-0">
 </div><header class="flex-none w-100">
-<a href=/stencil/categories/functions class="f6 fw8 mb0 link mid-gray dim mr3">
+<a href=/categories/functions class="f6 fw8 mb0 link mid-gray dim mr3">
 FUNCTIONS
 </a>
 <h1 class="lh-title mb3 mv0 pt3 primary-color-dark">stencil.ReadFile</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
@@ -198,6 +200,14 @@ stencil.Arg
 stencil.Args
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.exists/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Exists
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetGlobal
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
@@ -208,6 +218,10 @@ stencil.ReadBlocks
 </li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 primary-color">
 stencil.ReadFile
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.setglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.SetGlobal
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
@@ -249,6 +263,10 @@ stencil updater
 stencil updater get-channel
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_get-channels/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater get-channels
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_list-releases/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater list-releases
 </a>
@@ -259,6 +277,14 @@ stencil updater rollback
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater set-channel
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_status/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater status
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_use/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater use
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>

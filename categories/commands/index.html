@@ -6,7 +6,7 @@
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
 <meta http-equiv=x-ua-compatible content="IE=edge">
 <title>commands | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
-<meta name=generator content="Hugo 0.98.0">
+<meta name=generator content="Hugo 0.108.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=alternate type=application/rss+xml href=https://engineering.outreach.io/stencil/categories/commands/index.xml>
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
@@ -20,10 +20,10 @@
 <meta property="og:title" content="commands">
 <meta property="og:description" content="A smart templating engine for service development">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://engineering.outreach.io/stencil/categories/commands/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_15526528417744683938.png">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/categories/commands/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9237248747791425785.png">
 <meta itemprop=name content="commands">
 <meta itemprop=description content="A smart templating engine for service development"><meta name=twitter:card content="summary_large_image">
-<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_15526528417744683938.png">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9237248747791425785.png">
 <meta name=twitter:title content="commands">
 <meta name=twitter:description content="A smart templating engine for service development">
 </head><body class="ma0 sans-serif bg-primary-color-light">
@@ -173,6 +173,14 @@ stencil.Arg
 stencil.Args
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.exists/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Exists
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetGlobal
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
@@ -183,6 +191,10 @@ stencil.ReadBlocks
 </li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.ReadFile
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.setglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.SetGlobal
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.commands>CLI</a>
@@ -224,6 +236,10 @@ stencil updater
 stencil updater get-channel
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_get-channels/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater get-channels
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_list-releases/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater list-releases
 </a>
@@ -234,6 +250,14 @@ stencil updater rollback
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater set-channel
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_status/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater status
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_use/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater use
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>
@@ -318,7 +342,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater/ class="link primary-color dim">stencil updater</a>
 </h1><div class="lh-copy links">
-stencil updater NAME: stencil updater - Commands for interacting with the built-in updater USAGE: stencil updater command [command options] [arguments...] COMMANDS: set-channel Set the channel to check for updates: release or rc get-channel Returns the current channel: release or rc rollback Rollback to the previous version list-releases List all releases help, h Shows a list of commands or help for one command OPTIONS: --help, -h show help (default: false)
+stencil updater NAME: stencil updater - Commands for interacting with the built-in updater USAGE: stencil updater command [command options] [arguments...] COMMANDS: set-channel Set the channel to check for updates get-channels Returns the valid channels rollback Rollback to the previous version use Use a specific version of the application status Returns the current status of the updater help, h Shows a list of commands or help for one command OPTIONS: --help, -h show help (default: false)
 <a href=/stencil/commands/stencil_updater/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -329,6 +353,15 @@ Read More &#187;
 </h1><div class="lh-copy links">
 stencil updater get-channel NAME: stencil updater get-channel - Returns the current channel: release or rc USAGE: stencil updater get-channel [command options] [arguments...] OPTIONS: --help, -h show help (default: false)
 <a href=/stencil/commands/stencil_updater_get-channel/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/commands/stencil_updater_get-channels/ class="link primary-color dim">stencil updater get-channels</a>
+</h1><div class="lh-copy links">
+stencil updater get-channels NAME: stencil updater get-channels - Returns the valid channels USAGE: stencil updater get-channels [command options] [arguments...] OPTIONS: --help, -h show help (default: false)
+<a href=/stencil/commands/stencil_updater_get-channels/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
@@ -345,7 +378,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_rollback/ class="link primary-color dim">stencil updater rollback</a>
 </h1><div class="lh-copy links">
-stencil updater rollback NAME: stencil updater rollback - Rollback to the previous version USAGE: stencil updater rollback [command options] [arguments...] OPTIONS: --version value The version to rollback to --help, -h show help (default: false)
+stencil updater rollback NAME: stencil updater rollback - Rollback to the previous version USAGE: stencil updater rollback [command options] [arguments...] OPTIONS: --version value The version to rollback to (default: "v1.28.0")
 <a href=/stencil/commands/stencil_updater_rollback/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -354,8 +387,26 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="link primary-color dim">stencil updater set-channel</a>
 </h1><div class="lh-copy links">
-stencil updater set-channel NAME: stencil updater set-channel - Set the channel to check for updates: release or rc USAGE: stencil updater set-channel [command options] [arguments...] OPTIONS: --help, -h show help (default: false)
+stencil updater set-channel NAME: stencil updater set-channel - Set the channel to check for updates USAGE: stencil updater set-channel [command options] [arguments...] OPTIONS: --reset Reset the channel to the default (default: false)
 <a href=/stencil/commands/stencil_updater_set-channel/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/commands/stencil_updater_status/ class="link primary-color dim">stencil updater status</a>
+</h1><div class="lh-copy links">
+stencil updater status NAME: stencil updater status - Returns the current status of the updater USAGE: stencil updater status [command options] [arguments...] OPTIONS: --debug Show debug information (default: false)
+<a href=/stencil/commands/stencil_updater_status/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/commands/stencil_updater_use/ class="link primary-color dim">stencil updater use</a>
+</h1><div class="lh-copy links">
+stencil updater use NAME: stencil updater use - Use a specific version of the application USAGE: stencil updater use [command options] [arguments...] OPTIONS: --list List available versions (default: false)
+<a href=/stencil/commands/stencil_updater_use/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div></section></div></div></div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>

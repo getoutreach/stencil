@@ -6,7 +6,7 @@
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
 <meta http-equiv=x-ua-compatible content="IE=edge">
 <title>stencil create module | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
-<meta name=generator content="Hugo 0.98.0">
+<meta name=generator content="Hugo 0.108.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
 <meta name=description content="Creates a module with the provided name in the current directory">
@@ -19,15 +19,15 @@
 <meta property="og:title" content="stencil create module">
 <meta property="og:description" content="Creates a module with the provided name in the current directory">
 <meta property="og:type" content="article">
-<meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_create_module/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9539938058632944345.png"><meta property="article:section" content="commands">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_create_module/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_17740347772342796958.png"><meta property="article:section" content="commands">
 <meta property="article:published_time" content="2022-05-04T00:00:00-07:00">
-<meta property="article:modified_time" content="2022-08-19T10:40:59+02:00">
+<meta property="article:modified_time" content="2022-12-07T16:51:49-08:00">
 <meta itemprop=name content="stencil create module">
 <meta itemprop=description content="Creates a module with the provided name in the current directory"><meta itemprop=datePublished content="2022-05-04T00:00:00-07:00">
-<meta itemprop=dateModified content="2022-08-19T10:40:59+02:00">
-<meta itemprop=wordCount content="43"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=dateModified content="2022-12-07T16:51:49-08:00">
+<meta itemprop=wordCount content="36"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
-<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_9539938058632944345.png">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_17740347772342796958.png">
 <meta name=twitter:title content="stencil create module">
 <meta name=twitter:description content="Creates a module with the provided name in the current directory">
 </head><body class="ma0 sans-serif bg-primary-color-light">
@@ -68,7 +68,7 @@ GitHub
 <div class="documentation-copy center measure-wide-l">
 <div id=readout class="fixed right-0 bottom-0">
 </div><header class="flex-none w-100">
-<a href=/stencil/categories/commands class="f6 fw8 mb0 link mid-gray dim mr3">
+<a href=/categories/commands class="f6 fw8 mb0 link mid-gray dim mr3">
 COMMANDS
 </a>
 <h1 class="lh-title mb3 mv0 pt3 primary-color-dark">stencil create module</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
@@ -76,7 +76,7 @@ COMMANDS
 Creates a module with the provided name in the current directory
 </div></aside><div class=prose id=prose>
 <h2 id=stencil-create-module>stencil create module <a class=header-link href=#stencil-create-module><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>NAME:
-</span></span><span class=line><span class=cl>   stencil create module - 
+</span></span><span class=line><span class=cl>   stencil create module
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>USAGE:
 </span></span><span class=line><span class=cl>   stencil create module <span class=o>[</span><span class=nb>command</span> options<span class=o>]</span> create module &lt;name&gt;
@@ -86,7 +86,6 @@ Creates a module with the provided name in the current directory
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>OPTIONS:
 </span></span><span class=line><span class=cl>   --native-extension  Generates a native extension <span class=o>(</span>default: <span class=nb>false</span><span class=o>)</span>
-</span></span><span class=line><span class=cl>   --help, -h          show <span class=nb>help</span> <span class=o>(</span>default: <span class=nb>false</span><span class=o>)</span>
 </span></span><span class=line><span class=cl>   
 </span></span></code></pre></div></div></div></div><div class="order-0 w-20 dn db-l">
 <nav role=navigation>
@@ -208,6 +207,14 @@ stencil.Arg
 stencil.Args
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.exists/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Exists
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.getglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.GetGlobal
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.getmodulehook/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.GetModuleHook
 </a>
@@ -218,6 +225,10 @@ stencil.ReadBlocks
 </li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.readfile/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.ReadFile
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.setglobal/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.SetGlobal
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2 primary-color" data-target=.commands>CLI</a>
@@ -259,6 +270,10 @@ stencil updater
 stencil updater get-channel
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_get-channels/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater get-channels
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_list-releases/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater list-releases
 </a>
@@ -269,6 +284,14 @@ stencil updater rollback
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater set-channel
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_status/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater status
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_updater_use/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil updater use
 </a>
 </li></ul></li><li class="f5 w-100 hover-bg-light-gray hover-accent-color-light fw8 mb1 bb b--moon-gray">
 <a href=javascript:void(0) class="js-toggle dib w-100 link mid-gray hover-accent-color-light pl2 pr2 pv2" data-target=.contribute>Contribute</a>
@@ -290,7 +313,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: August 19, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/7f2940a090b2a9f3bf3c63df697895831ee440b6>feat(arguments): support from to alias to another module's argument (#129) (7f2940a)</a>
+Last updated: December 7, 2022: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/50dd4d9572d4832682961a6294a3f508af732750>docs: regenerate docs (#185) (50dd4d9)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_create_module.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
