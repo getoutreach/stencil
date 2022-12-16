@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/getoutreach/stencil/internal/dotnotation"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -205,21 +207,38 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v inte
 	if err := schema.Validate(v); err != nil {
 		var validationError *jsonschema.ValidationError
 		if errors.As(err, &validationError) {
-			// If there's only one error, return it directly, otherwise
-			// return the full list of errors.
-			errs := validationError.DetailedOutput().Errors
-			out := ""
-			if len(errs) == 1 {
-				out = errs[0].Error
-			} else {
-				out = fmt.Sprintf("%#v", validationError.DetailedOutput().Errors)
+			for _, validationErr := range validationError.DetailedOutput().Errors {
+				path, err := buildErrorPath(validationErr.AbsoluteKeywordLocation)
+				if err != nil {
+					s.log.Errorf("Validation failed but failed to determine cause: %v", err)
+				}
+				s.log.Errorf("Encountered a validation error for %q: %v", path, validationErr.Error)
 			}
 
-			return fmt.Errorf("module %q argument %q validation failed: %s", s.t.Module.Name, pth, out)
+			return fmt.Errorf("module %q validation failed", s.t.Module.Name)
 		}
 
 		return errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)
 	}
 
 	return nil
+}
+
+// buildErrorPath builds an error path from the provided absoluteKeywordLocation from jsonschema errors.
+func buildErrorPath(absoluteKeywordLocation string) (string, error) {
+	// Splits on manifest to retrieve only the path declared inside the manifest file.
+	splitOnManifest := strings.Split(absoluteKeywordLocation, "/manifest.yaml/")
+
+	// Validates that we have two items. We only want the second item which contains the path inside
+	// the manifest file.
+	if len(splitOnManifest) != 2 {
+		return "", fmt.Errorf("could not split provided path")
+	}
+
+	// The path is devided by either "/" or "#/" we want to remove both.
+	re := regexp.MustCompile("#*/")
+	split := re.Split(splitOnManifest[1], -1)
+
+	// Drops the final item in the split because it represents the error condition.
+	return strings.Join(split[:len(split)-1], "."), nil
 }
