@@ -210,7 +210,7 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v inte
 			for _, validationErr := range validationError.DetailedOutput().Errors {
 				path, err := buildErrorPath(validationErr.AbsoluteKeywordLocation)
 				if err != nil {
-					s.log.Errorf("Validation failed but failed to determine cause: %v", err)
+					s.log.Errorf("Validation failed but could not determine cause: %v", err)
 				}
 				s.log.Errorf("Encountered a validation error for %q: %v", path, validationErr.Error)
 			}

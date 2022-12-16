@@ -67,6 +67,7 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 		t.Fatal(err)
 	}
 	test.t = tpls[0]
+	test.log = log
 
 	return test
 }
@@ -134,6 +135,7 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 		t.Fatal(err)
 	}
 	test.t = tpls[0]
+	test.log = log
 
 	return test
 }
@@ -350,19 +352,22 @@ func TestBuildErrorPath(t *testing.T) {
 		expectErr               bool
 	}{
 		{
-			name:                    "simple schema",
+			name: "simple schema",
+			//nolint:lll // Why: realistic test case
 			absoluteKeywordLocation: "file:///home/test/getoutreach/stencil/manifest.yaml/arguments/releaseOptions.allowMajorVersions#/type",
 			expected:                "arguments.releaseOptions.allowMajorVersions",
 			expectErr:               false,
 		},
 		{
-			name:                    "complex schema",
+			name: "complex schema",
+			//nolint:lll // Why: realistic test case
 			absoluteKeywordLocation: "file:///Users/test/getoutreach/stencil-smartstore/testapps/orgschemagrpc/manifest.yaml/arguments/postgreSQL#/items/properties/name/pattern",
 			expected:                "arguments.postgreSQL.items.properties.name",
 			expectErr:               false,
 		},
 		{
-			name:                    "missing manifest",
+			name: "missing manifest",
+			//nolint:lll // Why: realistic test case
 			absoluteKeywordLocation: "file:///Users/test/getoutreach/stencil-smartstore/testapps/orgschemagrpc/arguments/postgreSQL#/items/properties/name/pattern",
 			expected:                "arguments.postgreSQL.items.properties.name",
 			expectErr:               true,
