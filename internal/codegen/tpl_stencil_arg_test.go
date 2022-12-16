@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/sirupsen/logrus"
+	"gotest.tools/v3/assert"
 )
 
 type testTpl struct {
@@ -66,6 +67,7 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 		t.Fatal(err)
 	}
 	test.t = tpls[0]
+	test.log = log
 
 	return test
 }
@@ -133,6 +135,7 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]in
 		t.Fatal(err)
 	}
 	test.t = tpls[0]
+	test.log = log
 
 	return test
 }
@@ -338,5 +341,51 @@ func TestTplStencil_Arg(t *testing.T) {
 				t.Errorf("TplStencil.Arg() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBuildErrorPath(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		absoluteKeywordLocation string
+		expected                string
+		expectErr               bool
+	}{
+		{
+			name: "simple schema",
+			//nolint:lll // Why: realistic test case
+			absoluteKeywordLocation: "file:///home/test/getoutreach/stencil/manifest.yaml/arguments/releaseOptions.allowMajorVersions#/type",
+			expected:                "arguments.releaseOptions.allowMajorVersions",
+			expectErr:               false,
+		},
+		{
+			name: "complex schema",
+			//nolint:lll // Why: realistic test case
+			absoluteKeywordLocation: "file:///Users/test/getoutreach/stencil-smartstore/testapps/orgschemagrpc/manifest.yaml/arguments/postgreSQL#/items/properties/name/pattern",
+			expected:                "arguments.postgreSQL.items.properties.name",
+			expectErr:               false,
+		},
+		{
+			name: "missing manifest",
+			//nolint:lll // Why: realistic test case
+			absoluteKeywordLocation: "file:///Users/test/getoutreach/stencil-smartstore/testapps/orgschemagrpc/arguments/postgreSQL#/items/properties/name/pattern",
+			expected:                "arguments.postgreSQL.items.properties.name",
+			expectErr:               true,
+		},
+	}
+
+	for _, tc := range testCases {
+		result, err := buildErrorPath(tc.absoluteKeywordLocation)
+		if tc.expectErr {
+			if err == nil {
+				t.Fatalf("expectd and error but got none")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("did not expect error, but got: %v", err)
+		}
+
+		assert.Equal(t, result, tc.expected)
 	}
 }
