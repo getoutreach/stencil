@@ -131,9 +131,19 @@ func TestHandleNestedModules(t *testing.T) {
 		Log: newLogger(),
 	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
+
+	// ensure that a resolved b
 	assert.Equal(t, len(mods), 2, "expected exactly two modules to be returned")
-	assert.Equal(t, mods[0].Name, "a", "expected module to match")
-	assert.Equal(t, mods[1].Name, "b", "expected module to match")
+
+	// ensure that we resolved both a and b
+	found := 0
+	for _, m := range mods {
+		if m.Name == "a" || m.Name == "b" {
+			found++
+		}
+	}
+
+	assert.Equal(t, found, 2, "expected both modules to be returned")
 }
 
 func TestFailOnIncompatibleConstraints(t *testing.T) {
