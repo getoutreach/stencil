@@ -14,6 +14,7 @@ TAGS
 *.sublime-project
 *.sublime-workspace
 .\#*
+.dir-locals.el
 
 # Test binary, build with "go test -c"
 *.test
