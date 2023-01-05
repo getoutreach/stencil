@@ -14,7 +14,10 @@ service:
   framework: stencil
   description: >
     microservice lifecycle manager
+  lifecycle: public_ga
+  tier: tier_2
   ## <<Stencil::Block(extraServiceMetadata)>>
+
   ## <</Stencil::Block>>
   aliases:
     ## <<Stencil::Block(extraAliases)>>
@@ -34,7 +37,7 @@ service:
     - key: name
       value: "stencil"
     - key: stencil_version
-      value: "v1.28.1"
+      value: "v1.29.0-rc.2"
     - key: golang_version
       value: "1.17.9"
     - key: tutorial
