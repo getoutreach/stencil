@@ -13,6 +13,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/gobox/pkg/cli/github"
+	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
@@ -121,7 +122,10 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 		return nil
 	}
 
-	return ext.RegisterExtension(ctx, m.URI, m.Name, m.Version)
+	version := &resolver.Version{
+		Tag: m.Version,
+	}
+	return ext.RegisterExtension(ctx, m.URI, m.Name, version)
 }
 
 // Manifest downloads the module if not already downloaded and returns a parsed
