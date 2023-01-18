@@ -173,8 +173,8 @@ func getVersionWithCommit(ctx context.Context, token cfg.SecretData, repoURL str
 			return nil, errors.Wrap(err, "failed to get latest version")
 		}
 		return v, nil
-
 	}
+
 	v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:         repoURL,
 		Constraints: []string{version.Tag},
