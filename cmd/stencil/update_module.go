@@ -23,23 +23,28 @@ func NewUpdateModule() *cli.Command {
 		ArgsUsage:   "update module",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:  "native-extension",
+				Name:  "--remove-native-extension",
 				Usage: "Updates a module to be a native extension",
 			},
 		},
 		Action: func(c *cli.Context) error {
-			readAndMergeServiceYaml("service.yaml", c.Bool("native-extension"))
+			// Call readAndMergeServiceYaml to update the service yaml to add or remove the native-extension fields.
+			if err := readAndMergeServiceYaml("service.yaml", c.Bool("remove-native-extension")); err != nil {
+				return err
+			}
 			//nolint:gosec // Why: intentional
 			cmd := exec.CommandContext(c.Context, os.Args[0])
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
-			return errors.Wrap(cmd.Run(), "failed to run stancil")
+			return errors.Wrap(cmd.Run(), "failed to run stencil")
 		},
 	}
 }
 
-func readAndMergeServiceYaml(path string, nativeExtension bool) error {
+// readAndMergeServiceYaml takes a path and a bool and updates the service.yaml to create/remove fields
+// associated with native-extensions.
+func readAndMergeServiceYaml(path string, removeNativeExtension bool) error {
 	if path == "" {
 		path = "service.yaml"
 	}
@@ -54,8 +59,7 @@ func readAndMergeServiceYaml(path string, nativeExtension bool) error {
 		return err
 	}
 
-	err = yaml.Unmarshal(b, tm)
-	if err != nil {
+	if err := yaml.Unmarshal(b, tm); err != nil {
 		return err
 	}
 
@@ -63,7 +67,7 @@ func readAndMergeServiceYaml(path string, nativeExtension bool) error {
 		"enablePrereleases": true,
 	}
 
-	if nativeExtension {
+	if !removeNativeExtension {
 		tm.Arguments["plugin"] = true
 		releaseOpts["force"] = true
 	} else {
@@ -76,8 +80,7 @@ func readAndMergeServiceYaml(path string, nativeExtension bool) error {
 		return err
 	}
 
-	err = os.WriteFile(path, out, 0o600)
-	if err != nil {
+	if err := os.WriteFile(path, out, 0o600); err != nil {
 		return err
 	}
 	return nil

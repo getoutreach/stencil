@@ -118,7 +118,7 @@ func NewCreateModule() *cli.Command {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
-			return errors.Wrap(cmd.Run(), "failed to run stancil")
+			return errors.Wrap(cmd.Run(), "failed to run stencil")
 		},
 	}
 }

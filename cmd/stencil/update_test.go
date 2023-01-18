@@ -12,14 +12,14 @@ import (
 
 func TestUpdateModule(t *testing.T) {
 	tt := []struct {
-		Name                string
-		NativeExtensionFlag bool
-		Given               configuration.ServiceManifest
-		Expected            configuration.ServiceManifest
+		Name                      string
+		RemoveNativeExtensionFlag bool
+		Given                     configuration.ServiceManifest
+		Expected                  configuration.ServiceManifest
 	}{
 		{
-			Name:                "EnsureServiceNoChangeWithoutFlag",
-			NativeExtensionFlag: false,
+			Name:                      "EnsureServiceNoChangeWithoutFlag",
+			RemoveNativeExtensionFlag: true,
 			Given: configuration.ServiceManifest{
 				Name: "test",
 				Modules: []*configuration.TemplateRepository{
@@ -53,8 +53,8 @@ func TestUpdateModule(t *testing.T) {
 				},
 			},
 		}, {
-			Name:                "EnsureNativeExtensionAddition",
-			NativeExtensionFlag: true,
+			Name:                      "EnsureNativeExtensionAddition",
+			RemoveNativeExtensionFlag: false,
 			Given: configuration.ServiceManifest{
 				Name: "test",
 				Modules: []*configuration.TemplateRepository{
@@ -90,8 +90,8 @@ func TestUpdateModule(t *testing.T) {
 				},
 			},
 		}, {
-			Name:                "EnsureNativeExtensionReversion",
-			NativeExtensionFlag: false,
+			Name:                      "EnsureNativeExtensionReversion",
+			RemoveNativeExtensionFlag: true,
 			Given: configuration.ServiceManifest{
 				Name: "test",
 				Modules: []*configuration.TemplateRepository{
@@ -149,7 +149,7 @@ func TestUpdateModule(t *testing.T) {
 			assert.NilError(t, err, "failed to unmarshal expected yaml")
 
 			// Update the service.yaml and compare to expected
-			err = readAndMergeServiceYaml(tempFile, test.NativeExtensionFlag)
+			err = readAndMergeServiceYaml(tempFile, test.RemoveNativeExtensionFlag)
 			assert.NilError(t, err, "failed to read and update service.yaml")
 
 			b, err = os.ReadFile(tempFile)
