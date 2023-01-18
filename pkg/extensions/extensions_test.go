@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -17,7 +18,10 @@ func TestCanImportNativeExtension(t *testing.T) {
 	ext := extensions.NewHost(logrus.New())
 	defer ext.Close()
 
-	err := ext.RegisterExtension(ctx, "https://github.com/getoutreach/stencil-golang", "github.com/getoutreach/stencil-golang", "v1.3.0")
+	version := &resolver.Version{
+		Tag: "v1.3.0",
+	}
+	err := ext.RegisterExtension(ctx, "https://github.com/getoutreach/stencil-golang", "github.com/getoutreach/stencil-golang", version)
 	assert.NilError(t, err, "failed to register extension")
 
 	caller, err := ext.GetExtensionCaller(ctx)

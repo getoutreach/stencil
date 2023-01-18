@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/blang/semver/v4"
+	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/archive"
 	"github.com/getoutreach/gobox/pkg/cli/updater/release"
@@ -109,7 +111,7 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
-func (h *Host) RegisterExtension(ctx context.Context, source, name, version string) error { //nolint:funlen // Why: OK length.
+func (h *Host) RegisterExtension(ctx context.Context, source, name string, version *resolver.Version) error { //nolint:funlen // Why: OK length.
 	h.log.WithField("extension", name).WithField("source", source).Debug("Registered extension")
 
 	u, err := giturls.Parse(source)
@@ -148,11 +150,39 @@ func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 }
 
 // getExtensionPath returns the path to an extension binary
-func (h *Host) getExtensionPath(version, name string) string {
+func (h *Host) getExtensionPath(version *resolver.Version, name string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
-	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions", name, fmt.Sprintf("@%s", version), filepath.Base(name))
+	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions",
+		name, fmt.Sprintf("@%s", version.Commit), filepath.Base(name))
 	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
+}
+
+// getVersionWithCommit retrieves a new version with the commit present.
+func getVersionWithCommit(ctx context.Context, token cfg.SecretData, repoURL string,
+	version *resolver.Version) (*resolver.Version, error) {
+	var v *resolver.Version
+	var err error
+	// We assume that if the tag does not comply with semver it is a channel (e.g. unstable).
+	if _, err := semver.ParseTolerant(version.Tag); err != nil {
+		v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
+			URL:     repoURL,
+			Channel: version.Tag,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get latest version")
+		}
+		return v, nil
+	}
+
+	v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
+		URL:         repoURL,
+		Constraints: []string{version.Tag},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest version")
+	}
+	return v, nil
 }
 
 // downloadFromRemote downloads a release from github and extracts it to disk
@@ -162,7 +192,8 @@ func (h *Host) getExtensionPath(version, name string) string {
 //	org: getoutreach
 //	repo: stencil-plugin
 //	name: github.com/getoutreach/stencil-plugin
-func (h *Host) downloadFromRemote(ctx context.Context, name, version string) (string, error) {
+func (h *Host) downloadFromRemote(ctx context.Context, name string,
+	version *resolver.Version) (string, error) {
 	token, err := github.GetToken()
 	if err != nil {
 		h.log.WithError(err).Warn("Failed to get github token, falling back to anonymous")
@@ -170,14 +201,23 @@ func (h *Host) downloadFromRemote(ctx context.Context, name, version string) (st
 
 	repoURL := "https://" + name
 
-	if version == "" {
+	if version.Tag == "" {
 		v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
 			URL: repoURL,
 		})
 		if err != nil {
 			return "", errors.Wrap(err, "failed to get latest version")
 		}
-		version = v.Tag
+		version = v
+	}
+
+	if version.Commit == "" {
+		v, err := getVersionWithCommit(ctx, token, repoURL, version)
+		if err != nil {
+			return "", errors.Wrap(err, "retrieving commit")
+
+		}
+		version = v
 	}
 
 	// Check if the version we're pulling already exists and is executable before downloading
@@ -191,7 +231,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name, version string) (st
 	a, archiveName, _, err := release.Fetch(ctx, token, &release.FetchOptions{
 		AssetName: filepath.Base(name) + "_*_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz",
 		RepoURL:   repoURL,
-		Tag:       version,
+		Tag:       version.Tag,
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch release")
