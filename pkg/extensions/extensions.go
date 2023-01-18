@@ -150,10 +150,10 @@ func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 }
 
 // getExtensionPath returns the path to an extension binary
-func (h *Host) getExtensionPath(commit, name string) string {
-	fmt.Printf("commit: %v\n", commit)
+func (h *Host) getExtensionPath(version *resolver.Version, name string) string {
 	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
-	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions", name, fmt.Sprintf("@%s", commit), filepath.Base(name))
+	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions",
+		name, fmt.Sprintf("@%s", version.Commit), filepath.Base(name))
 	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
 	return path
 }
@@ -222,7 +222,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 
 	// Check if the version we're pulling already exists and is executable before downloading
 	// it again.
-	dlPath := h.getExtensionPath(version.Commit, name)
+	dlPath := h.getExtensionPath(version, name)
 	if info, err := os.Stat(dlPath); err == nil && info.Mode() == 0o755 {
 		return dlPath, nil
 	}
