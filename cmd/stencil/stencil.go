@@ -120,6 +120,7 @@ func main() {
 		NewDescribeCmd(),
 		NewCreateCommand(),
 		NewDocsCommand(),
+		NewUpdateCommand(),
 		// <</Stencil::Block>>
 	}
 
