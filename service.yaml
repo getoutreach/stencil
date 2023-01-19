@@ -19,6 +19,9 @@ arguments:
   reportingTeam: fnd-dt
   slack: dev-tooling-notifications
   tracing: opentelemetry
+  ciOptions:
+    skipE2e: true
+    skipDocker: true
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb
     - deploy/launchdarkly/%(environment)s/launchdarkly

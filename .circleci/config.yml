@@ -131,15 +131,3 @@ workflows:
               ignore: /.*/
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
-      - shared/e2e:
-          context: *contexts
-          ## <<Stencil::Block(circleE2EExtra)>>
-
-          ## <</Stencil::Block>>
-      - shared/docker:
-          context: *contexts
-          filters:
-            branches:
-              ignore: *release_branches
-            tags:
-              only: /v\d+(\.\d+)*(-.*)*/
