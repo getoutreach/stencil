@@ -10,12 +10,13 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestUpdateModule(t *testing.T) {
+func TestConfigureModule(t *testing.T) {
 	tt := []struct {
 		Name                      string
 		RemoveNativeExtensionFlag bool
 		Given                     configuration.ServiceManifest
 		Expected                  configuration.ServiceManifest
+		ShouldError               bool
 	}{
 		{
 			Name:                      "EnsureServiceNoChangeWithoutFlag",
@@ -29,7 +30,7 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 					},
@@ -45,13 +46,14 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 					},
 					"reportingTeam": "test_name",
 				},
 			},
+			ShouldError: true,
 		}, {
 			Name:                      "EnsureNativeExtensionAddition",
 			RemoveNativeExtensionFlag: false,
@@ -64,7 +66,7 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 					},
@@ -80,7 +82,7 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 						"force":             true,
@@ -89,6 +91,7 @@ func TestUpdateModule(t *testing.T) {
 					"reportingTeam": "test_name",
 				},
 			},
+			ShouldError: false,
 		}, {
 			Name:                      "EnsureNativeExtensionReversion",
 			RemoveNativeExtensionFlag: true,
@@ -101,7 +104,7 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 						"force":             true,
@@ -119,13 +122,14 @@ func TestUpdateModule(t *testing.T) {
 					},
 				},
 				Arguments: map[string]interface{}{
-					"description": "test module update",
+					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
 					},
 					"reportingTeam": "test_name",
 				},
 			},
+			ShouldError: false,
 		},
 	}
 
@@ -148,9 +152,13 @@ func TestUpdateModule(t *testing.T) {
 			err = yaml.Unmarshal(b, tm)
 			assert.NilError(t, err, "failed to unmarshal expected yaml")
 
-			// Update the service.yaml and compare to expected
-			err = readAndMergeServiceYaml(tempFile, test.RemoveNativeExtensionFlag)
-			assert.NilError(t, err, "failed to read and update service.yaml")
+			// configure the service.yaml and compare to expected
+			err = readAndMergeServiceYaml(tempFile, test.RemoveNativeExtensionFlag, "")
+			if test.ShouldError == true {
+				assert.Error(t, err, "no action")
+			} else {
+				assert.NilError(t, err, "failed to read and configure service.yaml")
+			}
 
 			b, err = os.ReadFile(tempFile)
 			assert.NilError(t, err, "failed to read service.yaml")
