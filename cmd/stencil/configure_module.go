@@ -17,7 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// NewConfigureModule returns a new urfave/cli.Command for the
+// NewConfigureModuleCmd returns a new urfave/cli.Command for the
 // update module command
 func NewConfigureModuleCmd() *cli.Command {
 	return &cli.Command{
