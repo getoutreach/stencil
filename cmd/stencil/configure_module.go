@@ -19,7 +19,7 @@ import (
 
 // NewConfigureModule returns a new urfave/cli.Command for the
 // update module command
-func NewConfigureModule() *cli.Command {
+func NewConfigureModuleCmd() *cli.Command {
 	return &cli.Command{
 		Name:        "configure",
 		Description: "updates a module with the provided name in the current directory",

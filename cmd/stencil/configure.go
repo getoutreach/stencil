@@ -15,7 +15,7 @@ func NewConfigureCommand() *cli.Command {
 		Name:        "module",
 		Description: "Commands to configure template repositories for native-extension functionality, or stencil powered repositories",
 		Subcommands: []*cli.Command{
-			NewConfigureModule(),
+			NewConfigureModuleCmd(),
 		},
 	}
 }
