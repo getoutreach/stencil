@@ -111,7 +111,7 @@ func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error)
 // RegisterExtension registers a ext from a given source
 // and compiles/downloads it. A client is then created
 // that is able to communicate with the ext.
-func (h *Host) RegisterExtension(ctx context.Context, source, name string, version *resolver.Version) error { //nolint:funlen // Why: OK length.
+func (h *Host) RegisterExtension(ctx context.Context, source, name string, version *resolver.Version) error { //nolint:lll // Why: OK length.
 	h.log.WithField("extension", name).WithField("source", source).Debug("Registered extension")
 
 	u, err := giturls.Parse(source)
@@ -215,7 +215,6 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 		v, err := getVersionWithCommit(ctx, token, repoURL, version)
 		if err != nil {
 			return "", errors.Wrap(err, "retrieving commit")
-
 		}
 		version = v
 	}
