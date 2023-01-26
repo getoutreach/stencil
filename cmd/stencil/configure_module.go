@@ -21,9 +21,9 @@ import (
 // update module command
 func NewConfigureModule() *cli.Command {
 	return &cli.Command{
-		Name:        "module",
+		Name:        "configure",
 		Description: "updates a module with the provided name in the current directory",
-		ArgsUsage:   "update module",
+		ArgsUsage:   "configure module",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "remove-native-extension",

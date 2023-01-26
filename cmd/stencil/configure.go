@@ -12,7 +12,7 @@ import (
 // create command
 func NewConfigureCommand() *cli.Command {
 	return &cli.Command{
-		Name:        "configure",
+		Name:        "module",
 		Description: "Commands to configure template repositories for native-extension functionality, or stencil powered repositories",
 		Subcommands: []*cli.Command{
 			NewConfigureModule(),
