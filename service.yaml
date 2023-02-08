@@ -9,7 +9,7 @@ arguments:
   metrics: datadog
   opslevel:
     tier: 2
-    confluenceSpaceKey: DTSS
+    confluenceSpaceKey: DT
     designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
   oss: true
   releaseOptions:
@@ -22,6 +22,8 @@ arguments:
   ciOptions:
     skipE2e: true
     skipDocker: true
+  notifications:
+    releaseFailureSlackChannel: C01CEQP2MA6
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb
     - deploy/launchdarkly/%(environment)s/launchdarkly
@@ -30,8 +32,9 @@ arguments:
 modules:
   - name: github.com/getoutreach/stencil-base
   - name: github.com/getoutreach/stencil-golang
-  - name: github.com/getoutreach/stencil-outreach
-  - name: github.com/getoutreach/stencil-circleci
   - name: github.com/getoutreach/stencil-actions
-  - name: github.com/getoutreach/stencil-discovery
+  - name: github.com/getoutreach/stencil-circleci
+    channel: rc
+  - name: github.com/getoutreach/devbase
+    channel: rc
 migrated: true
