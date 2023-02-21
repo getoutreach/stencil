@@ -2,7 +2,8 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@dev:2.9.0-rc.4
+  shared: getoutreach/shared@2.9.0
+  queue: eddiewebb/queue@1.8.4
 
 parameters:
   rebuild_cache:
@@ -104,7 +105,6 @@ workflows:
       - shared/release: &release
           dryrun: false
           context: *contexts
-          release_failure_slack_channel: C01CEQP2MA6
           ## <<Stencil::Block(circleReleaseExtra)>>
 
           ## <</Stencil::Block>>
@@ -129,6 +129,5 @@ workflows:
           context: *contexts
           filters:
             branches:
-              ignore: /.*/
-            tags:
-              only: /v[0-9]+(\.[0-9]+)*(-.*)*/
+              only:
+                - main
