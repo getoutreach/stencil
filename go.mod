@@ -1,6 +1,6 @@
 module github.com/getoutreach/stencil
 
-go 1.17
+go 1.19
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6

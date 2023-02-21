@@ -4,7 +4,7 @@
 # you are reducing compatibility guarantees.
 ## <<Stencil::Block(toolverOverride)>>
 ## <</Stencil::Block>>
-golang 1.19.2
+golang 1.19.5
 nodejs 16.13.0
 terraform 0.14.11
 ruby 2.7.5
