@@ -168,8 +168,11 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		})
 	}
 
-	//nolint:errcheck // Why: expose if available
-	vals.Runtime.Box, _ = box.LoadBox()
+	var err error
+	vals.Runtime.Box, err = box.LoadBox()
+	if err != nil {
+		vals.Runtime.Box = &box.Config{}
+	}
 
 	// If we're a repository, add repository information
 	if r, err := gogit.PlainOpen(""); err == nil {
