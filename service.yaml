@@ -2,9 +2,7 @@ name: stencil
 arguments:
   commands:
     - stencil
-  coverage:
-    provider: codecov
-  description: microservice lifecycle manager
+  description: smart templating engine for service development
   lintroller: platinum
   metrics: datadog
   opslevel:
@@ -18,7 +16,6 @@ arguments:
     prereleasesBranch: rc
   reportingTeam: fnd-dt
   slack: dev-tooling-notifications
-  tracing: opentelemetry
   ciOptions:
     skipE2e: true
     skipDocker: true
@@ -32,9 +29,8 @@ arguments:
 modules:
   - name: github.com/getoutreach/stencil-base
   - name: github.com/getoutreach/stencil-golang
+    channel: rc
   - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-circleci
-    channel: rc
   - name: github.com/getoutreach/devbase
     channel: rc
-migrated: true
