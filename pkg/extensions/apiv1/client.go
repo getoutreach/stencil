@@ -40,6 +40,7 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 
 	rpcClient, err := client.Client()
 	if err != nil {
+		log.WithError(err).Error("Failed to create connection to extension, if not useful output is returned, try running again with '--debug'")
 		return nil, func() error { return nil }, errors.Wrap(err, "failed to create connection to extension")
 	}
 

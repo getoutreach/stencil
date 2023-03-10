@@ -93,6 +93,29 @@ type TemplateRepository struct {
 	Version string `yaml:"version,omitempty"`
 }
 
+// NewTemplateRepositoryManifest reads a template repository manifest from disk at the
+// specified path, parses it, and returns the output.
+func NewTemplateRepositoryManifest(filePath string) (*TemplateRepositoryManifest, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var m *TemplateRepositoryManifest
+	if err := yaml.NewDecoder(f).Decode(&m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+// NewDefaultTemplateRepositoryManifest returns a parsed template repository manifest
+// from a set default path on disk.
+func NewDefaultTemplateRepositoryManifest() (*TemplateRepositoryManifest, error) {
+	return NewTemplateRepositoryManifest("manifest.yaml")
+}
+
 // TemplateRepositoryManifest is a manifest of a template repository
 type TemplateRepositoryManifest struct {
 	// Name is the name of this template repository.

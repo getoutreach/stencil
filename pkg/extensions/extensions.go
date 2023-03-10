@@ -122,6 +122,9 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name string, versi
 	var extPath string
 	if u.Scheme == "file" {
 		extPath = filepath.Join(strings.TrimPrefix(source, "file://"), "bin", "plugin")
+		if _, err := os.Stat(extPath); err != nil {
+			h.log.WithError(err).WithField("extension", name).Warn("Extension binary not found (did you run 'make' in the extension directory?)")
+		}
 	} else {
 		extPath, err = h.downloadFromRemote(ctx, name, version)
 	}

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/getoutreach/stencil/internal/cmd/docs/generate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,5 +16,6 @@ func NewDocsGenerateCommand() *cli.Command {
 		Name:        "generate",
 		Usage:       "Generate documentation",
 		Description: "Generates documentation for the current stencil module",
+		Action:      generate.Run,
 	}
 }
