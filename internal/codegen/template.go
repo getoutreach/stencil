@@ -4,13 +4,18 @@
 // that is being rendered by stencil.
 package codegen
 
+// TODO(jaredallard): Make this entire file safer, right now it doesn't
+// validate engine names at all.
+
 import (
 	"bytes"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/getoutreach/stencil/internal/engine"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/sirupsen/logrus"
 )
@@ -73,8 +78,9 @@ func (t *Template) Parse(st *Stencil) error {
 	// Add the current template to the template object on the module that we're
 	// attached to. This enables us to call functions in other templates within our
 	// 'module context'.
-	if _, err := t.Module.GetTemplate().New(t.ImportPath()).Funcs(NewFuncMap(nil, nil, t.log)).
-		Parse(string(t.Contents)); err != nil {
+	fns := NewFuncMap(nil, nil, t.log)
+	if err := t.Module.GetTemplate(engine.GetEngineNameForExtension(filepath.Ext(t.Path))).
+		Parse(t.ImportPath(), bytes.NewReader(t.Contents), fns); err != nil {
 		return err
 	}
 
@@ -87,7 +93,9 @@ func (t *Template) Parse(st *Stencil) error {
 // are rendered onto the Files field of the template struct.
 func (t *Template) Render(st *Stencil, vals *Values) error {
 	if len(t.Files) == 0 {
-		f, err := NewFile(strings.TrimSuffix(t.Path, ".tpl"), t.mode, t.modTime)
+		// Create a default file that is the name of the file minus the last extension
+		// (usually the .tpl extension)
+		f, err := NewFile(strings.TrimSuffix(t.Path, filepath.Ext(t.Path)), t.mode, t.modTime)
 		if err != nil {
 			return err
 		}
@@ -107,8 +115,9 @@ func (t *Template) Render(st *Stencil, vals *Values) error {
 	// Execute a specific file because we're using a shared template, if we attempt to render
 	// the entire template we'll end up just rendering the base template (<module>) which is empty
 	var buf bytes.Buffer
-	if err := t.Module.GetTemplate().Funcs(NewFuncMap(st, t, t.log)).
-		ExecuteTemplate(&buf, t.ImportPath(), t.args); err != nil {
+	fns := NewFuncMap(st, t, t.log)
+	if err := t.Module.GetTemplate(engine.GetEngineNameForExtension(filepath.Ext(t.Path))).
+		Render(t.ImportPath(), &buf, fns, t.args); err != nil {
 		return err
 	}
 

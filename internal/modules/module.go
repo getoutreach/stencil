@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	"github.com/getoutreach/stencil/internal/engine"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
@@ -34,11 +33,15 @@ const localModuleVersion = "local"
 
 // Module is a stencil module that contains template files.
 type Module struct {
-	// t is a shared go-template that is used for this module. This is important
-	// because this allows us to call shared templates across a single module.
+	// templates contains a list of the global template being used for this module
+	// based on the specific engine being in use.
+	//
+	// This is important because this allows us to call shared templates across
+	// a single module.
+	//
 	// Note: We don't currently support sharing templates across modules. Instead
 	// the data passing system should be used for cases like this.
-	t *template.Template
+	templates map[engine.Name]engine.Instance
 
 	// Name is the name of a module. This should be a valid go
 	// import path. For example: github.com/getoutreach/stencil-base
@@ -87,7 +90,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		return nil, fmt.Errorf("version must be specified for module %q", tr.Name)
 	}
 
-	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
+	return &Module{make(map[engine.Name]engine.Instance), tr.Name, uri, tr.Version, nil}, nil
 }
 
 // NewWithFS creates a module with the specified file system. This is
@@ -102,9 +105,30 @@ func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
 	return m
 }
 
-// GetTemplate returns the go template for this module
-func (m *Module) GetTemplate() *template.Template {
-	return m.t
+// GetTemplate returns the shared template being used for this template
+// based on the provided engine. It is the caller's responsibility to
+// cast the returned value to the correct type.
+func (m *Module) GetTemplate(engineName engine.Name) engine.Instance {
+	// TODO(jaredallard): Protect w/ mutex?
+	e, ok := m.templates[engineName]
+	if !ok {
+		// Create the engine
+		creator, ok := engine.GetEngine(engineName)
+		if !ok {
+			panic(fmt.Errorf("unsupported engine '%s'", engineName))
+		}
+
+		var err error
+		e, err = creator(m.Name)
+		if err != nil {
+			panic(err)
+		}
+
+		// store the engine instance for this module
+		m.templates[engineName] = e
+	}
+
+	return e
 }
 
 // RegisterExtensions registers all extensions provided

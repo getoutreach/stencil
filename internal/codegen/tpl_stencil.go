@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/getoutreach/stencil/internal/engine"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
@@ -245,7 +247,8 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string,
 	}
 
 	var buf bytes.Buffer
-	if err := s.t.Module.GetTemplate().ExecuteTemplate(&buf, name, data); err != nil {
+	if err := s.t.Module.GetTemplate(engine.GetEngineNameForExtension(filepath.Ext(s.t.Path))).
+		Render(name, &buf, nil, data); err != nil {
 		return "", err
 	}
 

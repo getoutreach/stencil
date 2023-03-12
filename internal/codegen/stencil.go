@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/stencil/internal/engine"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -225,6 +226,20 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 	return nil
 }
 
+// isTemplateFile determines if the provided name is a template file
+func (s *Stencil) isTemplateFile(name string) bool {
+	ext := filepath.Ext(name)
+	tplExts := engine.GetEngineExtensions()
+	for _, e := range tplExts {
+		if e == ext {
+			return true
+		}
+	}
+
+	// not a template, nothing was equal above
+	return false
+}
+
 // getTemplates takes all modules attached to this stencil
 // struct and returns all templates exposed by it.
 func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*Template, error) {
@@ -268,8 +283,8 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 				return err
 			}
 
-			// Skip files without a .tpl extension
-			if filepath.Ext(path) != ".tpl" {
+			// Skip files that do not appear to be template files
+			if !s.isTemplateFile(path) {
 				return nil
 			}
 

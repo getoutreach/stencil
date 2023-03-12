@@ -26,7 +26,7 @@ func TestBasicE2ERender(t *testing.T) {
 	f.Close()
 
 	// create a stub template
-	f, err := fs.Create("test-template.tpl")
+	f, err := fs.Create("templates/test-template.tpl")
 	assert.NilError(t, err, "failed to create stub template")
 	f.Write([]byte("{{ .Config.Name }}"))
 	f.Close()
