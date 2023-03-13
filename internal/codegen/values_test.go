@@ -41,6 +41,7 @@ func TestValues(t *testing.T) {
 	assert.NilError(t, err, "expected gogit.(Repository).Worktree() not to fail")
 
 	cmt, err := wrk.Commit("initial commit", &gogit.CommitOptions{
+		AllowEmptyCommits: true,
 		Author: &object.Signature{
 			Name:  "Stencil",
 			Email: "email@example.com",
