@@ -289,3 +289,13 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 
 	return data, nil
 }
+
+// Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
+//
+//  {{- $_ := stencil.Debug "I'm a log!" }}
+func (s *TplStencil) Debug(args ...interface{}) error {
+	s.log.WithField("path", s.t.Path).Debug(args...)
+
+	// We have to return something...
+	return nil
+}
