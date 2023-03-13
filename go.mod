@@ -13,7 +13,7 @@ require (
 
 	// This version has util.Walk
 	// https://github.com/go-git/go-billy/commit/7ab80d7c013de28ffbb1ca64b9bbf8dd1cbd81c5
-	github.com/go-git/go-billy/v5 v5.4.0
+	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.6.0
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-hclog v1.4.0
