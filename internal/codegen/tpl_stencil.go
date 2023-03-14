@@ -11,10 +11,12 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"sort"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -46,6 +48,26 @@ type TplStencil struct {
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 	v := s.s.sharedData.moduleHooks[k]
+
+	// sort the output so that it's deterministic
+	sort.Slice(v, func(i, j int) bool {
+		// We have to hash the values because they're not the same
+		// type, so we can't compare them directly
+		hi, herr := hashstructure.Hash(v[i], hashstructure.FormatV2, nil)
+		hj, jerr := hashstructure.Hash(v[j], hashstructure.FormatV2, nil)
+		if herr != nil || jerr != nil {
+			// fallback to fmt.Sprintf
+			s.log.WithFields(logrus.Fields{
+				"module": s.t.Module.Name,
+				"hook":   name,
+				"i":      i,
+				"j":      j,
+			}).Debug("Failed to hash using hashstructure, falling back to fmt.Sprintf")
+			return fmt.Sprintf("%v", v[i]) < fmt.Sprintf("%v", v[j])
+		}
+
+		return hi < hj
+	})
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
@@ -100,8 +122,11 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 		return v.value
 	}
 
-	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-		Warn("failed to retrieved data from global store")
+	// Don't log on the first pass because we haven't rendered all the templates yet
+	if !s.s.isFirstPass {
+		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+			Warn("failed to retrieved data from global store")
+	}
 
 	return nil
 }
