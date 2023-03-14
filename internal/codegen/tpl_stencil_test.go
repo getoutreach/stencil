@@ -127,7 +127,7 @@ func TestTplStencil_GetModuleHook(t *testing.T) {
 					),
 				),
 				s: &Stencil{sharedData: &sharedData{
-					moduleHooks: make(map[string][]interface{}),
+					moduleHooks: make(map[string]*moduleHook),
 					globals:     make(map[string]global),
 				}},
 				log: logrus.New(),
@@ -142,6 +142,10 @@ func TestTplStencil_GetModuleHook(t *testing.T) {
 				}
 			}
 			s.s.isFirstPass = false
+
+			// Sort the module hooks, which should be called by stencil before
+			// the second pass
+			s.s.sortModuleHooks()
 
 			if got := s.GetModuleHook(tt.args.name); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("TplStencil.GetModuleHook() = %v, want %v", got, tt.want)
