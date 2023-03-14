@@ -1,8 +1,8 @@
-version: v1.30.0
+version: v1.31.0
 modules:
     - name: github.com/getoutreach/devbase
       url: https://github.com/getoutreach/devbase
-      version: v2.9.0
+      version: v2.10.0-rc.7
     - name: github.com/getoutreach/stencil-actions
       url: https://github.com/getoutreach/stencil-actions
       version: v0.2.0
@@ -14,7 +14,7 @@ modules:
       version: v1.7.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: v1.7.0
+      version: v1.8.0-rc.7
 files:
     - name: .circleci/config.yml
       template: .circleci/config.yml.tpl
@@ -87,9 +87,6 @@ files:
       module: github.com/getoutreach/stencil-golang
     - name: go.mod
       template: go.mod.tpl
-      module: github.com/getoutreach/stencil-golang
-    - name: monitoring/slos.tf
-      template: monitoring/slos.tf.tpl
       module: github.com/getoutreach/stencil-golang
     - name: package.json
       template: package.json.tpl

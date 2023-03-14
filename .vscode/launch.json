@@ -27,7 +27,11 @@
       "substitutePath": [
         {
           "from": "${workspaceRoot}",
-          "to": "/home/dev/app"
+          "to": "github.com/getoutreach/stencil"
+        },
+        {
+          "from": "${env:HOME}/.asdf/installs/golang/1.19.5/packages/pkg/mod",
+          "to": ""
         },
         {
           "from": "${env:HOME}/.asdf/installs/golang/1.19.5/packages/pkg/mod",
