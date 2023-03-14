@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -92,6 +93,8 @@ type ModuleResolveOptions struct {
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
+//
+//nolint:funlen // Why: Will be refactored in the future
 func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
 	// start resolving the top-level modules
 	modulesToResolve := make([]resolveModule, 0)
@@ -152,6 +155,16 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 			resolved[importPath] = &resolvedModule{Module: &Module{}}
 		}
 		rm := resolved[importPath]
+
+		if resolv.conf.Version != "" {
+			if _, err := semver.NewConstraint(resolv.conf.Version); err != nil {
+				// Attempt to resolve as a branch, which essentially is a channel.
+				// This is a bit of a hack, ideally we'll consolidate this logic when
+				// channels are ripped out of stencil later.
+				resolv.conf.Channel = resolv.conf.Version
+				resolv.conf.Version = ""
+			}
+		}
 
 		// if the module has already been resolved and is marked as
 		// "dontResolve", then re-use it.

@@ -223,6 +223,56 @@ func TestCanUseBranch(t *testing.T) {
 	assert.Equal(t, mod.Version, "main", "expected module to match")
 }
 
+func TestBranchAlwaysUsedOverDependency(t *testing.T) {
+	ctx := context.Background()
+
+	// Create in-memory module that also requires stencil-base
+	man := &configuration.TemplateRepositoryManifest{
+		Name: "test",
+		Modules: []*configuration.TemplateRepository{
+			{
+				Name:    "github.com/getoutreach/stencil-base",
+				Version: ">=v0.0.0",
+			},
+		},
+	}
+	mDep, err := modulestest.NewModuleFromTemplates(man)
+	assert.NilError(t, err, "failed to create dep module")
+
+	// Resolve a fake service that requires a branch of a dependency that the in-memory module also requires
+	// but with a different version constraint
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		Replacements: map[string]*modules.Module{"test-dep": mDep},
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "testing-service",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "main",
+				},
+				{
+					Name: "test-dep",
+				},
+			},
+		},
+		Log: newLogger(),
+	})
+	assert.NilError(t, err, "failed to call GetModulesForService()")
+
+	var mod *modules.Module
+	for _, m := range mods {
+		if m.Name == "github.com/getoutreach/stencil-base" {
+			mod = m
+			break
+		}
+	}
+	if mod == nil {
+		t.Fatal("failed to find module")
+	}
+
+	assert.Equal(t, mod.Version, "main", "expected module to match")
+}
+
 func TestCanRespectChannels(t *testing.T) {
 	t.Skip("Breaks when a module isn't currently on an rc version")
 	ctx := context.Background()
