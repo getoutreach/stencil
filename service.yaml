@@ -2,8 +2,6 @@ name: stencil
 arguments:
   commands:
     - stencil
-  coverage:
-    provider: codecov
   description: microservice lifecycle manager
   lintroller: platinum
   metrics: datadog
