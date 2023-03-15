@@ -36,19 +36,19 @@ type TplStencil struct {
 // This is incredibly useful for allowing other modules to write
 // to files that your module owns. Think of them as extension points
 // for your module. The value returned by this function is always a
-// []interface{}, aka a list.
+// []any, aka a list.
 //
-//	{{- /* This returns a []interface{} */}}
+//	{{- /* This returns a []any */}}
 //	{{ $hook := stencil.GetModuleHook "myModuleHook" }}
 //	{{- range $hook }}
 //	  {{ . }}
 //	{{- end }}
-func (s *TplStencil) GetModuleHook(name string) []interface{} {
+func (s *TplStencil) GetModuleHook(name string) []any {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 	v := s.s.sharedData.moduleHooks[k]
 	if v == nil {
 		// No data, return nothing
-		return nil
+		return []any{}
 	}
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
