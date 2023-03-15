@@ -46,6 +46,10 @@ type TplStencil struct {
 func (s *TplStencil) GetModuleHook(name string) []interface{} {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 	v := s.s.sharedData.moduleHooks[k]
+	if v == nil {
+		// No data, return nothing
+		return nil
+	}
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
