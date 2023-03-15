@@ -49,7 +49,8 @@ func (s *TplStencil) GetModuleHook(name string) []interface{} {
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
-	return v
+
+	return v.values
 }
 
 // SetGlobal sets a global to be used in the context of the current template module
@@ -100,8 +101,11 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 		return v.value
 	}
 
-	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-		Warn("failed to retrieved data from global store")
+	// Don't log on the first pass because we haven't rendered all the templates yet
+	if !s.s.isFirstPass {
+		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+			Warn("failed to retrieved data from global store")
+	}
 
 	return nil
 }
@@ -139,17 +143,17 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 		return err, err
 	}
 
-	// convert the slice into a []interface{}
-	interfaceSlice := make([]interface{}, v.Len())
+	// convert the slice into a []any
+	interfaceSlice := make([]any, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
 	// if set, append, otherwise assign
 	if _, ok := s.s.sharedData.moduleHooks[k]; ok {
-		s.s.sharedData.moduleHooks[k] = append(s.s.sharedData.moduleHooks[k], interfaceSlice...)
+		s.s.sharedData.moduleHooks[k].values = append(s.s.sharedData.moduleHooks[k].values, interfaceSlice...)
 	} else {
-		s.s.sharedData.moduleHooks[k] = interfaceSlice
+		s.s.sharedData.moduleHooks[k] = &moduleHook{values: interfaceSlice}
 	}
 
 	return nil, nil

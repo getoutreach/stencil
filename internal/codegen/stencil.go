@@ -19,6 +19,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/util"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -51,29 +52,56 @@ type Stencil struct {
 	// pass mode
 	isFirstPass bool
 
-	// store for module hook data and globals
+	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
+}
+
+// hashModuleHookValue hashes the module hook value using the
+// hashstructure library. If the hashing fails, it returns 0.
+func hashModuleHookValue(m any) uint64 {
+	hash, err := hashstructure.Hash(m, hashstructure.FormatV2, nil)
+	if err != nil {
+		hash = 0
+	}
+	return hash
+}
+
+// moduleHook is a wrapper type for module hook values that
+// contains the values for module hooks
+type moduleHook struct {
+	// values are the values available for this module hook
+	values []any
+}
+
+// Sort sorts the module hook values by their hash
+func (m *moduleHook) Sort() {
+	sort.Slice(m.values, func(i, j int) bool {
+		return hashModuleHookValue(m.values[i]) < hashModuleHookValue(m.values[j])
+	})
 }
 
 // global is an explicit type used to define global variables in the sharedData
 // type (specifically the globals struct field) so that we can track not only the
 // value of the global but also the template it came from.
 type global struct {
+	// template is the template that defined this global (and is scoped too)
 	template string
-	value    interface{}
+
+	// value is the underlying value
+	value any
 }
 
 // sharedData stores data that is injected by templates from modules
 // for both module hooks and template module globals.
 type sharedData struct {
-	moduleHooks map[string][]interface{}
+	moduleHooks map[string]*moduleHook
 	globals     map[string]global
 }
 
 // newSharedData returns an initialized (empty underlying maps) sharedData type.
 func newSharedData() *sharedData {
 	return &sharedData{
-		moduleHooks: make(map[string][]interface{}),
+		moduleHooks: make(map[string]*moduleHook),
 		globals:     make(map[string]global),
 	}
 }
@@ -147,6 +175,13 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 	return l
 }
 
+// sortModuleHooks sorts the module hooks by their hash
+func (s *Stencil) sortModuleHooks() {
+	for _, m := range s.sharedData.moduleHooks {
+		m.Sort()
+	}
+}
+
 // Render renders all templates using the ServiceManifest that was
 // provided to stencil at creation time, returned is the templates
 // that were produced and their associated files.
@@ -184,6 +219,9 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 		t.Files = nil
 	}
 	s.isFirstPass = false
+
+	// Sort module hook data before the next pass
+	s.sortModuleHooks()
 
 	tpls := make([]*Template, 0)
 	for _, t := range tplfiles {
