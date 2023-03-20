@@ -30,9 +30,7 @@ arguments:
 modules:
   - name: github.com/getoutreach/stencil-base
   - name: github.com/getoutreach/stencil-golang
-    channel: rc
   - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-circleci
   - name: github.com/getoutreach/devbase
-    channel: rc
 migrated: true
