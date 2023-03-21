@@ -36,20 +36,25 @@ type TplStencil struct {
 // This is incredibly useful for allowing other modules to write
 // to files that your module owns. Think of them as extension points
 // for your module. The value returned by this function is always a
-// []interface{}, aka a list.
+// []any, aka a list.
 //
-//	{{- /* This returns a []interface{} */}}
+//	{{- /* This returns a []any */}}
 //	{{ $hook := stencil.GetModuleHook "myModuleHook" }}
 //	{{- range $hook }}
 //	  {{ . }}
 //	{{- end }}
-func (s *TplStencil) GetModuleHook(name string) []interface{} {
+func (s *TplStencil) GetModuleHook(name string) []any {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 	v := s.s.sharedData.moduleHooks[k]
+	if v == nil {
+		// No data, return nothing
+		return []any{}
+	}
 
 	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
 		WithField("data", spew.Sdump(v)).Debug("getting module hook")
-	return v
+
+	return v.values
 }
 
 // SetGlobal sets a global to be used in the context of the current template module
@@ -100,8 +105,11 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 		return v.value
 	}
 
-	s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
-		Warn("failed to retrieved data from global store")
+	// Don't log on the first pass because we haven't rendered all the templates yet
+	if !s.s.isFirstPass {
+		s.log.WithField("template", s.t.ImportPath()).WithField("path", k).
+			Warn("failed to retrieved data from global store")
+	}
 
 	return nil
 }
@@ -139,17 +147,17 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 		return err, err
 	}
 
-	// convert the slice into a []interface{}
-	interfaceSlice := make([]interface{}, v.Len())
+	// convert the slice into a []any
+	interfaceSlice := make([]any, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
 	// if set, append, otherwise assign
 	if _, ok := s.s.sharedData.moduleHooks[k]; ok {
-		s.s.sharedData.moduleHooks[k] = append(s.s.sharedData.moduleHooks[k], interfaceSlice...)
+		s.s.sharedData.moduleHooks[k].values = append(s.s.sharedData.moduleHooks[k].values, interfaceSlice...)
 	} else {
-		s.s.sharedData.moduleHooks[k] = interfaceSlice
+		s.s.sharedData.moduleHooks[k] = &moduleHook{values: interfaceSlice}
 	}
 
 	return nil, nil
@@ -288,4 +296,14 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 	}
 
 	return data, nil
+}
+
+// Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
+//
+//	{{- $_ := stencil.Debug "I'm a log!" }}
+func (s *TplStencil) Debug(args ...interface{}) error {
+	s.log.WithField("path", s.t.Path).Debug(args...)
+
+	// We have to return something...
+	return nil
 }
