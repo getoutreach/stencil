@@ -20,7 +20,7 @@ This quick start assumes you're familiar with stencil usage already. If you aren
 
 ## Step 1: Create a module
 
-Using the [`stencil create`]() command we're able to quickly create a module, let's start with a simple hello world module.
+Using the [`stencil create`]() command we're able to quickly create a module, let's start with a simple hello world module. 
 
 {{< code file="create-module.sh" >}}
 mkdir helloworld; cd helloworld
