@@ -82,6 +82,10 @@ func NewCreateModule() *cli.Command {
 				Name: path.Base(c.Args().Get(0)),
 				Modules: []*configuration.TemplateRepository{{
 					Name: "github.com/getoutreach/stencil-template-base",
+				}, {
+					Name: "github.com/getoutreach/stencil-base",
+				}, {
+					Name: "github.com/getoutreach/stencil-circleci",
 				}},
 				Arguments: map[string]interface{}{
 					"reportingTeam": reportingTeam,
