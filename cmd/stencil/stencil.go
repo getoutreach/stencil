@@ -25,25 +25,11 @@ import (
 	// <</Stencil::Block>>
 )
 
-// HoneycombTracingKey gets set by the Makefile at compile-time which is pulled
-// down by devconfig.sh.
-var HoneycombTracingKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
-
-// TeleforkAPIKey gets set by the Makefile at compile-time which is pulled
-// down by devconfig.sh.
-var TeleforkAPIKey = "NOTSET" //nolint:gochecknoglobals // Why: We can't compile in things as a const.
-
-// <<Stencil::Block(honeycombDataset)>>
-
-// HoneycombDataset is the dataset to use when talking to Honeycomb
-const HoneycombDataset = "dev-tooling-team"
-
-// <</Stencil::Block>>
-
 // <<Stencil::Block(global)>>
 
 // <</Stencil::Block>>
 
+// main is the entrypoint for the stencil CLI.
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	log := logrus.New()
@@ -129,5 +115,10 @@ func main() {
 	// <</Stencil::Block>>
 
 	// Insert global flags, tracing, updating and start the application.
-	gcli.HookInUrfaveCLI(ctx, cancel, &app, log, HoneycombTracingKey, HoneycombDataset, TeleforkAPIKey)
+	gcli.Run(ctx, cancel, &app, &gcli.Config{
+		Logger: log,
+		Telemetry: gcli.TelemetryConfig{
+			UseDelibird: true,
+		},
+	})
 }

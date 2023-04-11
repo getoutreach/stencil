@@ -1,7 +1,8 @@
 name: stencil
 arguments:
   commands:
-    - stencil
+    - stencil:
+        delibird: true
   description: microservice lifecycle manager
   lintroller: platinum
   metrics: datadog
@@ -29,8 +30,11 @@ arguments:
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
+    channel: rc
   - name: github.com/getoutreach/stencil-golang
+    channel: rc
   - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-circleci
   - name: github.com/getoutreach/devbase
+    channel: rc
 migrated: true
