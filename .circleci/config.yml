@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.10.0
+  shared: getoutreach/shared@2.11.0
   queue: eddiewebb/queue@1.8.4
 
 parameters:
@@ -131,3 +131,5 @@ workflows:
             branches:
               only:
                 - main
+            tags:
+              only: /v\d+(\.\d+)*(-.*)*/
