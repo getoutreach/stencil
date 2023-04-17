@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.9
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/pkg/errors v0.9.1
-	github.com/santhosh-tekuri/jsonschema/v5 v5.2.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli/v2 v2.16.3
 	github.com/whilp/git-urls v1.0.0
