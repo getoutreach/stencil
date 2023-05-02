@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.11.0
+  shared: getoutreach/shared@dev:2.13.0-rc.1
   queue: eddiewebb/queue@1.8.4
 
 parameters:
@@ -124,7 +124,11 @@ workflows:
           filters:
             branches:
               ignore: *release_branches
-      - shared/test: *test
+      - shared/test:
+          <<: *test
+          ## <<Stencil::Block(circleSharedTestExtra)>>
+
+          ## <</Stencil::Block>>
       - shared/publish_docs:
           context: *contexts
           filters:
