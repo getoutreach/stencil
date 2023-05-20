@@ -45,10 +45,16 @@ if [[ ! -e $libDir ]] || [[ $existingVersion != "$version" ]] || [[ ! -e "$libDi
   else
     git clone -q --single-branch --branch "$version" git@github.com:getoutreach/devbase \
       "$libDir" >/dev/null
-
-    # Don't let devbase be confused by the existence of one there :(
-    rm "$libDir/service.yaml" || true # ignore errors
   fi
 
   echo -n "$version" >"$libDir/.version"
+fi
+
+# If we're not using a local version, ensure that service.yaml doesn't exist
+# in the library directory. This is because of the repo detection logic
+# which looks for the base directory through the existence of that file.
+if [[ $version != "local" ]]; then
+  if [[ -e "$libDir/service.yaml" ]]; then
+    rm "$libDir/service.yaml"
+  fi
 fi

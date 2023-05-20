@@ -30,16 +30,16 @@
           "to": "github.com/getoutreach/stencil"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.19.5/packages/pkg/mod",
+          "from": "${env:HOME}/.asdf/installs/golang/1.19.8/packages/pkg/mod",
           "to": ""
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.19.5/packages/pkg/mod",
+          "from": "${env:HOME}/.asdf/installs/golang/1.19.8/packages/pkg/mod",
           "to": "/tmp/cache/go/mod/"
         },
         {
-          "from": "${env:HOME}/.asdf/installs/golang/1.19.5/go/src",
-          "to": "/home/dev/.asdf/installs/golang/1.19.5/go/src"
+          "from": "${env:HOME}/.asdf/installs/golang/1.19.8/go/src",
+          "to": "/home/dev/.asdf/installs/golang/1.19.8/go/src"
         }
       ]
     }

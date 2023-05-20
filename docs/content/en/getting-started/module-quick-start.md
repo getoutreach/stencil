@@ -20,14 +20,14 @@ This quick start assumes you're familiar with stencil usage already. If you aren
 
 ## Step 1: Create a module
 
-Using the [`stencil create`]() command we're able to quickly create a module, let's start with a simple hello world module.
+Using the [`stencil create`]() command we're able to quickly create a module, let's start with a simple hello world module. 
 
 {{< code file="create-module.sh" >}}
 mkdir helloworld; cd helloworld
 stencil create module github.com/yourorg/helloworld
 {{< /code >}}
 
-You'll notice that when running that command, stencil itself was ran. This is because `stencil create` uses the [`stencil-template-base`](https://github.com/getoutreach/stencil-template-base) module by default. This brings automatic CI and testing support to your module.
+You'll notice that when running that command, stencil itself was ran. This is because `stencil create` uses the [`stencil-template-base`](https://github.com/getoutreach/stencil-template-base), the [`stencil-base`](https://github.com/getoutreach/stencil-base), and the [`stencil-circleci`](https://github.com/getoutreach/stencil-circleci) modules by default. This brings automatic CI and testing support to your module.
 
 Let's briefly look at what it's created:
 
