@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.13.0
+  shared: getoutreach/shared@2.14.0
   queue: eddiewebb/queue@1.8.4
 
 parameters:

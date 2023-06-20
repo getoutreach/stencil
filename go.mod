@@ -10,7 +10,7 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/getoutreach/gobox v1.70.1
+	github.com/getoutreach/gobox v1.70.5
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/google/go-cmp v0.5.9

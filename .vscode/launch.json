@@ -24,20 +24,26 @@
       "host": "127.0.0.1",
       "port": 42097,
       // <</Stencil::Block>>
+      // Paths to replace when running the debugger. "from" is the host
+      // path and "to" is the path in the devspace.
       "substitutePath": [
         {
+          // Maps the workspace root (the repository directory) to the path that
+          // is compiled into the built binary. Note: This is not impacted by trimpath
+          // because devbase currently uses dlv to compile the source code.
+          // See: https://github.com/getoutreach/devbase/blob/main/shell/debug.sh#L72
           "from": "${workspaceRoot}",
-          "to": "github.com/getoutreach/stencil"
+          "to": "/home/dev/app"
         },
-        {
-          "from": "${env:HOME}/.asdf/installs/golang/1.19.8/packages/pkg/mod",
-          "to": ""
-        },
+        // Maps the go module cache on the host to the persistent volume used by devspaces.
+        // See the value of `go env GOMODCACHE` on the host and devspace.
         {
           "from": "${env:HOME}/.asdf/installs/golang/1.19.8/packages/pkg/mod",
           "to": "/tmp/cache/go/mod/"
         },
         {
+          // Maps the standard library location on the host to the location in the devspace.
+          // This enables debugging standard library code.
           "from": "${env:HOME}/.asdf/installs/golang/1.19.8/go/src",
           "to": "/home/dev/.asdf/installs/golang/1.19.8/go/src"
         }
