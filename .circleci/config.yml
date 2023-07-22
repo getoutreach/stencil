@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.14.0
+  shared: getoutreach/shared@2.16.0
   queue: eddiewebb/queue@1.8.4
 
 parameters:
@@ -17,7 +17,6 @@ contexts: &contexts
   - docker-registry
   - npm-credentials
   - prismacloud-credentials
-  - opslevel-credentials
   - vault-dev
   - confluence
   - circleci-credentials
