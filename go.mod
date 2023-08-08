@@ -25,7 +25,7 @@ require (
 	github.com/whilp/git-urls v1.0.0
 	golang.org/x/term v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
-	gotest.tools/v3 v3.4.0
+	gotest.tools/v3 v3.5.0
 	sigs.k8s.io/yaml v1.3.0
 )
 
