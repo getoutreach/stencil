@@ -59,6 +59,29 @@ func TestReplacementLocalModule(t *testing.T) {
 		"expected module to use replacement URI")
 }
 
+func TestReplacementModuleUseOrbversion(t *testing.T) {
+	sm := &configuration.ServiceManifest{
+		Name: "testing-service",
+		Modules: []*configuration.TemplateRepository{
+			{
+				Name:       "github.com/getoutreach/stencil-base",
+				OrbVersion: "stable",
+			},
+		},
+		Replacements: map[string]string{
+			"github.com/getoutreach/stencil-base": "file://testdata",
+		},
+	}
+
+	mods, err := modules.GetModulesForService(context.Background(), &modules.ModuleResolveOptions{ServiceManifest: sm, Log: newLogger()})
+	assert.NilError(t, err, "expected GetModulesForService() to not error")
+	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
+	t.Log("mod version ", mods[0].OrbVersion, mods[0].Version)
+	assert.Equal(t, mods[0].Version, "local", "expected module Version is local")
+	assert.Assert(t, len(mods[0].OrbVersion) > 1, "expected module orbVersion is not empty")
+	assert.Assert(t, mods[0].OrbVersion != "local", "expected module orbVersion is not local")
+}
+
 func TestCanGetLatestVersion(t *testing.T) {
 	ctx := context.Background()
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{

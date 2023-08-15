@@ -37,6 +37,9 @@ type resolvedModule struct {
 	// version is the version that was resolved for this module
 	version *resolver.Version
 
+	//orbVersion is the shared orb version resolved for this module
+	orbVersion *resolver.Version
+
 	// history is the stack of the criteria that was used to resolve
 	// this module. This is used to generate a useful error message if a
 	// constraint, or other import condition, is violated.
@@ -94,7 +97,7 @@ type ModuleResolveOptions struct {
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
 //
-//nolint:funlen // Why: Will be refactored in the future
+// nolint:funlen,gocyclo // Why: Will be refactored in the future
 func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
 	// start resolving the top-level modules
 	modulesToResolve := make([]resolveModule, 0)
@@ -165,6 +168,17 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 				resolv.conf.Version = ""
 			}
 		}
+		// Attemp to resolve the OrbVersion by configuration
+		if resolv.conf.OrbVersion != "" {
+			if _, err := semver.NewConstraint(resolv.conf.OrbVersion); err != nil {
+				URI := "https://" + importPath
+				orbVersion, err := getLatestModuleForConstraints(ctx, URI, opts.Token, &resolv, resolved)
+				if err != nil {
+					return nil, err
+				}
+				rm.orbVersion = orbVersion
+			}
+		}
 
 		// if the module has already been resolved and is marked as
 		// "dontResolve", then re-use it.
@@ -225,6 +239,10 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 			rm.dontResolve = true
 		}
 
+		var orbVersion string
+		if rm.orbVersion != nil {
+			orbVersion = rm.orbVersion.GitRef()
+		}
 		// if we have a replacement for the module in-memory, use that instead
 		// of creating a new module that's to be resolved
 		if _, ok := opts.Replacements[importPath]; ok {
@@ -232,9 +250,10 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 		} else {
 			var err error
 			m, err = New(ctx, uri, &configuration.TemplateRepository{
-				Name:    importPath,
-				Channel: resolv.conf.Channel,
-				Version: version.GitRef(),
+				Name:       importPath,
+				Channel:    resolv.conf.Channel,
+				Version:    version.GitRef(),
+				OrbVersion: orbVersion,
 			})
 			if err != nil {
 				return nil, err
@@ -257,6 +276,7 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 		// set the module on our resolved module
 		rm.Module = m
 		rm.version = version
+		rm.OrbVersion = m.OrbVersion
 
 		log.WithFields(logrus.Fields{
 			"module":  importPath,

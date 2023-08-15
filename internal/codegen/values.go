@@ -79,6 +79,9 @@ type module struct {
 
 	// Version is the version of the current module
 	Version string
+
+	// OrbVersion is the shared orb version for current module
+	OrbVersion string
 }
 
 // stencilTemplate contains information about the current template
@@ -163,8 +166,9 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 
 	for _, m := range mods {
 		vals.Runtime.Modules = append(vals.Runtime.Modules, module{
-			Name:    m.Name,
-			Version: m.Version,
+			Name:       m.Name,
+			Version:    m.Version,
+			OrbVersion: m.OrbVersion,
 		})
 	}
 

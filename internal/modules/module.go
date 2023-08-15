@@ -50,6 +50,9 @@ type Module struct {
 	// Version is the version of this module
 	Version string
 
+	// OrbVersion is the shared orb version for this module
+	OrbVersion string
+
 	// fs is a cached filesystem
 	fs billy.Filesystem
 }
@@ -78,7 +81,6 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		if _, err := os.Stat(osPath); err != nil {
 			return nil, errors.Wrapf(err, "failed to find module %s at path %q", tr.Name, osPath)
 		}
-
 		// translate the path into a file:// URI
 		uri = "file://" + osPath
 		tr.Version = localModuleVersion
@@ -87,7 +89,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		return nil, fmt.Errorf("version must be specified for module %q", tr.Name)
 	}
 
-	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
+	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, tr.OrbVersion, nil}, nil
 }
 
 // NewWithFS creates a module with the specified file system. This is

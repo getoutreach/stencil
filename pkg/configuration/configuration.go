@@ -91,6 +91,10 @@ type TemplateRepository struct {
 	// Version can also be a constraint as supported by the underlying resolver:
 	// https://pkg.go.dev/github.com/getoutreach/gobox/pkg/cli/updater/resolver#Resolve
 	Version string `yaml:"version,omitempty"`
+
+	// OrbVersion is the version of shared orb for CI. It is only used to override the orb version
+	// for devbase module local replacement
+	OrbVersion string `yaml:"orbVersion,omitempty"`
 }
 
 // TemplateRepositoryManifest is a manifest of a template repository
