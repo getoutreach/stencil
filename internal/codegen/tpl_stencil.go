@@ -36,7 +36,9 @@ type TplStencil struct {
 // This is incredibly useful for allowing other modules to write
 // to files that your module owns. Think of them as extension points
 // for your module. The value returned by this function is always a
-// []any, aka a list.
+// []any, aka a list. This function only returns data during the second
+// pass of stencil to ensure that template render order doesn't impact
+// the data that is returned.
 //
 //	{{- /* This returns a []any */}}
 //	{{ $hook := stencil.GetModuleHook "myModuleHook" }}
@@ -44,6 +46,13 @@ type TplStencil struct {
 //	  {{ . }}
 //	{{- end }}
 func (s *TplStencil) GetModuleHook(name string) []any {
+	// On the first pass, never return any data. If we did, the data would
+	// be unreliably set because we don't sort the templates in any way or
+	// guarantee that they will be rendered in specific any order.
+	if s.s.isFirstPass {
+		return []any{}
+	}
+
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 	v := s.s.sharedData.moduleHooks[k]
 	if v == nil {

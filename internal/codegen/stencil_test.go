@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -92,7 +93,7 @@ func TestModuleHookRender(t *testing.T) {
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpls), 2, "expected Render() to return a single template")
 	assert.Equal(t, len(tpls[1].Files), 1, "expected Render() template to return a single file")
-	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
+	assert.Equal(t, strings.TrimSpace(tpls[1].Files[0].String()), "a", "expected Render() to return correct output")
 }
 
 func ExampleStencil_PostRun() {

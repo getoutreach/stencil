@@ -141,6 +141,12 @@ func TestTplStencil_GetModuleHook(t *testing.T) {
 					return
 				}
 			}
+
+			// Ensure that GetModuleHook never returns anything other than
+			// `[]any` during the first pass.
+			if got := s.GetModuleHook(tt.args.name); !reflect.DeepEqual(got, []any{}) {
+				t.Errorf("TplStencil.GetModuleHook() = %v, want %v", got, []any{})
+			}
 			s.s.isFirstPass = false
 
 			// Sort the module hooks, which should be called by stencil before
