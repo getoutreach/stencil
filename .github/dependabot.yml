@@ -8,6 +8,7 @@ updates:
     # stencil-golang managed dependencies
     ignore:
       - dependency-name: github.com/getoutreach/gobox
+      - dependency-name: github.com/getoutreach/stencil-golang/pkg
       - dependency-name: github.com/urfave/cli/v2
 
   # Ignore semantic-release, this code is only executed in CI.
