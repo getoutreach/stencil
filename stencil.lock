@@ -1,4 +1,4 @@
-version: v1.36.0
+version: v1.37.0
 modules:
     - name: github.com/getoutreach/devbase
       url: https://github.com/getoutreach/devbase
@@ -8,10 +8,10 @@ modules:
       version: v0.3.0
     - name: github.com/getoutreach/stencil-base
       url: https://github.com/getoutreach/stencil-base
-      version: v0.12.0
+      version: v0.14.0
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
-      version: v1.10.0
+      version: v1.11.1
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
       version: unstable
@@ -67,18 +67,12 @@ files:
     - name: .vscode/settings.json
       template: .vscode/settings.json.tpl
       module: github.com/getoutreach/stencil-golang
-    - name: CONTRIBUTING.md
-      template: CONTRIBUTING.md.tpl
-      module: github.com/getoutreach/stencil-base
     - name: LICENSE
       template: LICENSE.tpl
       module: github.com/getoutreach/stencil-base
     - name: Makefile
       template: Makefile.tpl
       module: github.com/getoutreach/stencil-golang
-    - name: README.md
-      template: README.md.tpl
-      module: github.com/getoutreach/stencil-base
     - name: cmd/stencil/stencil.go
       template: cmd/main_cli.go.tpl
       module: github.com/getoutreach/stencil-golang
