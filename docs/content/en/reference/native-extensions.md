@@ -40,6 +40,9 @@ Once a connection has been established stencil communicates with the plugin over
 3. When the function is called via `extensions.Call "importPath.function"` the rpc `ExecuteTemplateFunction` is called with the arguments passed to the function. The format for this RPC is defined as [`TemplateFunctionExec`](https://pkg.go.dev/github.com/getoutreach/stencil/pkg/extensions/apiv1#TemplateFunctionExec) in Go.
 4. The response from the RPC is returned directly to the go-template with no processing.
 
+## Debug Native Extension
+The [go-plugin](https://github.com/hashicorp/go-plugin) library does not surface error to stencil. You could just get general error message of `failed to create connection to extension: Unrecognized remote plugin message`. In this case, run the native extension binary directly to find out the error in the plugin.
+
 {{% tip %}}
 While `ExecuteTemplateFunction`'s return value is a `interface{}`, that is actually just a wrapper around the lower level implementation dubbed as [`implementationTransport`](https://github.com/getoutreach/stencil/blob/v1.14.2/pkg/extensions/apiv1/transport.go#L25). The return value of that is `[]byte`, which is expected to be valid JSON to be decoded by stencil before being passed to the template that called it. This is done to ensure typed data is always able to be sent over.
 {{% /tip %}}
