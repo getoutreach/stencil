@@ -31,8 +31,7 @@ A native extension can be ran locally using the `replacements` key in an applica
 
 ## Debugging a Native Extension
 
-The [`go-plugin`](https://github.com/hashicorp/go-plugin) library does not surface errors to stencil. Instead, it will raise the generic message `failed to create connection to extension: Unrecognized remote plugin message`.  The binary path could be found in bottom of the returned error. To determine a more precise error message, execute the native extension binary directly. Normally the binary lives in the `bin/plugin` in the native extension direcotry.
-
+The [`go-plugin`](https://github.com/hashicorp/go-plugin) library does not surface errors to stencil. Instead, it will raise the generic message `failed to create connection to extension: Unrecognized remote plugin message`. To determine a more precise error message, execute the native extension binary directly. The binary path can usually be found in bottom of the returned error. If not, the binary lives in the `bin/plugin` subdirectory of the native extension folder.
 
 ## How Native Extensions Work
 
