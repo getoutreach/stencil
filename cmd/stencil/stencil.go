@@ -1,4 +1,4 @@
-// Copyright 2023 Outreach Corporation. All Rights Reserved.
+// Copyright 2024 Outreach Corporation. All Rights Reserved.
 
 // Description: This file is the entrypoint for the stencil CLI
 // command for stencil.
