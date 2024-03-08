@@ -207,3 +207,9 @@ func (t *Template) Run(save bool) {
 		}
 	})
 }
+
+// RegenerateSnapshots determines whether to regenerate template
+// snapshots based on the presence of the CI environment variable.
+func RegenerateSnapshots() bool {
+	return os.Getenv("CI") == ""
+}
