@@ -18,6 +18,9 @@ builds:
       - '-X "main.TeleforkAPIKey={{ .Env.TELEFORK_APIKEY }}"'
     env:
       - CGO_ENABLED=0
+    ### <<Stencil::Block(stencilAdditionalEnv)>>
+
+    ### <</Stencil::Block>>
 
 archives: []
 checksum:
