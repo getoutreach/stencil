@@ -11,7 +11,7 @@ import (
 
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 
-	giturls "github.com/whilp/git-urls"
+	giturls "github.com/chainguard-dev/git-urls"
 )
 
 // protocol is a protocol for Git
