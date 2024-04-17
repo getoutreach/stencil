@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
+	github.com/chainguard-dev/git-urls v1.0.2
 	github.com/charmbracelet/glamour v0.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/getoutreach/gobox v1.89.0
@@ -22,7 +23,6 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.1
-	github.com/whilp/git-urls v1.0.0
 	golang.org/x/term v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.1
