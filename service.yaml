@@ -5,10 +5,9 @@ arguments:
   description: microservice lifecycle manager
   lintroller: platinum
   metrics: datadog
-  opslevel:
-    tier: 2
-    confluenceSpaceKey: DT
-    designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+  tier: 2
+  confluenceSpaceKey: DT
+  designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
   oss: true
   releaseOptions:
     allowMajorVersions: true

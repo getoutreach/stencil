@@ -5,5 +5,6 @@ _ := $(shell ./scripts/devbase.sh)
 include .bootstrap/root/Makefile
 
 ## <<Stencil::Block(targets)>>
-
+post-stencil::
+	./scripts/shell-wrapper.sh catalog-sync.sh
 ## <</Stencil::Block>>
