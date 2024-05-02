@@ -1,6 +1,6 @@
 preset: conventionalcommits
 branches:
-  - name: rc
+  - name: main
     prerelease: "rc"
   - name: release
 plugins:

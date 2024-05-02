@@ -10,9 +10,10 @@ arguments:
   designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
   oss: true
   releaseOptions:
-    allowMajorVersions: true
     enablePrereleases: true
-    prereleasesBranch: rc
+    allowMajorVersions: true
+    autoPrereleases: true
+    prereleasesBranch: main
   reportingTeam: fnd-dt
   slack: dev-tooling-notifications
   tracing: opentelemetry
@@ -32,6 +33,7 @@ modules:
     channel: unstable
   - name: github.com/getoutreach/stencil-actions
   - name: github.com/getoutreach/stencil-circleci
+    channel: rc
   - name: github.com/getoutreach/devbase
-    channel: main
+    channel: rc
 migrated: true
