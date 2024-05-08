@@ -75,7 +75,7 @@ type TemplateRepository struct {
 
 	// Deprecated: Use 'channel' instead, prerelease sets 'channel' to 'rc'.
 	// Prerelease is a boolean indicating whether or not to consider prerelease versions
-	Prerelease bool `yaml:"prerelease"`
+	Prerelease bool `yaml:"prerelease,omitempty"`
 
 	// Deprecated: Use name instead
 	// URL is a full URL for a given module
