@@ -50,6 +50,9 @@ type ServiceManifest struct {
 	// Name is the name of the service
 	Name string `yaml:"name"`
 
+	// Arguments is a map of arbitrary arguments to pass to the generator
+	Arguments map[string]interface{} `yaml:"arguments"`
+
 	// Modules are the template modules that this service depends
 	// on and utilizes
 	Modules []*TemplateRepository `yaml:"modules,omitempty"`
@@ -57,9 +60,6 @@ type ServiceManifest struct {
 	// Versions is a map of versions of certain tools, this is used by templates
 	// and will likely be replaced with something better in the future.
 	Versions map[string]string `yaml:"versions,omitempty"`
-
-	// Arguments is a map of arbitrary arguments to pass to the generator
-	Arguments map[string]interface{} `yaml:"arguments"`
 
 	// Replacements is a list of module names to replace their URI.
 	// Expected format:
