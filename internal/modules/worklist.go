@@ -1,3 +1,8 @@
+// Copyright 2024 Outreach Corporation. All Rights Reserved.
+
+// Description: This file provides a threadsafe work list for resolving
+// modules. All functions with a workList receiver are threadsafe
+
 package modules
 
 import (
