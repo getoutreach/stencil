@@ -91,6 +91,10 @@ type ModuleResolveOptions struct {
 	// as this is not resolved and instead requires a module type to be
 	// passed.
 	Replacements map[string]*Module
+
+	// ConcurrentResolvers is the number of concurrent resolvers to use
+	// when resolving modules.
+	ConcurrentResolvers int
 }
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
@@ -102,9 +106,13 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 
 	log := opts.Log
 
-	concurentResolutions := 5
 	g := errgroup.Group{}
-	g.SetLimit(concurentResolutions)
+	// setting it to a default value if we got here via a path other than the
+	// CLI. E.g. a test
+	if opts.ConcurrentResolvers == 0 {
+		opts.ConcurrentResolvers = 5
+	}
+	g.SetLimit(opts.ConcurrentResolvers)
 
 	for len(wl.tasks) > 0 {
 		for {
@@ -139,7 +147,8 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 
 // work does the actual work of resolving a module
 func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *workList,
-	log logrus.FieldLogger) error {
+	log logrus.FieldLogger,
+) error {
 	var m *Module
 	var version *resolver.Version
 
@@ -157,13 +166,13 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 			Mutable: true,
 		}
 
-		// if uri is local, represent it as "local" instead of the full path
+		// assume in-memory
+		version.Tag = "in-memory"
+		// ... but if uri is local, represent it as "local" instead of the full path
 		if uriIsLocal(item.uri) {
 			version.Tag = "local"
-		} else {
-			// otherwise assume in-memory
-			version.Tag = "in-memory"
 		}
+
 		version.Branch = version.Tag
 
 		// don't attempt to resolve this module again
@@ -212,7 +221,7 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 
 // workList is a list of modules to resolve
 type workList struct {
-	tasks []resolveModule
+	tasks []*resolveModule
 	// replacements replace the URL for a module's
 	// provided import path.
 	replacements map[string]string
@@ -230,7 +239,7 @@ type workList struct {
 type workItem struct {
 	importPath           string
 	inProgressResolution *resolvedModule
-	spec                 resolveModule
+	spec                 *resolveModule
 	uri                  string
 }
 
@@ -297,13 +306,13 @@ func (list *workList) push(task *resolveModule) {
 	list.mu.Lock()
 	defer list.mu.Unlock()
 
-	list.tasks = append(list.tasks, *task)
+	list.tasks = append(list.tasks, task)
 }
 
 // buildWorkLists constructs a list of modules to resolve and a map of string replacements
 func buildWorkLists(opts *ModuleResolveOptions) workList {
 	// start resolving the top-level modules
-	modulesToResolve := make([]resolveModule, 0)
+	modulesToResolve := make([]*resolveModule, 0)
 
 	strReplacements := make(map[string]string)
 
@@ -313,7 +322,7 @@ func buildWorkLists(opts *ModuleResolveOptions) workList {
 		// for each module required by the service manifest
 		// add it to the list of module to be resolved
 		for i := range sm.Modules {
-			modulesToResolve = append(modulesToResolve, resolveModule{
+			modulesToResolve = append(modulesToResolve, &resolveModule{
 				conf:   sm.Modules[i],
 				parent: sm.Name + " (top-level)",
 			})
@@ -334,7 +343,7 @@ func buildWorkLists(opts *ModuleResolveOptions) workList {
 
 		// add ourself as the top-level module to resolve our
 		// dependencies without duplicating code here
-		modulesToResolve = append(modulesToResolve, resolveModule{
+		modulesToResolve = append(modulesToResolve, &resolveModule{
 			conf:   &configuration.TemplateRepository{Name: opts.Module.Name, Version: "vfs"},
 			parent: opts.Module.Name + " (top-level)",
 		})
@@ -353,9 +362,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	m := item.spec
 
 	list.mu.Lock()
-	// todo(AWinterman): Did i fuckover some modify by reference by lifting this up
 	module, ok := list.resolved[m.conf.Name]
-	// todo(AWinterman): this looks the same as item.inProgressResolution, is it?
 	list.mu.Unlock()
 
 	for _, r := range module.history {

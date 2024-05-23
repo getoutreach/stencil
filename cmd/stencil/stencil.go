@@ -85,14 +85,27 @@ func main() {
 				}
 			}
 
-			cmd := stencil.NewCommand(log, serviceManifest, c.Bool("dry-run"),
-				c.Bool("frozen-lockfile"), c.Bool("use-prerelease"), c.Bool("allow-major-version-upgrades"))
+			cmd := stencil.NewCommand(
+				log,
+				serviceManifest,
+				c.Bool("dry-run"),
+				c.Bool("frozen-lockfile"),
+				c.Bool("use-prerelease"),
+				c.Bool("allow-major-version-upgrades"),
+				c.Int("concurrent-resolvers"),
+			)
 			return errors.Wrap(cmd.Run(ctx), "run codegen")
 		},
 		// <</Stencil::Block>>
 	}
 	app.Flags = []cli.Flag{
 		// <<Stencil::Block(flags)>>
+		&cli.StringFlag{
+			Name:        "concurrent-resolvers",
+			Aliases:     []string{"c"},
+			DefaultText: "5",
+			Usage:       "Number of concurrent resolvers to use when resolving modules",
+		},
 		&cli.BoolFlag{
 			Name:    "dry-run",
 			Aliases: []string{"dryrun"},
