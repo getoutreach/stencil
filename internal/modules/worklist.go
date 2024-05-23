@@ -129,12 +129,15 @@ func (list *workList) pop() *workItem {
 		return &workItem{importPath: importPath, inProgressResolution: rm, spec: resolv}
 	}
 
+	rm.mu.Lock()
 	// log the resolution attempt
 	rm.history = append(rm.history, resolution{
 		constraint:   resolv.conf.Version,
 		channel:      resolv.conf.Channel,
 		parentModule: resolv.parent,
 	})
+	rm.mu.Unlock()
+
 	list.log.WithFields(logrus.Fields{
 		"module": importPath,
 		"parent": resolv.parent,
@@ -160,17 +163,28 @@ func (list *workList) push(task *resolveModule) {
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *workItem, token cfg.SecretData) (*resolver.Version, error) {
 	constraints := make([]string, 0)
+	history := []resolution{}
+
 	m := item.spec
 	module := item.inProgressResolution
 
-	for _, r := range module.history {
+	module.mu.Lock()
+	history = append(history, module.history...)
+	module.mu.Unlock()
+	defer func() {
+		module.mu.Lock()
+		module.history = history
+		module.mu.Unlock()
+	}()
+
+	for _, r := range history {
 		if r.constraint != "" {
 			constraints = append(constraints, r.constraint)
 		}
 	}
 
 	channel := m.conf.Channel
-	for _, r := range module.history {
+	for _, r := range history {
 		// if we don't have a channel, or the channel is stable, check to see if
 		// the channel we last resolved with doesn't match the current channel requested.
 		//
@@ -202,7 +216,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	})
 	if err != nil {
 		errorString := ""
-		history := module.history
+
 		for i := range history {
 			h := &history[i]
 			errorString += strings.Repeat(" ", i*2) + "└─ "

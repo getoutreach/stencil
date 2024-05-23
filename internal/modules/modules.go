@@ -10,6 +10,7 @@ package modules
 
 import (
 	"context"
+	"sync"
 
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
@@ -39,6 +40,9 @@ type resolvedModule struct {
 	// constraint, or other import condition, is violated.
 	// This is sorted in descending order.
 	history []resolution
+
+	// mu protects the history slice
+	mu sync.Mutex
 }
 
 // resolveModule is used to keep track of a module that needs to be resolved
