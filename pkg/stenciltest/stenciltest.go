@@ -45,6 +45,9 @@ type Template struct {
 	// args are the arguments to the template.
 	args map[string]interface{}
 
+	// mods are the modules passed to the template's service manifest.
+	mods []*configuration.TemplateRepository
+
 	// exts holds the inproc extensions
 	exts map[string]apiv1.Implementation
 
@@ -89,6 +92,7 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 		additionalTemplates: additionalTemplates,
 		persist:             true,
 		log:                 log,
+		mods:                []*configuration.TemplateRepository{},
 		exts:                map[string]apiv1.Implementation{},
 	}
 }
@@ -96,6 +100,12 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 // Args sets the arguments to the template.
 func (t *Template) Args(args map[string]interface{}) *Template {
 	t.args = args
+	return t
+}
+
+// AddModule adds a module to the service manifest modules list.
+func (t *Template) AddModule(tr *configuration.TemplateRepository) *Template {
+	t.mods = append(t.mods, tr)
 	return t
 }
 
@@ -152,10 +162,22 @@ func (t *Template) Run(save bool) {
 		}
 		mods = append(mods, m)
 
+		// Reconcile any declared modules with the found module dependencies.
+		for _, m := range mods {
+			for _, tm := range t.mods {
+				if m.Name == tm.Name {
+					m.Version = tm.Version
+					break
+				}
+			}
+		}
+
+		t.mods = append([]*configuration.TemplateRepository{{Name: m.Name}}, t.mods...)
+
 		mf := &configuration.ServiceManifest{
 			Name:      "testing",
 			Arguments: t.args,
-			Modules:   []*configuration.TemplateRepository{{Name: m.Name}},
+			Modules:   t.mods,
 		}
 		st := codegen.NewStencil(mf, mods, t.log)
 
