@@ -52,7 +52,10 @@ func TestReplacementLocalModule(t *testing.T) {
 		},
 	}
 
-	mods, err := modules.GetModulesForService(context.Background(), &modules.ModuleResolveOptions{ServiceManifest: sm, Log: newLogger()})
+	mods, err := modules.GetModulesForService(
+		context.Background(),
+		&modules.ModuleResolveOptions{ServiceManifest: sm, Log: newLogger(), ConcurrentResolvers: 5},
+	)
 	assert.NilError(t, err, "expected GetModulesForService() to not error")
 	assert.Equal(t, len(mods), 1, "expected exactly one module to be returned")
 	assert.Equal(t, mods[0].URI, sm.Replacements["github.com/getoutreach/stencil-base"],
@@ -62,6 +65,7 @@ func TestReplacementLocalModule(t *testing.T) {
 func TestCanGetLatestVersion(t *testing.T) {
 	ctx := context.Background()
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{
@@ -176,6 +180,7 @@ func TestFailOnIncompatibleConstraints(t *testing.T) {
 func TestSupportChannelAndConstraint(t *testing.T) {
 	ctx := context.Background()
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{
@@ -196,6 +201,7 @@ func TestSupportChannelAndConstraint(t *testing.T) {
 func TestCanUseBranch(t *testing.T) {
 	ctx := context.Background()
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{
@@ -242,7 +248,8 @@ func TestBranchAlwaysUsedOverDependency(t *testing.T) {
 	// Resolve a fake service that requires a branch of a dependency that the in-memory module also requires
 	// but with a different version constraint
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		Replacements: map[string]*modules.Module{"test-dep": mDep},
+		ConcurrentResolvers: 5,
+		Replacements:        map[string]*modules.Module{"test-dep": mDep},
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{
@@ -277,6 +284,7 @@ func TestCanRespectChannels(t *testing.T) {
 	t.Skip("Breaks when a module isn't currently on an rc version")
 	ctx := context.Background()
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{
@@ -325,9 +333,10 @@ func TestShouldResolveInMemoryModule(t *testing.T) {
 	assert.NilError(t, err, "failed to create dep module")
 
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		Module:       m,
-		Replacements: map[string]*modules.Module{"test-dep": mDep},
-		Log:          newLogger(),
+		ConcurrentResolvers: 5,
+		Module:              m,
+		Replacements:        map[string]*modules.Module{"test-dep": mDep},
+		Log:                 newLogger(),
 	})
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 	assert.Equal(t, len(mods), 2, "expected exactly two modules to be returned")
@@ -345,6 +354,7 @@ func TestShouldResolveInMemoryModule(t *testing.T) {
 func TestShouldErrorOnTwoDifferentChannels(t *testing.T) {
 	ctx := context.Background()
 	_, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "testing-service",
 			Modules: []*configuration.TemplateRepository{

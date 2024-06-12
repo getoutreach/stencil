@@ -54,12 +54,14 @@ type Command struct {
 	allowMajorVersionUpgrades bool
 
 	// token is the github token used for fetching modules
-	token cfg.SecretData
+	token            cfg.SecretData
+	resolverRoutines int
 }
 
 // NewCommand creates a new stencil command
-func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
-	dryRun, frozen, usePrerelease, allowMajorVersionUpgrades bool) *Command {
+func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen, usePrerelease,
+	allowMajorVersionUpgrades bool, resolverRoutines int,
+) *Command {
 	l, err := stencil.LoadLockfile("")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.WithError(err).Warn("failed to load lockfile")
@@ -87,6 +89,7 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest,
 		frozenLockfile:            frozen,
 		allowMajorVersionUpgrades: allowMajorVersionUpgrades,
 		token:                     token,
+		resolverRoutines:          resolverRoutines,
 	}
 }
 
@@ -103,9 +106,10 @@ func (c *Command) Run(ctx context.Context) error {
 
 	c.log.Info("Fetching dependencies")
 	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		ServiceManifest: c.manifest,
-		Token:           c.token,
-		Log:             c.log,
+		ServiceManifest:     c.manifest,
+		Token:               c.token,
+		Log:                 c.log,
+		ConcurrentResolvers: c.resolverRoutines,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to process modules list")
