@@ -56,8 +56,8 @@ info:
     reporting_team: fnd-dt
     lintroller: platinum
   x-cortex-groups:
-    - lifecycle: in_development
-    - product: Outreach
-    - language: Golang
-    - framework: stencil
-    - engOrg: fnd
+    - lifecycle:in_development
+    - product:Outreach
+    - language:Golang
+    - framework:stencil
+    - engOrg:fnd
