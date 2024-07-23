@@ -148,6 +148,9 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *workList,
 	log logrus.FieldLogger,
 ) error {
+	item.mu.Lock()
+	defer item.mu.Unlock()
+
 	var m *Module
 	var version *resolver.Version
 
