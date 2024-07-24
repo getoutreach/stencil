@@ -208,8 +208,10 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 	}
 
 	// set the module on our resolved module
+	item.inProgressResolution.mu.Lock()
 	item.inProgressResolution.Module = m
 	item.inProgressResolution.version = version
+	item.inProgressResolution.mu.Unlock()
 
 	log.WithFields(logrus.Fields{
 		"module":  item.importPath,
