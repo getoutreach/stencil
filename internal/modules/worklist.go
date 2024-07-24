@@ -41,7 +41,6 @@ type workItem struct {
 	inProgressResolution *resolvedModule
 	spec                 *resolveModule
 	uri                  string
-	mu                   sync.Mutex
 }
 
 // newWorkList constructs a list of modules to resolve and a map of string replacements
