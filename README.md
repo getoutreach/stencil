@@ -6,6 +6,9 @@
 
 <!-- <</Stencil::Block>> -->
 
+> [!WARNING]
+> This version of Stencil is in maintenance mode. That is, there is not enough time to maintain this aside from bug fixes and Outreach-specific features. The next-generation of this tool is currently located at [`rgst-io/stencil`](https://github.com/rgst-io/stencil).
+
 microservice lifecycle manager
 
 ## Contributing
