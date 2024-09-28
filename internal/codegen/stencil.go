@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/stencil/internal/jsonschema"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -131,6 +132,58 @@ func (s *Stencil) RegisterExtensions(ctx context.Context) error {
 // either an actual extension or a mock one (feeding fake data into the template).
 func (s *Stencil) RegisterInprocExtensions(name string, ext apiv1.Implementation) {
 	s.ext.RegisterInprocExtension(name, ext)
+}
+
+// GenerateJSONSchema generates a jsonschema.Schema using the loaded
+// Stencil modules.
+func (s *Stencil) GenerateJSONSchema(ctx context.Context) *jsonschema.Schema {
+	schema := jsonschema.NewSchema("Service Manifest", "Service-specific schema for Stencil service manifest")
+	for _, m := range s.modules {
+		log := s.log.WithField("module", m.Name)
+		manifest, err := m.Manifest(ctx)
+		if err != nil {
+			log.WithError(err).Error("Could not load module manifest")
+			continue
+		}
+
+		for name, arg := range manifest.Arguments {
+			log = log.WithField("name", name)
+			log.WithField("arg.Schema", arg.Schema).Infof("Argument")
+			if arg.From != "" {
+				// This is defined in a different module
+				continue
+			}
+			aType, ok := arg.Schema["type"].(string)
+			if !ok {
+				// Assume it's an array
+				// FIXME: this block doesn't actually work, it always skips.
+				var types []string
+				types, ok = arg.Schema["type"].([]string)
+				if !ok {
+					log.Error("Skipping arg without type")
+					continue
+				}
+				schema.AddProperty(name, arg.Description, jsonschema.NewTypes(types...))
+			}
+			switch aType {
+			case "array":
+				var items map[string]interface{}
+				items, ok = arg.Schema["items"].(map[string]interface{})
+				if !ok {
+					log.Error("Skipping array arg without items")
+					continue
+				}
+				itemType := items["type"].(string)
+				schema.AddArrayProperty(name, arg.Description, itemType)
+			case "object":
+				// TODO: add support
+			default:
+				schema.AddProperty(name, arg.Description, jsonschema.NewTypes(aType))
+			}
+		}
+	}
+
+	return schema
 }
 
 // GenerateLockfile generates a stencil.Lockfile based

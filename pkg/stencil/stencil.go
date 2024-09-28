@@ -20,6 +20,9 @@ const (
 
 	// oldLockfileName is the old lockfile that stencil interops with
 	oldLockfileName = "bootstrap.lock"
+
+	// SchemaName is the name of the generated JSON schema
+	SchemaName = "service.schema.json"
 )
 
 // LockfileModuleEntry is an entry in the lockfile for a module

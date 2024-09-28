@@ -9,6 +9,7 @@ package stencil
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -137,7 +138,7 @@ func (c *Command) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.writeFiles(st, tpls); err != nil {
+	if err := c.writeFiles(ctx, st, tpls); err != nil {
 		return err
 	}
 
@@ -369,7 +370,7 @@ func (c *Command) writeFile(f *codegen.File) error {
 }
 
 // writeFiles writes the files to disk
-func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) error {
+func (c *Command) writeFiles(ctx context.Context, st *codegen.Stencil, tpls []*codegen.Template) error {
 	c.log.Infof("Writing template(s) to disk")
 	for _, tpl := range tpls {
 		for i := range tpl.Files {
@@ -382,6 +383,17 @@ func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) erro
 	// Don't generate a lockfile in dry-run mode
 	if c.dryRun {
 		return nil
+	}
+
+	s := st.GenerateJSONSchema(ctx)
+	sf, err := os.Create(stencil.SchemaName)
+	if err != nil {
+		return errors.Wrap(err, "failed to create lockfile")
+	}
+	defer sf.Close()
+
+	if err := json.NewEncoder(sf).Encode(s); err != nil {
+		return errors.Wrap(err, "failed to encode JSON schema")
 	}
 
 	l := st.GenerateLockfile(tpls)
