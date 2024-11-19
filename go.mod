@@ -6,7 +6,7 @@ toolchain go1.22.6
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
