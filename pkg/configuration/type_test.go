@@ -50,7 +50,6 @@ func TestTemplateRepositoryType(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test // for the parallel closure
 		t.Run(test.Name, func(t *testing.T) {
 			//t.Parallel()
 			var ts configuration.TemplateRepositoryTypes
