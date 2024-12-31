@@ -134,8 +134,6 @@ func TestConfigureModule(t *testing.T) {
 	}
 
 	for _, test := range tt {
-		test := test
-
 		t.Run(test.Name, func(t *testing.T) {
 			var tm = &configuration.ServiceManifest{}
 			var comp = &configuration.ServiceManifest{}
