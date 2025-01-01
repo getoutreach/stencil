@@ -15,7 +15,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/getoutreach/gobox v1.95.0
 	github.com/go-git/go-billy/v5 v5.6.1
-	github.com/go-git/go-git/v5 v5.12.0
+	github.com/go-git/go-git/v5 v5.13.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
@@ -43,7 +43,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/ProtonMail/go-crypto v1.0.0 // indirect
+	github.com/ProtonMail/go-crypto v1.1.3 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -109,7 +109,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.14.6 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/skeema/knownhosts v1.2.2 // indirect
+	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
