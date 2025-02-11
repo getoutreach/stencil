@@ -10,18 +10,13 @@ jobs:
   deploy:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup asdf
-        uses: asdf-vm/actions/install@v1
-      - name: Install hugo
-        working-directory: ./docs
-        run: |-
-          # We run this here because of sub directory limitations
-          asdf plugin add hugo
-          asdf install
-
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: hugo
+          working_directory: ./docs
       - name: Build
         working-directory: ./docs
         run: hugo --minify
