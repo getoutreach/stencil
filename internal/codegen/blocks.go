@@ -22,8 +22,8 @@ const endStatement = "EndBlock"
 var blockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)`)
 
 // v2BlockPattern is the new regex for parsing blocks
-// For unit testing of this regex and explanation, see https://regex101.com/r/EHkH5O/1
-var v2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 ]+\))?>>`)
+// For unit testing of this regex and explanation, see https://regex101.com/r/eJZ7R2/1
+var v2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 _]+\))?>>`)
 
 // parseBlocks reads the blocks from an existing file
 func parseBlocks(filePath string) (map[string]string, error) {
