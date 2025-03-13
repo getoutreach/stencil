@@ -121,3 +121,30 @@ func ExampleStencil_PostRun() {
 	// Output:
 	// hello
 }
+
+func TestStencilPostRunError(t *testing.T) {
+	ctx := context.Background()
+	m, err := modules.New(ctx, "", &configuration.TemplateRepository{Name: "github.com/getoutreach/stencil-base", Version: "main"})
+	if err != nil {
+		t.Errorf("failed to create module: %v", err)
+	}
+
+	manifest, err := m.Manifest(ctx)
+	if err != nil {
+		t.Errorf("failed to get manifest from module: %v", err)
+	}
+
+	if len(manifest.PostRunCommand) == 0 {
+		t.Errorf("manifest does not contain post-run commands")
+	}
+	prc := manifest.PostRunCommand[0]
+
+	st := NewStencil(&configuration.ServiceManifest{
+		Name:      "TestStencilPostRunError",
+		Arguments: map[string]interface{}{},
+	}, []*modules.Module{m}, logrus.New())
+
+	err = st.PostRun(ctx, logrus.New())
+	exErr := fmt.Sprintf("failed to run post run command for module %s and command %s", m.Name, prc.Command)
+	assert.ErrorContains(t, err, exErr)
+}
