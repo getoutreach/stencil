@@ -11,6 +11,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -123,23 +124,32 @@ func ExampleStencil_PostRun() {
 }
 
 func TestStencilPostRunError(t *testing.T) {
-	var (
+	const (
 		name    = "TestStencilPostRunError"
 		command = "invalidPostRunCommand"
 	)
 
-	ctx := context.Background()
+	var (
+		ctx              = context.Background()
+		logger           = logrus.New()
+		manifestContents = fmt.Sprintf("name: %s\npostRunCommand:\n- command: %s\n", name, command)
+		errMsg           = fmt.Sprintf("failed to run post run command for module %s and command %s", name, command)
+	)
+
+	fs := createFakeModuleFSWithManifest(t, manifestContents)
+	st := NewStencil(&configuration.ServiceManifest{Name: name},
+		[]*modules.Module{modules.NewWithFS(ctx, name, fs)}, logger)
+
+	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
+}
+
+func createFakeModuleFSWithManifest(t *testing.T, manifestContents string) billy.Filesystem {
 	fs := memfs.New()
 	mf, err := fs.Create("manifest.yaml")
 	assert.NilError(t, err)
-	_, err = fmt.Fprintf(mf, "name: %s\npostRunCommand:\n- command: %s\n", name, command)
+	_, err = fmt.Fprintf(mf, manifestContents)
 	assert.NilError(t, err)
 	assert.NilError(t, mf.Close())
 
-	st := NewStencil(&configuration.ServiceManifest{Name: name},
-		[]*modules.Module{modules.NewWithFS(ctx, name, fs)}, logrus.New())
-
-	err = st.PostRun(ctx, logrus.New())
-	assert.ErrorContains(t, err,
-		fmt.Sprintf("failed to run post run command for module %s and command %s", name, command))
+	return fs
 }
