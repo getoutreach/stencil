@@ -147,7 +147,7 @@ func createFakeModuleFSWithManifest(t *testing.T, manifestContents string) billy
 	fs := memfs.New()
 	mf, err := fs.Create("manifest.yaml")
 	assert.NilError(t, err)
-	_, err = fmt.Fprintf(mf, manifestContents)
+	_, err = mf.Write([]byte(manifestContents))
 	assert.NilError(t, err)
 	assert.NilError(t, mf.Close())
 
