@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -123,28 +124,25 @@ func ExampleStencil_PostRun() {
 }
 
 func TestStencilPostRunError(t *testing.T) {
+	var (
+		name    = "TestStencilPostRunError"
+		command = strings.ToLower("invalidPostRunCommand")
+	)
+
 	ctx := context.Background()
-	m, err := modules.New(ctx, "", &configuration.TemplateRepository{Name: "github.com/getoutreach/stencil-base", Version: "main"})
-	if err != nil {
-		t.Errorf("failed to create module: %v", err)
-	}
-
-	manifest, err := m.Manifest(ctx)
-	if err != nil {
-		t.Errorf("failed to get manifest from module: %v", err)
-	}
-
-	if len(manifest.PostRunCommand) == 0 {
-		t.Errorf("manifest does not contain post-run commands")
-	}
-	prc := manifest.PostRunCommand[0]
+	fs := memfs.New()
+	mf, err := fs.Create("manifest.yaml")
+	assert.NilError(t, err)
+	_, err = mf.Write([]byte(fmt.Sprintf("name: %s\npostRunCommand:\n- command: %s\n", name, command)))
+	assert.NilError(t, err)
+	assert.NilError(t, mf.Close())
 
 	st := NewStencil(&configuration.ServiceManifest{
-		Name:      "TestStencilPostRunError",
-		Arguments: map[string]interface{}{},
-	}, []*modules.Module{m}, logrus.New())
+		Name:      name,
+		Arguments: map[string]any{},
+	}, []*modules.Module{modules.NewWithFS(ctx, name, fs)}, logrus.New())
 
 	err = st.PostRun(ctx, logrus.New())
-	exErr := fmt.Sprintf("failed to run post run command for module %s and command %s", m.Name, prc.Command)
-	assert.ErrorContains(t, err, exErr)
+	assert.ErrorContains(t, err,
+		fmt.Sprintf("failed to run post run command for module %s and command %s", name, command))
 }
