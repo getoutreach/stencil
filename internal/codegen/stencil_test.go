@@ -133,14 +133,12 @@ func TestStencilPostRunError(t *testing.T) {
 	fs := memfs.New()
 	mf, err := fs.Create("manifest.yaml")
 	assert.NilError(t, err)
-	_, err = mf.Write([]byte(fmt.Sprintf("name: %s\npostRunCommand:\n- command: %s\n", name, command)))
+	_, err = fmt.Fprintf(mf, "name: %s\npostRunCommand:\n- command: %s\n", name, command)
 	assert.NilError(t, err)
 	assert.NilError(t, mf.Close())
 
-	st := NewStencil(&configuration.ServiceManifest{
-		Name:      name,
-		Arguments: map[string]any{},
-	}, []*modules.Module{modules.NewWithFS(ctx, name, fs)}, logrus.New())
+	st := NewStencil(&configuration.ServiceManifest{Name: name},
+		[]*modules.Module{modules.NewWithFS(ctx, name, fs)}, logrus.New())
 
 	err = st.PostRun(ctx, logrus.New())
 	assert.ErrorContains(t, err,
