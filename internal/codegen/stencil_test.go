@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -126,7 +125,7 @@ func ExampleStencil_PostRun() {
 func TestStencilPostRunError(t *testing.T) {
 	var (
 		name    = "TestStencilPostRunError"
-		command = strings.ToLower("invalidPostRunCommand")
+		command = "invalidPostRunCommand"
 	)
 
 	ctx := context.Background()
