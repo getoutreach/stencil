@@ -18,13 +18,10 @@ import (
 )
 
 func TestBasicE2ERender(t *testing.T) {
-	fs := memfs.New()
 	ctx := context.Background()
 
 	// create stub manifest
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing"))
-	f.Close()
+	fs := createFakeModuleFSWithManifest(t, "name: testing")
 
 	// create a stub template
 	f, err := fs.Create("test-template.tpl")
@@ -96,14 +93,11 @@ func TestModuleHookRender(t *testing.T) {
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
 }
 
-func ExampleStencil_PostRun() {
-	fs := memfs.New()
+func TestExampleStencil_PostRun(t *testing.T) {
 	ctx := context.Background()
-
+	manifestContents := "name: testing\npostRunCommand:\n- command: echo \"hello\""
+	fs := createFakeModuleFSWithManifest(t, manifestContents)
 	// create a stub manifest
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\npostRunCommand:\n- command: echo \"hello\""))
-	f.Close()
 
 	nullLog := logrus.New()
 	nullLog.SetOutput(io.Discard)
@@ -137,12 +131,25 @@ func TestStencilPostRunError(t *testing.T) {
 	)
 
 	fs := createFakeModuleFSWithManifest(t, manifestContents)
-	st := NewStencil(&configuration.ServiceManifest{Name: name},
-		[]*modules.Module{modules.NewWithFS(ctx, name, fs)}, logger)
+	st := NewStencil(
+		&configuration.ServiceManifest{Name: name},
+		[]*modules.Module{modules.NewWithFS(ctx, name, fs)},
+		logger,
+	)
 
 	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
 }
 
+// createFakeModuleFSWithManifest creates an in-memory filesystem with a single
+// file named "manifest.yaml" containing the provided manifest contents. This
+// is useful for testing purposes where a mock filesystem is needed.
+//
+// Parameters:
+//   - t: The testing object used for assertions.
+//   - manifestContents: A string representing the contents to be written to the manifest file.
+//
+// Returns:
+//   - A billy.Filesystem representing the in-memory filesystem with the manifest file.
 func createFakeModuleFSWithManifest(t *testing.T, manifestContents string) billy.Filesystem {
 	fs := memfs.New()
 	mf, err := fs.Create("manifest.yaml")
