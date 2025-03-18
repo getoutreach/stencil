@@ -7,7 +7,7 @@ arguments:
     - stencil
   confluenceSpaceKey: DT
   description: microservice lifecycle manager
-  designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+  designDocumentLink: https://outreachsales-my.sharepoint.com/:w:/g/personal/it_transfer_outreachsales_onmicrosoft_com/EXQdFL_8YKlZcYwIFvLgoVgBPHRhM3jLfvzqdLDQqoMy8w
   lintroller: platinum
   metrics: datadog
   notifications:
