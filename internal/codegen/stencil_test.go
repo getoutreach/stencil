@@ -151,6 +151,7 @@ func TestStencilPostRunError(t *testing.T) {
 // Returns:
 //   - A billy.Filesystem representing the in-memory filesystem with the manifest file.
 func createFakeModuleFSWithManifest(t *testing.T, manifestContents string) billy.Filesystem {
+	t.Helper()
 	fs := memfs.New()
 	mf, err := fs.Create("manifest.yaml")
 	assert.NilError(t, err)
