@@ -11,8 +11,6 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
-	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -93,12 +91,10 @@ func TestModuleHookRender(t *testing.T) {
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
 }
 
-func TestExampleStencil_PostRun(t *testing.T) {
+func TestStencil_PostRun(t *testing.T) {
 	ctx := context.Background()
 	manifestContents := "name: testing\npostRunCommand:\n- command: echo \"hello\""
 	fs := createFakeModuleFSWithManifest(t, manifestContents)
-	// create a stub manifest
-
 	nullLog := logrus.New()
 	nullLog.SetOutput(io.Discard)
 
@@ -108,13 +104,8 @@ func TestExampleStencil_PostRun(t *testing.T) {
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
 	}, logrus.New())
-	err := st.PostRun(ctx, nullLog)
-	if err != nil {
-		fmt.Println(err)
-	}
 
-	// Output:
-	// hello
+	assert.NilError(t, st.PostRun(ctx, nullLog))
 }
 
 func TestStencilPostRunError(t *testing.T) {
@@ -138,26 +129,4 @@ func TestStencilPostRunError(t *testing.T) {
 	)
 
 	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
-}
-
-// createFakeModuleFSWithManifest creates an in-memory filesystem with a single
-// file named "manifest.yaml" containing the provided manifest contents. This
-// is useful for testing purposes where a mock filesystem is needed.
-//
-// Parameters:
-//   - t: The testing object used for assertions.
-//   - manifestContents: A string representing the contents to be written to the manifest file.
-//
-// Returns:
-//   - A billy.Filesystem representing the in-memory filesystem with the manifest file.
-func createFakeModuleFSWithManifest(t *testing.T, manifestContents string) billy.Filesystem {
-	t.Helper()
-	fs := memfs.New()
-	mf, err := fs.Create("manifest.yaml")
-	assert.NilError(t, err)
-	_, err = mf.Write([]byte(manifestContents))
-	assert.NilError(t, err)
-	assert.NilError(t, mf.Close())
-
-	return fs
 }
