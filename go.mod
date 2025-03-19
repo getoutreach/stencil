@@ -11,7 +11,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/chainguard-dev/git-urls v1.0.2
-	github.com/charmbracelet/glamour v0.9.0
+	github.com/charmbracelet/glamour v0.9.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/getoutreach/gobox v1.102.1
 	github.com/go-git/go-billy/v5 v5.6.2
