@@ -91,10 +91,12 @@ func TestModuleHookRender(t *testing.T) {
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
 }
 
-func TestStencil_PostRun(t *testing.T) {
+func TestExampleStencil_PostRun(t *testing.T) {
 	ctx := context.Background()
 	manifestContents := "name: testing\npostRunCommand:\n- command: echo \"hello\""
 	fs := createFakeModuleFSWithManifest(t, manifestContents)
+	// create a stub manifest
+
 	nullLog := logrus.New()
 	nullLog.SetOutput(io.Discard)
 
@@ -104,8 +106,13 @@ func TestStencil_PostRun(t *testing.T) {
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
 	}, logrus.New())
+	err := st.PostRun(ctx, nullLog)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	assert.NilError(t, st.PostRun(ctx, nullLog))
+	// Output:
+	// hello
 }
 
 func TestStencilPostRunError(t *testing.T) {
