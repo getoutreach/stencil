@@ -50,10 +50,7 @@ func TestSingleFileRender(t *testing.T) {
 }
 
 func TestMultiFileRender(t *testing.T) {
-	fs := memfs.New()
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
-	f.Close()
+	fs := createFakeModuleFSWithManifest(t, "name: testing\narguments:\n  commands:\n    type: list")
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
@@ -76,13 +73,8 @@ func TestMultiFileRender(t *testing.T) {
 }
 
 func TestMultiFileWithInputRender(t *testing.T) {
-	fs := memfs.New()
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
-	f.Close()
-
+	fs := createFakeModuleFSWithManifest(t, "name: testing\narguments:\n  commands:\n    type: list")
 	m := modules.NewWithFS(context.Background(), "testing", fs)
-
 	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644,
 		time.Now(), []byte(multiFileInputTemplate), logrus.New())
 	assert.NilError(t, err, "failed to create template")
@@ -102,10 +94,7 @@ func TestMultiFileWithInputRender(t *testing.T) {
 }
 
 func TestApplyTemplateArgumentPassthrough(t *testing.T) {
-	fs := memfs.New()
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\narguments:\n  commands:\n    type: list"))
-	f.Close()
+	fs := createFakeModuleFSWithManifest(t, "name: testing\narguments:\n  commands:\n    type: list")
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
@@ -128,12 +117,7 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 func TestGeneratedBlock(t *testing.T) {
 	tempDir := t.TempDir()
 	fakeFilePath := filepath.Join(tempDir, "generated-block.txt")
-
-	fs := memfs.New()
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\n"))
-	f.Close()
-
+	fs := createFakeModuleFSWithManifest(t, "name: testing\n")
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{}}
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 

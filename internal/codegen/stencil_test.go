@@ -11,19 +11,15 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
-	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
 func TestBasicE2ERender(t *testing.T) {
-	fs := memfs.New()
 	ctx := context.Background()
 
 	// create stub manifest
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing"))
-	f.Close()
+	fs := createFakeModuleFSWithManifest(t, "name: testing")
 
 	// create a stub template
 	f, err := fs.Create("test-template.tpl")
@@ -95,14 +91,11 @@ func TestModuleHookRender(t *testing.T) {
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
 }
 
-func ExampleStencil_PostRun() {
-	fs := memfs.New()
+func TestExampleStencil_PostRun(t *testing.T) {
 	ctx := context.Background()
-
+	manifestContents := "name: testing\npostRunCommand:\n- command: echo \"hello\""
+	fs := createFakeModuleFSWithManifest(t, manifestContents)
 	// create a stub manifest
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing\npostRunCommand:\n- command: echo \"hello\""))
-	f.Close()
 
 	nullLog := logrus.New()
 	nullLog.SetOutput(io.Discard)
@@ -120,4 +113,27 @@ func ExampleStencil_PostRun() {
 
 	// Output:
 	// hello
+}
+
+func TestStencilPostRunError(t *testing.T) {
+	const (
+		name    = "TestStencilPostRunError"
+		command = "invalidPostRunCommand"
+	)
+
+	var (
+		ctx              = context.Background()
+		logger           = logrus.New()
+		manifestContents = fmt.Sprintf("name: %s\npostRunCommand:\n- command: %s\n", name, command)
+		errMsg           = fmt.Sprintf("failed to run post run command for module %s and command %s", name, command)
+	)
+
+	fs := createFakeModuleFSWithManifest(t, manifestContents)
+	st := NewStencil(
+		&configuration.ServiceManifest{Name: name},
+		[]*modules.Module{modules.NewWithFS(ctx, name, fs)},
+		logger,
+	)
+
+	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
 }
