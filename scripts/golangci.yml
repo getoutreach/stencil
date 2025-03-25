@@ -94,6 +94,7 @@ linters:
     - whitespace
 
 issues:
+  max-same-issues: 10
   exclude:
     # We allow error shadowing
     - 'declaration of "err" shadows declaration at'
