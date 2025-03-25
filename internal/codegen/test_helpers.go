@@ -1,3 +1,7 @@
+// Copyright 2022 Outreach Corporation. All Rights Reserved.
+
+// Description: Implements helper functions for unit tests
+
 package codegen
 
 import (
