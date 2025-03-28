@@ -11,6 +11,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -91,11 +92,14 @@ func TestModuleHookRender(t *testing.T) {
 	assert.Equal(t, tpls[1].Files[0].String(), "a", "expected Render() to return correct output")
 }
 
-func TestExampleStencil_PostRun(t *testing.T) {
+func ExampleStencil_PostRun() {
+	fs := memfs.New()
 	ctx := context.Background()
-	manifestContents := "name: testing\npostRunCommand:\n- command: echo \"hello\""
-	fs := createFakeModuleFSWithManifest(t, manifestContents)
+
 	// create a stub manifest
+	f, _ := fs.Create("manifest.yaml")
+	f.Write([]byte("name: testing\npostRunCommand:\n- command: echo \"hello\""))
+	f.Close()
 
 	nullLog := logrus.New()
 	nullLog.SetOutput(io.Discard)
