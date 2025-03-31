@@ -17,13 +17,10 @@ import (
 )
 
 func TestBasicE2ERender(t *testing.T) {
-	fs := memfs.New()
 	ctx := context.Background()
 
 	// create stub manifest
-	f, _ := fs.Create("manifest.yaml")
-	f.Write([]byte("name: testing"))
-	f.Close()
+	fs := createFakeModuleFSWithManifest(t, "name: testing")
 
 	// create a stub template
 	f, err := fs.Create("test-template.tpl")
@@ -120,4 +117,27 @@ func ExampleStencil_PostRun() {
 
 	// Output:
 	// hello
+}
+
+func TestStencilPostRunError(t *testing.T) {
+	const (
+		name    = "TestStencilPostRunError"
+		command = "invalidPostRunCommand"
+	)
+
+	var (
+		ctx              = context.Background()
+		logger           = logrus.New()
+		manifestContents = fmt.Sprintf("name: %s\npostRunCommand:\n- command: %s\n", name, command)
+		errMsg           = fmt.Sprintf("failed to run post run command for module %s and command %s", name, command)
+	)
+
+	fs := createFakeModuleFSWithManifest(t, manifestContents)
+	st := NewStencil(
+		&configuration.ServiceManifest{Name: name},
+		[]*modules.Module{modules.NewWithFS(ctx, name, fs)},
+		logger,
+	)
+
+	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
 }

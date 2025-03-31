@@ -255,7 +255,7 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
 			if err := cmd.Run(); err != nil {
-				return errors.Wrapf(err, "failed to run post run command for module %q", m.Name)
+				return errors.Wrapf(err, "failed to run post run command for module %s and command %s", m.Name, cmdStr.Command)
 			}
 		}
 	}
