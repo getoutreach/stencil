@@ -59,7 +59,7 @@ jobs:
   ## <<Stencil::Block(circleJobs)>>
   integration:
     executor:
-      name: shared/testbed-docker
+      name: shared/testbed-docker-aws
       docker_tag: stable
     resource_class: medium+
     steps:
