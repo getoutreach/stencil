@@ -12,8 +12,8 @@ require (
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/chainguard-dev/git-urls v1.0.2
 	github.com/charmbracelet/glamour v0.9.1
-	github.com/davecgh/go-spew v1.1.1
-	github.com/getoutreach/gobox v1.102.1
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/getoutreach/gobox v1.104.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.14.0
 	github.com/google/go-cmp v0.7.0
@@ -103,7 +103,7 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
