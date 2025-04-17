@@ -132,10 +132,10 @@ workflows:
       ## <<Stencil::Block(circleWorkflowJobs)>>
       - integration:
           context:
+            - aws-credentials
             - docker-registry
-            - npm-credentials
             - ghaccesstoken
-            - package-cloud-credentials
+            - npm-credentials
       ## <</Stencil::Block>>
       ### Start jobs inserted by other modules
       ### End jobs inserted by other modules
