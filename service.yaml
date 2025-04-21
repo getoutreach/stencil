@@ -1,27 +1,27 @@
 name: stencil
 arguments:
+  ciOptions:
+    skipDocker: true
+    skipE2e: true
   commands:
     - stencil
+  confluenceSpaceKey: DT
   description: microservice lifecycle manager
+  designDocumentLink: https://outreachsales-my.sharepoint.com/:w:/g/personal/it_transfer_outreachsales_onmicrosoft_com/EXQdFL_8YKlZcYwIFvLgoVgBPHRhM3jLfvzqdLDQqoMy8w
   lintroller: platinum
   metrics: datadog
-  opslevel:
-    tier: 2
-    confluenceSpaceKey: DT
-    designDocumentLink: https://docs.google.com/document/d/1e2YaeyeHMj5HrKMrZU8fh7-KInQj023GfzDxCi2u09A/edit
+  notifications:
+    releaseFailureSlackChannel: C01CEQP2MA6
   oss: true
   releaseOptions:
     allowMajorVersions: true
+    autoPrereleases: true
     enablePrereleases: true
-    prereleasesBranch: rc
+    prereleasesBranch: main
   reportingTeam: fnd-dt
   slack: dev-tooling-notifications
+  tier: 2
   tracing: opentelemetry
-  ciOptions:
-    skipE2e: true
-    skipDocker: true
-  notifications:
-    releaseFailureSlackChannel: C01CEQP2MA6
   vaultSecrets:
     - deploy/honeycomb_new/%(environment)s/honeycomb
     - deploy/launchdarkly/%(environment)s/launchdarkly
@@ -29,10 +29,12 @@ arguments:
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
 modules:
   - name: github.com/getoutreach/stencil-base
+    channel: rc
   - name: github.com/getoutreach/stencil-golang
     channel: unstable
   - name: github.com/getoutreach/stencil-actions
+    channel: rc
   - name: github.com/getoutreach/stencil-circleci
+    channel: rc
   - name: github.com/getoutreach/devbase
-    channel: main
-migrated: true
+    channel: rc

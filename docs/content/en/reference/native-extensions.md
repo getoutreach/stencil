@@ -29,6 +29,10 @@ Currently stencil does not provide a testing framework for native extensions, bu
 
 A native extension can be ran locally using the `replacements` key in an application's manifest (`service.yaml`), which is described in the [module documentation]({{< relref "template-module#testing-a-module-used-in-a-stencil-application" >}}). However, when doing this the native extension must write it's binary to `bin/plugin`.
 
+## Debugging a Native Extension
+
+The [`go-plugin`](https://github.com/hashicorp/go-plugin) library does not surface errors to stencil. Instead, it will raise the generic message `failed to create connection to extension: Unrecognized remote plugin message`. To determine a more precise error message, execute the native extension binary directly. The binary path can usually be found in bottom of the returned error. If not, the binary lives in the `bin/plugin` subdirectory of the native extension folder.
+
 ## How Native Extensions Work
 
 Native extensions are implemented using the [go-plugin](https://github.com/hashicorp/go-plugin) using the [`net/rpc`](https://pkg.go.dev/net/rpc) transport layer. go-plugin, in simple terms, implements this by executing a plugin and negotiating with it to create a unix socket to communicate over with the native extension.

@@ -229,3 +229,16 @@ func (t *Template) Run(save bool) {
 		}
 	})
 }
+
+// RegenerateSnapshots determines whether to regenerate template
+// snapshots based on the presence of the CI environment variable.
+// Example usage:
+//
+//	func TestMyTemplate(t *testing.T) {
+//		st := stenciltest.New(t, "path/to/template")
+//		// ... test setup
+//		st.Run(stenciltest.RegenerateSnapshots())
+//	}
+func RegenerateSnapshots() bool {
+	return os.Getenv("CI") == ""
+}

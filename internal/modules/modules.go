@@ -10,15 +10,13 @@ package modules
 
 import (
 	"context"
-	"fmt"
-	"strings"
+	"sync"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // resolvedModule is used to keep track of a module during the resolution
@@ -42,6 +40,9 @@ type resolvedModule struct {
 	// constraint, or other import condition, is violated.
 	// This is sorted in descending order.
 	history []resolution
+
+	// mu protects the history slice
+	mu sync.Mutex
 }
 
 // resolveModule is used to keep track of a module that needs to be resolved
@@ -89,6 +90,10 @@ type ModuleResolveOptions struct {
 	// as this is not resolved and instead requires a module type to be
 	// passed.
 	Replacements map[string]*Module
+
+	// ConcurrentResolvers is the number of concurrent resolvers to use
+	// when resolving modules.
+	ConcurrentResolvers int
 }
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
@@ -96,246 +101,121 @@ type ModuleResolveOptions struct {
 //
 //nolint:funlen // Why: Will be refactored in the future
 func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
-	// start resolving the top-level modules
-	modulesToResolve := make([]resolveModule, 0)
-
-	// strReplacements are replacements that replace the URL for a module's
-	// provided import path.
-	strReplacements := make(map[string]string)
-
-	// resolved contains the current modules that have been selected and is used
-	// to track previous resolutions/constraints for re-resolving modules.
-	resolved := make(map[string]*resolvedModule)
-
-	if opts.ServiceManifest != nil {
-		sm := opts.ServiceManifest
-
-		// for each module required by the service manifest
-		// add it to the list of module to be resolved
-		for i := range sm.Modules {
-			modulesToResolve = append(modulesToResolve, resolveModule{
-				conf:   sm.Modules[i],
-				parent: sm.Name + " (top-level)",
-			})
-		}
-
-		// add the replacements to the string list of replacements
-		for k, v := range sm.Replacements {
-			strReplacements[k] = v
-		}
-	} else if opts.Module != nil {
-		if opts.Replacements == nil {
-			opts.Replacements = make(map[string]*Module)
-		}
-
-		// add the module to the replacements map so that it can be
-		// used as a replacement for itself
-		opts.Replacements[opts.Module.Name] = opts.Module
-
-		// add ourself as the top-level module to resolve our
-		// dependencies without duplicating code here
-		modulesToResolve = append(modulesToResolve, resolveModule{
-			conf:   &configuration.TemplateRepository{Name: opts.Module.Name, Version: "vfs"},
-			parent: opts.Module.Name + " (top-level)",
-		})
-	}
+	wl := newWorkList(opts)
 
 	log := opts.Log
 
-	// resolve all versions, adding more to the stack as we go
-	for {
-		// done resolving the modules
-		if len(modulesToResolve) == 0 {
-			break
-		}
+	g := errgroup.Group{}
+	// setting it to a default value if we got here via a path other than the
+	// CLI. E.g. a test
+	if opts.ConcurrentResolvers == 0 {
+		opts.ConcurrentResolvers = 5
+	}
+	g.SetLimit(opts.ConcurrentResolvers)
 
-		resolv := modulesToResolve[0]
-		importPath := resolv.conf.Name
-		if _, ok := resolved[importPath]; !ok {
-			resolved[importPath] = &resolvedModule{Module: &Module{}}
-		}
-		rm := resolved[importPath]
-
-		if resolv.conf.Version != "" {
-			if _, err := semver.NewConstraint(resolv.conf.Version); err != nil {
-				// Attempt to resolve as a branch, which essentially is a channel.
-				// This is a bit of a hack, ideally we'll consolidate this logic when
-				// channels are ripped out of stencil later.
-				resolv.conf.Channel = resolv.conf.Version
-				resolv.conf.Version = ""
+	for len(wl.tasks) > 0 {
+		for {
+			// get an item
+			item := wl.pop()
+			if item == nil {
+				break
 			}
-		}
-
-		// if the module has already been resolved and is marked as
-		// "dontResolve", then re-use it.
-		if rm.dontResolve {
-			// this module has already been resolved and should always be used
-			log.WithFields(logrus.Fields{
-				"module": importPath,
-			}).Debug("Using in-memory module")
-			modulesToResolve = modulesToResolve[1:]
-			continue
-		}
-
-		// log the resolution attempt
-		rm.history = append(rm.history, resolution{
-			constraint:   resolv.conf.Version,
-			channel:      resolv.conf.Channel,
-			parentModule: resolv.parent,
-		})
-		log.WithFields(logrus.Fields{
-			"module": importPath,
-			"parent": resolv.parent,
-		}).Debug("resolving module")
-
-		uri := "https://" + importPath
-		var version *resolver.Version
-
-		var m *Module
-
-		// use a different url for the module if it's been replaced
-		if _, ok := strReplacements[importPath]; ok {
-			uri = strReplacements[importPath]
-		}
-
-		// if we're not using a local or in-memory replaced module, resolve the version
-		// (local modules & in-memory modules should be treated as always satisfying constraints)
-		if !uriIsLocal(uri) && opts.Replacements[importPath] == nil {
-			var err error
-			version, err = getLatestModuleForConstraints(ctx, uri, opts.Token, &resolv, resolved)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			// for local + in-memory modules we don't have a version so just stub it
-			version = &resolver.Version{
-				Mutable: true,
+			// if it's marked "dont resolve", skip it
+			if item.inProgressResolution.dontResolve {
+				continue
 			}
 
-			// if uri is local, represent it as "local" instead of the full path
-			if uriIsLocal(uri) {
-				version.Tag = "local"
-			} else {
-				// otherwise assume in-memory
-				version.Tag = "in-memory"
-			}
-			version.Branch = version.Tag
-
-			// don't attempt to resolve this module again
-			rm.dontResolve = true
+			// resolve the module in a goroutine
+			g.Go(func() error { return work(ctx, opts, item, &wl, log) })
 		}
-
-		// if we have a replacement for the module in-memory, use that instead
-		// of creating a new module that's to be resolved
-		if _, ok := opts.Replacements[importPath]; ok {
-			m = opts.Replacements[importPath]
-		} else {
-			var err error
-			m, err = New(ctx, uri, &configuration.TemplateRepository{
-				Name:    importPath,
-				Channel: resolv.conf.Channel,
-				Version: version.GitRef(),
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		mf, err := m.Manifest(ctx)
+		// wait for all the goroutines to finish
+		err := g.Wait()
 		if err != nil {
 			return nil, err
 		}
-
-		// add the dependencies of this module to the stack to be resolved
-		for i := range mf.Modules {
-			modulesToResolve = append(modulesToResolve, resolveModule{
-				conf:   mf.Modules[i],
-				parent: importPath + "@" + version.String(),
-			})
-		}
-
-		// set the module on our resolved module
-		rm.Module = m
-		rm.version = version
-
-		log.WithFields(logrus.Fields{
-			"module":  importPath,
-			"version": version.GitRef(),
-		}).Debug("resolved module")
-
-		// resolve the next module
-		modulesToResolve = modulesToResolve[1:]
+		// check if we have any more modules to resolve
 	}
 
 	// convert the resolved modules to a list of modules
-	modules := make([]*Module, 0, len(resolved))
-	for _, m := range resolved {
+	modules := make([]*Module, 0, len(wl.resolved))
+	for _, m := range wl.resolved {
 		modules = append(modules, m.Module)
 	}
 	return modules, nil
 }
 
-// getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
-func getLatestModuleForConstraints(ctx context.Context, uri string, token cfg.SecretData,
-	m *resolveModule, resolved map[string]*resolvedModule) (*resolver.Version, error) {
-	constraints := make([]string, 0)
-	for _, r := range resolved[m.conf.Name].history {
-		if r.constraint != "" {
-			constraints = append(constraints, r.constraint)
+// work does the actual work of resolving a module
+func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *workList,
+	log logrus.FieldLogger,
+) error {
+	var m *Module
+	var version *resolver.Version
+
+	// if we're not using a local or in-memory replaced module, resolve the version
+	// (local modules & in-memory modules should be treated as always satisfying constraints)
+	if !uriIsLocal(item.uri) && opts.Replacements[item.importPath] == nil {
+		var err error
+		version, err = wl.getLatestModuleForConstraints(ctx, item, opts.Token)
+		if err != nil {
+			return err
+		}
+	} else {
+		// for local + in-memory modules we don't have a version so just stub it
+		version = &resolver.Version{
+			Mutable: true,
+		}
+
+		// assume in-memory
+		version.Tag = "in-memory"
+		// ... but if uri is local, represent it as "local" instead of the full path
+		if uriIsLocal(item.uri) {
+			version.Tag = "local"
+		}
+
+		version.Branch = version.Tag
+
+		// don't attempt to resolve this module again
+		item.inProgressResolution.dontResolve = true
+	}
+
+	// if we have a replacement for the module in-memory, use that instead
+	// of creating a new module that's to be resolved
+	if _, ok := opts.Replacements[item.importPath]; ok {
+		m = opts.Replacements[item.importPath]
+	} else {
+		var err error
+		m, err = New(ctx, item.uri, &configuration.TemplateRepository{
+			Name:    item.importPath,
+			Channel: item.spec.conf.Channel,
+			Version: version.GitRef(),
+		})
+		if err != nil {
+			return err
 		}
 	}
 
-	channel := m.conf.Channel
-	for _, r := range resolved[m.conf.Name].history {
-		// if we don't have a channel, or the channel is stable, check to see if
-		// the channel we last resolved with doesn't match the current channel requested.
-		//
-		// If it doesn't match, we don't know how to resolve the module, so we error.
-		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return nil, fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				m.conf.Name, r.channel, r.parentModule, channel)
-		}
-
-		// use the first history entry that has a channel since we can't have multiple channels
-		channel = r.channel
-		break //nolint:staticcheck // Why: see above comment
-	}
-
-	// If the last version we resolved is mutable, it's impossible for us
-	// to compare the two, so we have to use it.
-	if rm, ok := resolved[m.conf.Name]; ok {
-		if rm.version != nil && rm.version.Mutable {
-			// IDEA(jaredallard): We should log this as it's non-deterministic when we
-			// have a good interface for doing so.
-			return rm.version, nil
-		}
-	}
-
-	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
-		URL:           uri,
-		Channel:       channel,
-		Constraints:   constraints,
-		AllowBranches: true,
-	})
+	mf, err := m.Manifest(ctx)
 	if err != nil {
-		errorString := ""
-		history := resolved[m.conf.Name].history
-		for i := range history {
-			h := &history[i]
-			errorString += strings.Repeat(" ", i*2) + "└─ "
-
-			wants := "*"
-			if h.constraint != "" {
-				wants = h.constraint
-			} else if h.channel != "" {
-				wants = "(channel) " + h.channel
-			}
-
-			errorString += fmt.Sprintln(history[i].parentModule, "wants", wants)
-		}
-		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
+		return err
 	}
 
-	return v, nil
+	// add the dependencies of this module to the stack to be resolved
+	for i := range mf.Modules {
+		wl.push(&resolveModule{
+			conf:   mf.Modules[i],
+			parent: item.importPath + "@" + version.String(),
+		})
+	}
+
+	// set the module on our resolved module
+	item.inProgressResolution.mu.Lock()
+	item.inProgressResolution.Module = m
+	item.inProgressResolution.version = version
+	item.inProgressResolution.mu.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"module":  item.importPath,
+		"version": version.GitRef(),
+	}).Debug("resolved module")
+	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/archive"
@@ -24,7 +25,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	giturls "github.com/whilp/git-urls"
 )
 
 // generatedTemplateFunc is the underlying type of a function
