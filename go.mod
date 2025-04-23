@@ -13,7 +13,7 @@ require (
 	github.com/chainguard-dev/git-urls v1.0.2
 	github.com/charmbracelet/glamour v0.9.1
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/getoutreach/gobox v1.104.2-0.20250422213824-23a932f4c77f
+	github.com/getoutreach/gobox v1.105.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/google/go-cmp v0.7.0
