@@ -7,11 +7,9 @@ package modules
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -22,12 +20,12 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
-	_ "github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -180,29 +178,29 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	var (
-		useCache       bool
-		info           os.FileInfo
-		cacheFileMutex sync.Mutex
+		useCache bool
+		info     os.FileInfo
 	)
 
-	// Use a persistent cache directory under os.TempDir, unique per module/version
-	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheFileNameFromURI(m.URI))
-	cacheFileMutex.Lock()
-	defer cacheFileMutex.Unlock()
+	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheNameFromURI(m.URI))
+	lock := flock.New(cacheDir)
+	err = lock.Lock()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to lock cache directory %q", cacheDir)
+	}
+	//nolint:errcheck // Reason: Unlock failures are non-fatal; best-effort cache locking.
+	defer lock.Unlock()
+
 	info, err = os.Stat(cacheDir)
 	if err == nil && time.Since(info.ModTime()) < 10*time.Minute {
 		useCache = true
 	}
 
 	if useCache {
-		log.Println("Using cache fs", cacheDir, "for module", m.Name, "version", m.Version)
 		m.fs = osfs.New(cacheDir)
 		return m.fs, nil
-	} else {
-		log.Println("Not using stale cache fs", cacheDir, "for module", m.Name, "version", m.Version)
 	}
 
-	// Remove old cache if present
 	_ = os.RemoveAll(cacheDir)
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, errors.Wrap(err, "failed to create cache directory")
