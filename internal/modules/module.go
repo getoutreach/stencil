@@ -7,9 +7,13 @@ package modules
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	giturls "github.com/chainguard-dev/git-urls"
@@ -18,7 +22,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
+	_ "github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -175,7 +179,36 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	m.fs = memfs.New()
+	var (
+		useCache       bool
+		info           os.FileInfo
+		cacheFileMutex sync.Mutex
+	)
+
+	// Use a persistent cache directory under os.TempDir, unique per module/version
+	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheFileNameFromURI(m.URI))
+	cacheFileMutex.Lock()
+	defer cacheFileMutex.Unlock()
+	info, err = os.Stat(cacheDir)
+	if err == nil && time.Since(info.ModTime()) < 10*time.Minute {
+		useCache = true
+	}
+
+	if useCache {
+		log.Println("Using cache fs", cacheDir, "for module", m.Name, "version", m.Version)
+		m.fs = osfs.New(cacheDir)
+		return m.fs, nil
+	} else {
+		log.Println("Not using stale cache fs", cacheDir, "for module", m.Name, "version", m.Version)
+	}
+
+	// Remove old cache if present
+	_ = os.RemoveAll(cacheDir)
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, errors.Wrap(err, "failed to create cache directory")
+	}
+
+	m.fs = osfs.New(cacheDir)
 	opts := &git.CloneOptions{
 		URL:               m.URI,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -196,8 +229,6 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		opts.SingleBranch = true
 	}
 
-	// We don't use the git object here because all we care about is
-	// the underlying filesystem object, which was created earlier
 	if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
 		// if tag not found try as a branch
 		if !errors.Is(err, git.NoMatchingRefSpecError{}) {

@@ -7,9 +7,16 @@ package modules
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
@@ -208,7 +215,35 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+	// let's lock this before we make any write to file system
+	var (
+		v              *resolver.Version
+		cached         *resolver.Version
+		err            error
+		useCache       bool
+		info           os.FileInfo
+		cacheFileMutex sync.Mutex
+	)
+
+	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version", cacheFileNameFromURI(item.uri))
+	cacheFileMutex.Lock()
+	defer cacheFileMutex.Unlock()
+	info, err = os.Stat(cacheFile)
+
+	if err == nil && time.Since(info.ModTime()) < 10*time.Minute {
+		if data, readErr := os.ReadFile(cacheFile); readErr == nil {
+			if jsonErr := json.Unmarshal(data, cached); jsonErr == nil {
+				useCache = true
+			}
+		}
+	}
+
+	if useCache {
+		log.Println("Using cached module version for", item.uri)
+		return cached, nil
+	}
+
+	v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:           item.uri,
 		Channel:       channel,
 		Constraints:   constraints,
@@ -233,5 +268,18 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
+	// Save to cache
+	if data, marshalErr := json.Marshal(v); marshalErr == nil {
+		_ = os.WriteFile(cacheFile, data, 0644)
+	}
+
 	return v, nil
+}
+
+// cacheFileNameFromURI generates a safe filename from the URI
+func cacheFileNameFromURI(uri string) string {
+	h := sha1.New()
+	h.Write([]byte(uri))
+
+	return hex.EncodeToString(h.Sum(nil)) + ".stencil"
 }
