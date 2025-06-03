@@ -182,17 +182,18 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		info     os.FileInfo
 	)
 
-	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheNameFromURI(m.URI))
+	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheNameFromURI(m.URI, m.Version))
 	lock := flock.New(cacheDir)
 	err = lock.Lock()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, errors.Wrapf(err, "failed to lock cache directory %q", cacheDir)
 	}
-	//nolint:errcheck // Reason: Unlock failures are non-fatal; best-effort cache locking.
+
+	//nolint:errcheck // Why: Unlock failures are non-fatal; best-effort cache locking.
 	defer lock.Unlock()
 
 	info, err = os.Stat(cacheDir)
-	if err == nil && time.Since(info.ModTime()) < 10*time.Minute {
+	if err == nil && time.Since(info.ModTime()) < 2*time.Minute {
 		useCache = true
 	}
 

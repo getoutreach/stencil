@@ -7,8 +7,6 @@ package modules
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,12 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/flock"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -216,7 +213,6 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	// let's lock this before we make any write to file system
 	var (
 		v        *resolver.Version
 		cached   *resolver.Version
@@ -225,19 +221,19 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		info     os.FileInfo
 	)
 
-	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version", cacheNameFromURI(item.uri))
+	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version", cacheNameFromURI(item.uri, item.spec.conf.Channel))
 	lock := flock.New(cacheFile)
 	err = lock.Lock()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, errors.Wrapf(err, "failed to lock cache file %q", cacheFile)
 	}
 
-	//nolint:errcheck // Reason: Unlock failures are non-fatal; best-effort cache locking.
+	//nolint:errcheck // Why: Unlock failures are non-fatal; best-effort cache locking.
 	defer lock.Unlock()
 
 	info, err = os.Stat(cacheFile)
 
-	if err == nil && time.Since(info.ModTime()) < 10*time.Minute {
+	if err == nil && time.Since(info.ModTime()) < 2*time.Minute {
 		if data, readErr := os.ReadFile(cacheFile); readErr == nil {
 			if jsonErr := json.Unmarshal(data, cached); jsonErr == nil {
 				useCache = true
@@ -275,17 +271,14 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	if data, marshalErr := json.Marshal(v); marshalErr == nil {
-		//nolint:errcheck // Reason: Cache write failures are non-fatal; best-effort caching.
-		_ = os.WriteFile(cacheFile, data, 0644)
+		//nolint:errcheck // Why: Cache write failures are non-fatal; best-effort caching.
+		_ = os.WriteFile(cacheFile, data, 0o600)
 	}
 
 	return v, nil
 }
 
 // cacheNameFromURI generates a safe name from the URI
-func cacheNameFromURI(uri string) string {
-	h := sha256.New()
-	h.Write([]byte(uri))
-
-	return hex.EncodeToString(h.Sum(nil))
+func cacheNameFromURI(uri, version string) string {
+	return strings.TrimPrefix(uri, "https://") + "_" + version
 }
