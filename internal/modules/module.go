@@ -219,6 +219,8 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		opts.SingleBranch = true
 	}
 
+	// We don't use the git object here because all we care about is
+	// the underlying filesystem object, which was created earlier
 	if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
 		// if tag not found try as a branch
 		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
