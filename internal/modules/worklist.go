@@ -7,6 +7,8 @@ package modules
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -19,7 +21,6 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -222,14 +223,6 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	)
 
 	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version", cacheNameFromURI(item.uri, item.spec.conf.Channel))
-	lock := flock.New(cacheFile)
-	err = lock.Lock()
-	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrapf(err, "failed to lock cache file %q", cacheFile)
-	}
-
-	//nolint:errcheck // Why: Unlock failures are non-fatal; best-effort cache locking.
-	defer lock.Unlock()
 
 	info, err = os.Stat(cacheFile)
 
@@ -279,6 +272,9 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 }
 
 // cacheNameFromURI generates a safe name from the URI
-func cacheNameFromURI(uri, version string) string {
-	return strings.TrimPrefix(uri, "https://") + "_" + version
+func cacheNameFromURI(uri, branch string) string {
+	h := sha256.New()
+	h.Write([]byte(uri + branch))
+
+	return hex.EncodeToString(h.Sum(nil))
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -183,14 +182,6 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	)
 
 	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheNameFromURI(m.URI, m.Version))
-	lock := flock.New(cacheDir)
-	err = lock.Lock()
-	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrapf(err, "failed to lock cache directory %q", cacheDir)
-	}
-
-	//nolint:errcheck // Why: Unlock failures are non-fatal; best-effort cache locking.
-	defer lock.Unlock()
 
 	info, err = os.Stat(cacheDir)
 	if err == nil && time.Since(info.ModTime()) < 2*time.Minute {
