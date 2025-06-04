@@ -211,7 +211,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version",
+	cacheFile := filepath.Join(stencilCacheDir(), "module_version",
 		getModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
 
 	if useModuleCache(cacheFile) {
@@ -220,6 +220,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 			return nil, errors.Wrapf(err, "failed to read cache resolved version"+
 				" from cache for mddule %s:%s", item.uri, item.spec.conf.Channel)
 		}
+
 		var cached *resolver.Version
 		err = json.Unmarshal(data, cached)
 		if err != nil {

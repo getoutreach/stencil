@@ -177,7 +177,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", getModuleCacheDirectory(m.URI, m.Version))
+	cacheDir := filepath.Join(stencilCacheDir(), "module_fs", getModuleCacheDirectory(m.URI, m.Version))
 	logrus.Println("cacheDir", cacheDir)
 
 	if useModuleCache(cacheDir) {
@@ -249,4 +249,8 @@ func getModuleCacheDirectory(uri, branch string) string {
 	}
 
 	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
+}
+
+func stencilCacheDir() string {
+	return filepath.Join(os.TempDir(), "stencil_cache")
 }
