@@ -224,7 +224,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		var cached *resolver.Version
 		err = json.Unmarshal(data, cached)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal cached version for module %s:%s", item.uri, item.spec.conf.Channel)
+			return nil, errors.Wrapf(err, "failed to deserialize cached version for module %s:%s", item.uri, item.spec.conf.Channel)
 		}
 
 		return cached, nil
@@ -255,9 +255,15 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
-	if data, marshalErr := json.Marshal(v); marshalErr == nil {
-		//nolint:errcheck // Why: Cache write failures are non-fatal; best-effort caching.
-		_ = os.WriteFile(cacheFile, data, 0o600)
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to serialize version for module %s:%s", item.uri, item.spec.conf.Channel)
+	}
+
+	err = os.WriteFile(cacheFile, data, 0o600)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to write resolved version"+
+			" to cache for module %s:%s", item.uri, item.spec.conf.Channel)
 	}
 
 	return v, nil
