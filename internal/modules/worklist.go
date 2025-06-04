@@ -211,8 +211,8 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	cacheFile := filepath.Join(stencilCacheDir(), "module_version",
-		getModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
+	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
+		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
 
 	if useModuleCache(cacheFile) {
 		data, err := os.ReadFile(cacheFile)

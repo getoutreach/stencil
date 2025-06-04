@@ -6,12 +6,16 @@ package modules_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/go-git/go-billy/v5"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -371,4 +375,55 @@ func TestShouldErrorOnTwoDifferentChannels(t *testing.T) {
 		Log: newLogger(),
 	})
 	assert.ErrorContains(t, err, "previously resolved with channel", "expected GetModulesForService() to error")
+}
+
+func TestGetFS_CacheUsage(t *testing.T) {
+	ctx := context.Background()
+	repoName := "github.com/getoutreach/stencil-base"
+	repoURL := "https://" + repoName
+	version := "main"
+
+	tr := &configuration.TemplateRepository{
+		Name:    repoName,
+		Version: version,
+	}
+
+	cacheDir := filepath.Join(modules.StencilCacheDir(), "module_fs", modules.ModuleCacheDirectory(repoURL, version))
+	err := os.RemoveAll(cacheDir)
+	assert.NilError(t, err, "failed to remove cache directory")
+
+	mod, err := modules.New(ctx, repoURL, tr)
+	assert.NilError(t, err)
+	fs1, err := mod.GetFS(ctx)
+	assert.NilError(t, err)
+	assertFSExists(t, fs1)
+	assertCacheFresh(t, cacheDir)
+
+	mod2, err := modules.New(ctx, repoURL, tr)
+	assert.NilError(t, err)
+	fs2, err := mod2.GetFS(ctx)
+	assert.NilError(t, err)
+	assertFSExists(t, fs2)
+	assert.Equal(
+		t,
+		fs1.Root(),
+		fs2.Root(),
+		"different process for the same module should use the same root file system",
+	)
+}
+
+func assertFSExists(t *testing.T, fs billy.Filesystem) {
+	_, err := fs.Stat(".")
+	assert.NilError(t, err)
+}
+
+func assertCacheFresh(t *testing.T, cacheDir string) {
+	info, err := os.Stat(cacheDir)
+	assert.NilError(t, err)
+	delta := modules.ModuleCacheTTL
+	dt := time.Now().Sub(info.ModTime())
+	if dt < -delta || dt > delta {
+		t.Errorf("cache directory %s is not fresh: expected mod time within %v minutes, got %v minuts",
+			cacheDir, delta.Minutes(), dt.Minutes())
+	}
 }

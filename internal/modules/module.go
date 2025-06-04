@@ -33,6 +33,7 @@ import (
 
 // localModuleVersion is the version string used for local modules
 const localModuleVersion = "local"
+const ModuleCacheTTL = 2 * time.Minute
 
 // Module is a stencil module that contains template files.
 type Module struct {
@@ -179,7 +180,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	cacheDir := filepath.Join(stencilCacheDir(), "module_fs", getModuleCacheDirectory(m.URI, m.Version))
+	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
 	logrus.Println("cacheDir", cacheDir)
 
 	if useModuleCache(cacheDir) {
@@ -237,15 +238,15 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 // useModuleCache returns true if the specified path should be used as a module cache
 func useModuleCache(path string) bool {
 	info, err := os.Stat(path)
-	if err != nil || time.Since(info.ModTime()) > 2*time.Minute {
+	if err != nil || time.Since(info.ModTime()) > ModuleCacheTTL {
 		return false
 	}
 
 	return true
 }
 
-// getModuleCacheDirectory generates a directory name from the URI and branch
-func getModuleCacheDirectory(uri, branch string) string {
+// ModuleCacheDirectory returns a directory name for the module from the given URI and branch
+func ModuleCacheDirectory(uri, branch string) string {
 	if branch == "" {
 		branch = "v0.0.0"
 	}
@@ -253,6 +254,7 @@ func getModuleCacheDirectory(uri, branch string) string {
 	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
 }
 
-func stencilCacheDir() string {
+// StencilCacheDir returns the directory where stencil caches its data.
+func StencilCacheDir() string {
 	return filepath.Join(os.TempDir(), "stencil_cache")
 }
