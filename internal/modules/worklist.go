@@ -276,16 +276,16 @@ func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
 		return errors.Wrapf(err, "failed to serialize version to cache file %s", cacheFile)
 	}
 
-	err = os.MkdirAll(filepath.Dir(cacheFile), 0o600)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create cache directory for cache file %s", cacheFile)
-	}
-
 	lockFile := cacheFile + ".lock"
 	fl := flock.New(lockFile)
 	locked, err := fl.TryLock()
 	if err != nil || !locked {
 		return nil
+	}
+
+	err = os.MkdirAll(filepath.Dir(cacheFile), 0o600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create cache directory for cache file %s", cacheFile)
 	}
 
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
