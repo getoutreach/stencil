@@ -18,6 +18,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -215,19 +216,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
 
 	if useModuleCache(cacheFile) {
-		data, err := os.ReadFile(cacheFile)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read cache resolved version"+
-				" from cache for mddule %s:%s", item.uri, item.spec.conf.Channel)
-		}
-
-		var cached *resolver.Version
-		err = json.Unmarshal(data, cached)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to deserialize cached version for module %s:%s", item.uri, item.spec.conf.Channel)
-		}
-
-		return cached, nil
+		return getCachedModuleVersion(cacheFile)
 	}
 
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
@@ -256,17 +245,56 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 			m.conf.Name, errorString)
 	}
 
-	data, err := json.Marshal(v)
+	err = setModuleVersionCache(cacheFile, v)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to serialize version for module %s:%s",
-			item.uri, item.spec.conf.Channel)
-	}
-
-	err = os.WriteFile(cacheFile, data, 0o600)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to write resolved version to cache for module %s:%s",
-			item.uri, item.spec.conf.Channel)
+		return nil, err
 	}
 
 	return v, nil
+}
+
+// getCachedModuleVersion returns version for a module from local cache file
+func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
+	data, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read cached version from file %s", cacheFile)
+	}
+
+	var cached resolver.Version
+	err = json.Unmarshal(data, &cached)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize cached version from file %s", cacheFile)
+	}
+
+	return &cached, nil
+}
+
+// setModuleVersionCache returns version for a module from local cache file
+func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return errors.Wrapf(err, "failed to serialize version to cache file %s", cacheFile)
+	}
+
+	err = os.MkdirAll(filepath.Dir(cacheFile), 0o600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create cache directory for cache file %s", cacheFile)
+	}
+
+	lockFile := cacheFile + ".lock"
+	fl := flock.New(lockFile)
+	locked, err := fl.TryLock()
+	if err != nil || !locked {
+		return nil
+	}
+
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer fl.Unlock()
+
+	err = os.WriteFile(cacheFile, data, 0o600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write resolved version to cache file %s", cacheFile)
+	}
+
+	return nil
 }

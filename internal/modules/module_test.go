@@ -397,7 +397,7 @@ func TestGetFS_CacheUsage(t *testing.T) {
 	fs1, err := mod.GetFS(ctx)
 	assert.NilError(t, err)
 	assertFSExists(t, fs1)
-	assertCacheFresh(t, cacheDir)
+	assertFreshCache(t, cacheDir)
 
 	mod2, err := modules.New(ctx, repoURL, tr)
 	assert.NilError(t, err)
@@ -417,7 +417,7 @@ func assertFSExists(t *testing.T, fs billy.Filesystem) {
 	assert.NilError(t, err)
 }
 
-func assertCacheFresh(t *testing.T, cacheDir string) {
+func assertFreshCache(t *testing.T, cacheDir string) {
 	info, err := os.Stat(cacheDir)
 	assert.NilError(t, err)
 	delta := modules.ModuleCacheTTL
