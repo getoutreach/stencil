@@ -160,8 +160,10 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	return manifest, nil
 }
 
-// GetFS returns a billy.Filesystem that contains the contents
-// of this module.
+// GetFS returns a billy.Filesystem that contains the contents of this module.
+// If the module URI starts with file://, it uses the local filesystem at the given path.
+// Otherwise, it clones the module from a remote git repository into a temporary cache directory
+// on the OS filesystem. This allows the module to be used as a billy.Filesystem.
 func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	if m.fs != nil {
 		return m.fs, nil
