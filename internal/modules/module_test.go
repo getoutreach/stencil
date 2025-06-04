@@ -421,7 +421,7 @@ func assertCacheFresh(t *testing.T, cacheDir string) {
 	info, err := os.Stat(cacheDir)
 	assert.NilError(t, err)
 	delta := modules.ModuleCacheTTL
-	dt := time.Now().Sub(info.ModTime())
+	dt := time.Since(info.ModTime())
 	if dt < -delta || dt > delta {
 		t.Errorf("cache directory %s is not fresh: expected mod time within %v minutes, got %v minuts",
 			cacheDir, delta.Minutes(), dt.Minutes())
