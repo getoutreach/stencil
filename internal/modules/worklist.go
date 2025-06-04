@@ -7,15 +7,12 @@ package modules
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
@@ -214,31 +211,25 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	var (
-		v        *resolver.Version
-		cached   *resolver.Version
-		err      error
-		useCache bool
-		info     os.FileInfo
-	)
+	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version",
+		getModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
 
-	cacheFile := filepath.Join(os.TempDir(), "stencil_cache", "module_version", cacheNameFromURI(item.uri, item.spec.conf.Channel))
-
-	info, err = os.Stat(cacheFile)
-
-	if err == nil && time.Since(info.ModTime()) < 2*time.Minute {
-		if data, readErr := os.ReadFile(cacheFile); readErr == nil {
-			if jsonErr := json.Unmarshal(data, cached); jsonErr == nil {
-				useCache = true
-			}
+	if useModuleCache(cacheFile) {
+		data, err := os.ReadFile(cacheFile)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read cache resolved version"+
+				" from cache for mddule %s:%s", item.uri, item.spec.conf.Channel)
 		}
-	}
+		var cached *resolver.Version
+		err = json.Unmarshal(data, cached)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal cached version for module %s:%s", item.uri, item.spec.conf.Channel)
+		}
 
-	if useCache {
 		return cached, nil
 	}
 
-	v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
+	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:           item.uri,
 		Channel:       channel,
 		Constraints:   constraints,
@@ -269,12 +260,4 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	return v, nil
-}
-
-// cacheNameFromURI generates a safe name from the URI
-func cacheNameFromURI(uri, branch string) string {
-	h := sha256.New()
-	h.Write([]byte(uri + branch))
-
-	return hex.EncodeToString(h.Sum(nil))
 }

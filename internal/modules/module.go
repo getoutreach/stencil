@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -176,25 +177,20 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	var (
-		useCache bool
-		info     os.FileInfo
-	)
+	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", getModuleCacheDirectory(m.URI, m.Version))
+	logrus.Println("cacheDir", cacheDir)
 
-	cacheDir := filepath.Join(os.TempDir(), "stencil_cache", "module_fs", cacheNameFromURI(m.URI, m.Version))
-
-	info, err = os.Stat(cacheDir)
-	if err == nil && time.Since(info.ModTime()) < 2*time.Minute {
-		useCache = true
-	}
-
-	if useCache {
+	if useModuleCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
 		return m.fs, nil
 	}
 
-	_ = os.RemoveAll(cacheDir)
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	err = os.RemoveAll(cacheDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to remove stale cache %q", cacheDir)
+	}
+
+	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, errors.Wrap(err, "failed to create cache directory")
 	}
 
@@ -234,4 +230,23 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	return m.fs, nil
+}
+
+// useModuleCache returns true if the specified path should be used as a module cache
+func useModuleCache(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil || time.Since(info.ModTime()) > 2*time.Minute {
+		return false
+	}
+
+	return true
+}
+
+// getModuleCacheDirectory generates a directory name from the URI and branch
+func getModuleCacheDirectory(uri, branch string) string {
+	if branch == "" {
+		branch = "v0.0.0"
+	}
+
+	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
 }
