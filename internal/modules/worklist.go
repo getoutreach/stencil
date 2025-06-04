@@ -283,11 +283,6 @@ func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
 		return nil
 	}
 
-	err = os.MkdirAll(filepath.Dir(cacheFile), 0o600)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create cache directory for cache file %s", cacheFile)
-	}
-
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
 	defer fl.Unlock()
 
