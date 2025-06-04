@@ -252,18 +252,20 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 
 			errorString += fmt.Sprintln(history[i].parentModule, "wants", wants)
 		}
-		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
+		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s",
+			m.conf.Name, errorString)
 	}
 
 	data, err := json.Marshal(v)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to serialize version for module %s:%s", item.uri, item.spec.conf.Channel)
+		return nil, errors.Wrapf(err, "failed to serialize version for module %s:%s",
+			item.uri, item.spec.conf.Channel)
 	}
 
 	err = os.WriteFile(cacheFile, data, 0o600)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to write resolved version"+
-			" to cache for module %s:%s", item.uri, item.spec.conf.Channel)
+		return nil, errors.Wrapf(err, "failed to write resolved version to cache for module %s:%s",
+			item.uri, item.spec.conf.Channel)
 	}
 
 	return v, nil
