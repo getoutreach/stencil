@@ -241,8 +241,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 
 			errorString += fmt.Sprintln(history[i].parentModule, "wants", wants)
 		}
-		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s",
-			m.conf.Name, errorString)
+		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
 	err = setModuleVersionCache(cacheFile, v)
@@ -253,7 +252,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	return v, nil
 }
 
-// getCachedModuleVersion returns version for a module from local cache file
+// getCachedModuleVersion returns module version from local file
 func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 	data, err := os.ReadFile(cacheFile)
 	if err != nil {
@@ -263,7 +262,7 @@ func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 	var cached resolver.Version
 	err = json.Unmarshal(data, &cached)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to deserialize cached version from file %s", cacheFile)
+		return nil, errors.Wrapf(err, "failed to deserialize cached module version from file %s", cacheFile)
 	}
 
 	return &cached, nil
@@ -273,7 +272,7 @@ func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
 	data, err := json.Marshal(v)
 	if err != nil {
-		return errors.Wrapf(err, "failed to serialize version to cache file %s", cacheFile)
+		return errors.Wrapf(err, "failed to serialize module version to cache file %s", cacheFile)
 	}
 
 	lockFile := cacheFile + ".lock"
