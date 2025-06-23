@@ -420,12 +420,14 @@ func assertFSExists(t *testing.T, fs billy.Filesystem) {
 }
 
 func assertFreshCache(t *testing.T, cacheDir string) {
+	t.Helper()
+
 	info, err := os.Stat(cacheDir)
 	assert.NilError(t, err)
 	delta := modules.ModuleCacheTTL
 	dt := time.Since(info.ModTime())
 	if dt < -delta || dt > delta {
-		t.Errorf("cache directory %s is not fresh: expected mod time within %v minutes, got %v minuts",
+		t.Errorf("Cache directory %s is not fresh: expected mod time within %f minutes, got %f minutes",
 			cacheDir, delta.Minutes(), dt.Minutes())
 	}
 }
