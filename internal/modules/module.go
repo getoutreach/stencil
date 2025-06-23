@@ -237,7 +237,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	return m.fs, nil
 }
 
-// useModuleCache returns true if the specified path should be used as a module cache
+// useModuleCache determines if the specified path should be used as a module cache.
 func useModuleCache(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil || time.Since(info.ModTime()) > ModuleCacheTTL {
