@@ -268,7 +268,7 @@ func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 	return &cached, nil
 }
 
-// setModuleVersionCache returns version for a module from local cache file
+// setModuleVersionCache writes the version for a module to a local cache file.
 func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
 	data, err := json.Marshal(v)
 	if err != nil {
