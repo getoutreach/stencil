@@ -252,7 +252,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	return v, nil
 }
 
-// getCachedModuleVersion returns module version from local file
+// getCachedModuleVersion returns the module version from the cache file.
 func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 	data, err := os.ReadFile(cacheFile)
 	if err != nil {
