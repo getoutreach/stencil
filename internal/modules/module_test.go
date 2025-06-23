@@ -413,6 +413,8 @@ func TestGetFS_CacheUsage(t *testing.T) {
 }
 
 func assertFSExists(t *testing.T, fs billy.Filesystem) {
+	t.Helper()
+
 	_, err := fs.Stat(".")
 	assert.NilError(t, err)
 }
