@@ -247,7 +247,7 @@ func useModuleCache(path string) bool {
 	return true
 }
 
-// ModuleCacheDirectory returns a directory name for the module from the given URI and branch
+// ModuleCacheDirectory generates a directory name for the module from the given URI and optional branch.
 func ModuleCacheDirectory(uri, branch string) string {
 	if branch == "" {
 		branch = "v0.0.0"
