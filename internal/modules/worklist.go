@@ -7,7 +7,10 @@ package modules
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -15,6 +18,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -208,6 +212,13 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
+	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
+		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
+
+	if useModuleCache(cacheFile) {
+		return getCachedModuleVersion(cacheFile)
+	}
+
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
 		URL:           item.uri,
 		Channel:       channel,
@@ -233,5 +244,51 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
+	err = setModuleVersionCache(cacheFile, v)
+	if err != nil {
+		return nil, err
+	}
+
 	return v, nil
+}
+
+// getCachedModuleVersion returns the module version from the cache file.
+func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
+	data, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read cached version from file %s", cacheFile)
+	}
+
+	var cached resolver.Version
+	err = json.Unmarshal(data, &cached)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize cached module version from file %s", cacheFile)
+	}
+
+	return &cached, nil
+}
+
+// setModuleVersionCache writes the version for a module to a local cache file.
+func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return errors.Wrapf(err, "failed to serialize module version to cache file %s", cacheFile)
+	}
+
+	lockFile := cacheFile + ".lock"
+	fl := flock.New(lockFile)
+	locked, err := fl.TryLock()
+	if err != nil || !locked {
+		return nil
+	}
+
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer fl.Unlock()
+
+	err = os.WriteFile(cacheFile, data, 0o600)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write resolved version to cache file %s", cacheFile)
+	}
+
+	return nil
 }

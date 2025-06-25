@@ -8,8 +8,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	giturls "github.com/chainguard-dev/git-urls"
@@ -18,7 +21,6 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -31,6 +33,9 @@ import (
 
 // localModuleVersion is the version string used for local modules
 const localModuleVersion = "local"
+
+// ModuleCacheTTL defines the time-to-live duration for the module cache.
+const ModuleCacheTTL = 30 * time.Minute
 
 // Module is a stencil module that contains template files.
 type Module struct {
@@ -158,8 +163,10 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	return manifest, nil
 }
 
-// GetFS returns a billy.Filesystem that contains the contents
-// of this module.
+// GetFS returns a billy.Filesystem that contains the contents of this module.
+// If the module URI starts with file://, it uses the local filesystem at the given path.
+// Otherwise, it clones the module from a remote git repository into a temporary cache directory
+// on the OS filesystem. This allows the module to be used as a billy.Filesystem.
 func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	if m.fs != nil {
 		return m.fs, nil
@@ -175,7 +182,24 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	m.fs = memfs.New()
+	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
+	logrus.Println("cacheDir", cacheDir)
+
+	if useModuleCache(cacheDir) {
+		m.fs = osfs.New(cacheDir)
+		return m.fs, nil
+	}
+
+	err = os.RemoveAll(cacheDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to remove stale cache %q", cacheDir)
+	}
+
+	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, errors.Wrap(err, "failed to create cache directory")
+	}
+
+	m.fs = osfs.New(cacheDir)
 	opts := &git.CloneOptions{
 		URL:               m.URI,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -211,4 +235,28 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	return m.fs, nil
+}
+
+// useModuleCache determines if the specified path should be used as a module cache.
+func useModuleCache(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil || time.Since(info.ModTime()) > ModuleCacheTTL {
+		return false
+	}
+
+	return true
+}
+
+// ModuleCacheDirectory generates a directory name for the module from the given URI and optional branch.
+func ModuleCacheDirectory(uri, branch string) string {
+	if branch == "" {
+		branch = "v0.0.0"
+	}
+
+	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
+}
+
+// StencilCacheDir returns the directory where stencil caches its data.
+func StencilCacheDir() string {
+	return filepath.Join(os.TempDir(), "stencil_cache")
 }
