@@ -183,7 +183,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
-	logrus.Println("cacheDir", cacheDir)
+	logrus.Debug("cacheDir", cacheDir)
 
 	if useModuleCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
