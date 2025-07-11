@@ -246,8 +246,9 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	return m.fs, nil
 }
 
+// exclusiveLockDirectory creates a new flock lock for the specified directory.
 func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
-	lock := flock.New(filepath.Join(dir, ".lock"))
+	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
 	for {
 		locked, err := lock.TryLock()
 		if err != nil {
