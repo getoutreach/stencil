@@ -26,6 +26,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -35,7 +36,7 @@ import (
 const localModuleVersion = "local"
 
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
-const ModuleCacheTTL = 30 * time.Minute
+const ModuleCacheTTL = 10 * time.Minute
 
 // Module is a stencil module that contains template files.
 type Module struct {
@@ -136,6 +137,16 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
+	lockDir := filepath.Join(StencilCacheDir(), "ex_mf", ModuleCacheDirectory(m.URI, m.Version))
+	lock, err := exclusiveLockDirectory(lockDir)
+	if err != nil {
+		return configuration.TemplateRepositoryManifest{},
+			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
+	}
+
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer lock.Unlock()
+
 	fs, err := m.GetFS(ctx)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{}, errors.Wrap(err, "failed to download fs")
@@ -183,7 +194,6 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
-	logrus.Debug("cacheDir", cacheDir)
 
 	if useModuleCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
@@ -192,11 +202,11 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 
 	err = os.RemoveAll(cacheDir)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale cache %q", cacheDir)
+		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
 	}
 
 	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrap(err, "failed to create cache directory")
+		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
 	}
 
 	m.fs = osfs.New(cacheDir)
@@ -235,6 +245,30 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	return m.fs, nil
+}
+
+// exclusiveLockDirectory creates a new flock lock for the specified directory.
+func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
+	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
+	for {
+		locked, err := lock.TryLock()
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return nil, err
+			}
+
+			if err = os.MkdirAll(dir, 0o755); err != nil {
+				return nil, errors.Wrapf(err, "failed to create directory %q", dir)
+			}
+			continue
+		}
+
+		if locked {
+			break
+		}
+	}
+
+	return lock, nil
 }
 
 // useModuleCache determines if the specified path should be used as a module cache.
