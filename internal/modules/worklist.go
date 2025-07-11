@@ -211,17 +211,18 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	cacheDir := filepath.Join(StencilCacheDir(), "module_version",
+	lockDir := filepath.Join(StencilCacheDir(), "ex_ver",
 		ModuleCacheDirectory(item.uri, item.spec.conf.Channel))
-	lock, err := exclusiveLockDirectory(cacheDir)
+	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", cacheDir)
+		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", lockDir)
 	}
 
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
 	defer lock.Unlock()
 
-	cacheFile := filepath.Join(cacheDir, "version.json")
+	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
+		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), fmt.Sprintf("version_%v.json", constraints))
 	if useModuleCache(cacheFile) {
 		return getCachedModuleVersion(cacheFile)
 	}
@@ -277,15 +278,22 @@ func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 
 // setModuleVersionCache writes the version for a module to a local cache file.
 func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
+	cacheDir := filepath.Dir(cacheFile)
 	data, err := json.Marshal(v)
 	if err != nil {
 		return errors.Wrapf(err, "failed to serialize module version to cache file %s", cacheFile)
 	}
 
-	err = os.RemoveAll(cacheFile)
+	err = os.RemoveAll(cacheDir)
 	if err != nil {
-		return errors.Wrapf(err, "failed to remove module version cache file %s", cacheFile)
+		return errors.Wrapf(err, "failed to remove module version cache %s", cacheDir)
 	}
+
+	err = os.MkdirAll(cacheDir, 0o755)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create directory for module version cache %s", cacheDir)
+	}
+
 	err = os.WriteFile(cacheFile, data, 0o600)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write resolved version to cache file %s", cacheFile)
