@@ -18,7 +18,6 @@ import (
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
 	"github.com/getoutreach/stencil/pkg/configuration"
-	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -212,9 +211,17 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
-	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
-		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), "version.json")
+	cacheDir := filepath.Join(StencilCacheDir(), "module_version",
+		ModuleCacheDirectory(item.uri, item.spec.conf.Channel))
+	lock, err := exclusiveLockDirectory(cacheDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", cacheDir)
+	}
 
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer lock.Unlock()
+
+	cacheFile := filepath.Join(cacheDir, "version.json")
 	if useModuleCache(cacheFile) {
 		return getCachedModuleVersion(cacheFile)
 	}
@@ -275,16 +282,10 @@ func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
 		return errors.Wrapf(err, "failed to serialize module version to cache file %s", cacheFile)
 	}
 
-	lockFile := cacheFile + ".lock"
-	fl := flock.New(lockFile)
-	locked, err := fl.TryLock()
-	if err != nil || !locked {
-		return nil
+	err = os.RemoveAll(cacheFile)
+	if err != nil {
+		return errors.Wrapf(err, "failed to remove module version cache file %s", cacheFile)
 	}
-
-	//nolint:errcheck // Why: Unlock error can be safely ignored here
-	defer fl.Unlock()
-
 	err = os.WriteFile(cacheFile, data, 0o600)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write resolved version to cache file %s", cacheFile)
