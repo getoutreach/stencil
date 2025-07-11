@@ -36,7 +36,7 @@ import (
 const localModuleVersion = "local"
 
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
-const ModuleCacheTTL = 30 * time.Minute
+const ModuleCacheTTL = 10 * time.Minute
 
 // Module is a stencil module that contains template files.
 type Module struct {
@@ -137,10 +137,11 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
-	cacheDir := filepath.Join(StencilCacheDir(), "dir", ModuleCacheDirectory(m.URI, m.Version))
-	lock, err := exclusiveLockDirectory(cacheDir)
+	lockDir := filepath.Join(StencilCacheDir(), "ex_mf", ModuleCacheDirectory(m.URI, m.Version))
+	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
-		return configuration.TemplateRepositoryManifest{}, errors.Wrapf(err, "failed to lock cache directory %q", cacheDir)
+		return configuration.TemplateRepositoryManifest{},
+			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
 	}
 
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
@@ -201,11 +202,11 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 
 	err = os.RemoveAll(cacheDir)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale cache %q", cacheDir)
+		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
 	}
 
 	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrap(err, "failed to create cache directory")
+		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
 	}
 
 	m.fs = osfs.New(cacheDir)
