@@ -131,6 +131,6 @@ var Default = template.FuncMap{
 	"fromYaml":         fromYAML,
 	"toJson":           toJSON,
 	"fromJson":         fromJSON,
-	"toTOML":           toTOML,
-	"fromTOML":         fromTOML,
+	"toToml":           toTOML,
+	"fromToml":         fromTOML,
 }

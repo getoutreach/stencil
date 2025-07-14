@@ -80,7 +80,7 @@ func Example_fromJson() {
 }
 
 func Example_toTOML() {
-	example := map[string]interface{}{
+	example := map[string]any{
 		"a": "b",
 		"c": "d",
 	}
