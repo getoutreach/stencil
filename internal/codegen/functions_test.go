@@ -78,3 +78,24 @@ func Example_fromJson() {
 	// Output:
 	// map[a:b c:d] <nil>
 }
+
+func Example_toTOML() {
+	example := map[string]any{
+		"a": "b",
+		"c": "d",
+	}
+	fmt.Println(toTOML(example))
+
+	// Output:
+	// a = "b"
+	// c = "d" <nil>
+}
+
+func Example_fromTOML() {
+	example := `a = "b"
+c = "d"
+`
+	fmt.Println(fromTOML(example))
+	// Output:
+	// map[a:b c:d] <nil>
+}

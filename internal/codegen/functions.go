@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/BurntSushi/toml"
 	"sigs.k8s.io/yaml"
 )
 
@@ -95,6 +96,31 @@ func fromJSON(str string) (interface{}, error) {
 	return m, nil
 }
 
+// toTOML converts any value into a TOML document.
+func toTOML(v any) (string, error) {
+	// If no data, return an empty string
+	if v == nil {
+		return "", nil
+	}
+
+	data, err := toml.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSuffix(string(data), "\n"), nil
+}
+
+// fromTOML converts a TOML document into a value.
+func fromTOML(str string) (any, error) {
+	var m any
+
+	if err := toml.Unmarshal([]byte(str), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead
@@ -105,4 +131,6 @@ var Default = template.FuncMap{
 	"fromYaml":         fromYAML,
 	"toJson":           toJSON,
 	"fromJson":         fromJSON,
+	"toToml":           toTOML,
+	"fromToml":         fromTOML,
 }
