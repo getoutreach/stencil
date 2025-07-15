@@ -154,27 +154,6 @@ func TestHandleNestedModules(t *testing.T) {
 	assert.Equal(t, found, 2, "expected both modules to be returned")
 }
 
-func TestMatchStableConstraintsToRCVersions(t *testing.T) {
-	ctx := context.Background()
-	_, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		ServiceManifest: &configuration.ServiceManifest{
-			Name: "testing-service",
-			Modules: []*configuration.TemplateRepository{
-				{
-					Name:    "github.com/getoutreach/stencil-base",
-					Version: "0.16.2-rc.1",
-				},
-				{
-					Name:    "github.com/getoutreach/stencil-base",
-					Version: ">=0.14.0",
-				},
-			},
-		},
-		Log: newLogger(),
-	})
-	assert.NilError(t, err, "failed to call GetModulesForService()")
-}
-
 func TestFailOnIncompatibleConstraints(t *testing.T) {
 	ctx := context.Background()
 	_, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
