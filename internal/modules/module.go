@@ -291,7 +291,7 @@ func ModuleCacheDirectory(uri, branch string) string {
 		branch = "v0.0.0"
 	}
 
-	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
+	return regexp.MustCompile(`[^a-zA-Z0-9<>=.\[\]\-@]+`).ReplaceAllString(uri+"@"+branch, "_")
 }
 
 // StencilCacheDir returns the directory where stencil caches its data.
