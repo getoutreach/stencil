@@ -211,8 +211,9 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return module.version, nil
 	}
 
+	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
 	lockDir := filepath.Join(StencilCacheDir(), "ex_ver",
-		ModuleCacheDirectory(item.uri, item.spec.conf.Channel))
+		ModuleCacheDirectory(item.uri, versionID))
 	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", lockDir)
@@ -222,7 +223,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	defer lock.Unlock()
 
 	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
-		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), fmt.Sprintf("version_%v.json", constraints))
+		ModuleCacheDirectory(item.uri, versionID), "version.json")
 	if useModuleCache(filepath.Dir(cacheFile)) {
 		return getCachedModuleVersion(cacheFile)
 	}

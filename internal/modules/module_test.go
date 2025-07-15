@@ -442,7 +442,11 @@ func TestCanRecreateCacheAfterTimeout(t *testing.T) {
 			Modules: []*configuration.TemplateRepository{
 				{
 					Name:    "github.com/getoutreach/stencil-base",
-					Version: "v0.16.5",
+					Channel: "stable",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
 				},
 			},
 		},
