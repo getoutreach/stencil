@@ -278,6 +278,10 @@ func useModuleCache(path string) bool {
 		return false
 	}
 
+	if files, err := os.ReadDir(path); err != nil || len(files) == 0 {
+		return false
+	}
+
 	return true
 }
 

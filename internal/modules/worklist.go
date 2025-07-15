@@ -223,7 +223,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 
 	cacheFile := filepath.Join(StencilCacheDir(), "module_version",
 		ModuleCacheDirectory(item.uri, item.spec.conf.Channel), fmt.Sprintf("version_%v.json", constraints))
-	if useModuleCache(cacheFile) {
+	if useModuleCache(filepath.Dir(cacheFile)) {
 		return getCachedModuleVersion(cacheFile)
 	}
 

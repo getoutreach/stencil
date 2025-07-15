@@ -433,6 +433,44 @@ func TestGetFS_CacheUsage(t *testing.T) {
 	)
 }
 
+func TestCanRecreateCacheAfterTimeout(t *testing.T) {
+	ctx := context.Background()
+	opts := &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "test-cache-timeout",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "v0.16.5",
+				},
+			},
+		},
+		Log: newLogger(),
+	}
+
+	mods, err := modules.GetModulesForService(ctx, opts)
+	assert.NilError(t, err, "failed to call GetModulesForService()")
+
+	cacheExpireDuration := modules.ModuleCacheTTL + time.Minute
+	for _, m := range mods {
+		cacheDir := filepath.Join(modules.StencilCacheDir(), "module_fs", modules.ModuleCacheDirectory(m.URI, m.Version))
+		err = os.Chtimes(cacheDir, time.Now().Add(-cacheExpireDuration), time.Now().Add(-cacheExpireDuration))
+		assert.NilError(t, err, "failed to change cache directory times")
+	}
+
+	mods, err = modules.GetModulesForService(ctx, opts)
+	assert.NilError(t, err, "failed to call GetModulesForService()")
+
+	for _, m := range mods {
+		cacheDir := filepath.Join(modules.StencilCacheDir(), "module_fs", modules.ModuleCacheDirectory(m.URI, m.Version))
+		info, err := os.Stat(cacheDir)
+		assert.NilError(t, err, "failed to stat cache directory")
+		cachedTime := time.Since(info.ModTime())
+		assert.Assert(t, cachedTime < time.Minute, "expected new cache: cached %v ago", cachedTime)
+	}
+}
+
 func assertFSExists(t *testing.T, fs billy.Filesystem) {
 	t.Helper()
 
