@@ -36,7 +36,7 @@ import (
 const localModuleVersion = "local"
 
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
-const ModuleCacheTTL = 10 * time.Minute
+const ModuleCacheTTL = 30 * time.Minute
 
 // Module is a stencil module that contains template files.
 type Module struct {
