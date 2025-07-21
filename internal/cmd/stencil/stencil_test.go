@@ -193,7 +193,7 @@ func TestValidateStencilVersionBadConstraint(t *testing.T) {
 	mods := []*modules.Module{
 		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-bad-constraint")),
 	}
-	err := c.validateStencilVersion(ctx, mods, "1.10.0")
+	err := c.validateStencilVersion(ctx, mods, "v1.10.0")
 	assert.Error(t, err, "improper constraint: invalid")
 }
 
@@ -205,8 +205,8 @@ func TestValidateStencilVersionConstraintValidationFailure(t *testing.T) {
 	mods := []*modules.Module{
 		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-failure")),
 	}
-	err := c.validateStencilVersion(ctx, mods, "1.10.0")
-	assert.ErrorContains(t, err, "stencil version 1.10.0 does not match the version constraint (^2.0.0) for example.com/stencil-test")
+	err := c.validateStencilVersion(ctx, mods, "v1.10.0")
+	assert.ErrorContains(t, err, "stencil version v1.10.0 does not match the version constraint (^2.0.0) for example.com/stencil-test")
 }
 
 func TestValidateStencilVersionConstraintValidationSuccess(t *testing.T) {
@@ -217,5 +217,5 @@ func TestValidateStencilVersionConstraintValidationSuccess(t *testing.T) {
 	mods := []*modules.Module{
 		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-success")),
 	}
-	assert.NilError(t, c.validateStencilVersion(ctx, mods, "1.10.0"))
+	assert.NilError(t, c.validateStencilVersion(ctx, mods, "v1.10.0"))
 }
