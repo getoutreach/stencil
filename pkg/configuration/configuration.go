@@ -102,6 +102,11 @@ type TemplateRepositoryManifest struct {
 	// Modules are template repositories that this manifest requires
 	Modules []*TemplateRepository `yaml:"modules"`
 
+	// StencilVersion is the version constraint which describes what
+	// versions of Stencil can render this module. It conforms to the
+	// constraint syntax as supported by github.com/Masterminds/semver/v3.
+	StencilVersion string `yaml:"stencilVersion,omitempty"`
+
 	// Type stores a comma-separated list of template repository types served by the current module.
 	// Use the TemplateRepositoryTypes.Contains method to check.
 	Type TemplateRepositoryTypes `yaml:"type,omitempty"`
