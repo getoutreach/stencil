@@ -8,13 +8,26 @@
 package stencil
 
 import (
+	"context"
+	"io"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
+	"gotest.tools/v3/assert"
 )
+
+func testLogger(t *testing.T) logrus.FieldLogger {
+	t.Helper()
+	log := logrus.New()
+	log.SetOutput(io.Discard)
+	return log
+}
 
 func TestCommand_useModulesFromLock(t *testing.T) {
 	type fields struct {
@@ -143,7 +156,7 @@ func TestCommand_useModulesFromLock(t *testing.T) {
 			c := &Command{
 				lock:                      tt.fields.lock,
 				manifest:                  tt.fields.manifest,
-				log:                       logrus.New(),
+				log:                       testLogger(t),
 				dryRun:                    tt.fields.dryRun,
 				frozenLockfile:            true,
 				allowMajorVersionUpgrades: tt.fields.allowMajorVersionUpgrades,
@@ -158,4 +171,51 @@ func TestCommand_useModulesFromLock(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateStencilVersionBadVersion(t *testing.T) {
+	ctx := context.Background()
+	c := &Command{
+		log: testLogger(t),
+	}
+	mods := []*modules.Module{
+		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-success")),
+	}
+	err := c.validateStencilVersion(ctx, mods, "invalid")
+	assert.ErrorIs(t, err, semver.ErrInvalidSemVer)
+}
+
+func TestValidateStencilVersionBadConstraint(t *testing.T) {
+	ctx := context.Background()
+	c := &Command{
+		log: testLogger(t),
+	}
+	mods := []*modules.Module{
+		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-bad-constraint")),
+	}
+	err := c.validateStencilVersion(ctx, mods, "1.10.0")
+	assert.Error(t, err, "improper constraint: invalid")
+}
+
+func TestValidateStencilVersionConstraintValidationFailure(t *testing.T) {
+	ctx := context.Background()
+	c := &Command{
+		log: testLogger(t),
+	}
+	mods := []*modules.Module{
+		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-failure")),
+	}
+	err := c.validateStencilVersion(ctx, mods, "1.10.0")
+	assert.ErrorContains(t, err, "stencil version 1.10.0 does not match the version constraint (^2.0.0) for example.com/stencil-test")
+}
+
+func TestValidateStencilVersionConstraintValidationSuccess(t *testing.T) {
+	ctx := context.Background()
+	c := &Command{
+		log: testLogger(t),
+	}
+	mods := []*modules.Module{
+		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-success")),
+	}
+	assert.NilError(t, c.validateStencilVersion(ctx, mods, "1.10.0"))
 }
