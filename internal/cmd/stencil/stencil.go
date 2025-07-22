@@ -99,7 +99,8 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 // validateStencilVersion ensures that the running Stencil version is
 // compatible with the given Stencil modules.
 func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Module, stencilVersion string) error {
-	sgv, err := msemver.StrictNewVersion(stencilVersion)
+	// Strip the leading 'v' if it exists
+	sgv, err := msemver.StrictNewVersion(strings.TrimPrefix(stencilVersion, "v"))
 	if err != nil {
 		return err
 	}
