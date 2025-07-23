@@ -137,7 +137,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
-	lockDir := ModuleFSLockDir(ModuleID(m.URI, m.Version))
+	lockDir := FSLockDir(m.PathSlug())
 	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{},
@@ -193,9 +193,9 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	cacheDir := ModuleFSCacheDir(ModuleID(m.URI, m.Version))
+	cacheDir := m.FSCacheDir()
 
-	if useModuleCache(cacheDir) {
+	if useCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
 		return m.fs, nil
 	}
@@ -247,6 +247,14 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	return m.fs, nil
 }
 
+func (m *Module) PathSlug() string {
+	return PathSlug(m.URI, m.Version)
+}
+
+func (m *Module) FSCacheDir() string {
+	return FSCacheDir(m.PathSlug())
+}
+
 // exclusiveLockDirectory creates a new flock lock for the specified directory.
 func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
 	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
@@ -271,8 +279,8 @@ func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
 	return lock, nil
 }
 
-// useModuleCache determines if the specified path should be used as a module cache.
-func useModuleCache(path string) bool {
+// useCache determines if the specified path should be used as a module cache.
+func useCache(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil || time.Since(info.ModTime()) > ModuleCacheTTL {
 		return false
@@ -285,9 +293,9 @@ func useModuleCache(path string) bool {
 	return true
 }
 
-// ModuleID returns a unique identifier for a module
+// PathSlug returns a unique identifier for a module
 // using the given URI and versioning constraints.
-func ModuleID(uri, version string) string {
+func PathSlug(uri, version string) string {
 	if version == "" {
 		version = "v0.0.0"
 	}
@@ -300,27 +308,27 @@ func StencilCacheDir() string {
 	return filepath.Join(os.TempDir(), "stencil_cache")
 }
 
-// ModuleCacheDir returns the cache directory for a module based on its type and ID.
-func ModuleCacheDir(cacheType, moduleID string) string {
+// CacheDir returns the cache directory for a module based on its type and ID.
+func CacheDir(cacheType, moduleID string) string {
 	return filepath.Join(StencilCacheDir(), cacheType, moduleID)
 }
 
-// ModuleFSCacheDir returns the cache directory for a module based on its ID.
-func ModuleFSCacheDir(moduleID string) string {
-	return ModuleCacheDir("module_fs", moduleID)
+// FSCacheDir returns the cache directory for a module based on its ID.
+func FSCacheDir(moduleID string) string {
+	return CacheDir("module_fs", moduleID)
 }
 
-// ModuleVersionCacheDir returns the version cache directory for a module based on its ID.
-func ModuleVersionCacheDir(moduleID string) string {
-	return ModuleCacheDir("module_version", moduleID)
+// VersionCacheDir returns the version cache directory for a module based on its ID.
+func VersionCacheDir(moduleID string) string {
+	return CacheDir("module_version", moduleID)
 }
 
-// ModuleVersionLockDir returns the lock directory for a module version based on its ID.
-func ModuleVersionLockDir(moduleID string) string {
-	return ModuleCacheDir("module_version_lock", moduleID)
+// VersionLockDir returns the lock directory for a module version based on its ID.
+func VersionLockDir(moduleID string) string {
+	return CacheDir("module_version_lock", moduleID)
 }
 
-// ModuleFSLockDir returns the lock directory for a module filesystem based on its ID.
-func ModuleFSLockDir(moduleID string) string {
-	return ModuleCacheDir("module_fs_lock", moduleID)
+// FSLockDir returns the lock directory for a module filesystem based on its ID.
+func FSLockDir(moduleID string) string {
+	return CacheDir("module_fs_lock", moduleID)
 }

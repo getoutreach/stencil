@@ -387,7 +387,7 @@ func TestGetFS_CacheUsage(t *testing.T) {
 		Version: version,
 	}
 
-	cacheDir := modules.ModuleFSCacheDir(modules.ModuleID(repoURL, version))
+	cacheDir := modules.FSCacheDir(modules.PathSlug(repoURL, version))
 	err := os.RemoveAll(cacheDir)
 	assert.NilError(t, err, "failed to remove cache directory")
 
@@ -436,8 +436,7 @@ func TestCanRecreateCacheAfterTimeout(t *testing.T) {
 
 	cacheExpireDuration := modules.ModuleCacheTTL + time.Minute
 	for _, m := range mods {
-		cacheDir := modules.ModuleFSCacheDir(modules.ModuleID(m.URI, m.Version))
-		err = os.Chtimes(cacheDir, time.Now().Add(-cacheExpireDuration), time.Now().Add(-cacheExpireDuration))
+		err = os.Chtimes(m.FSCacheDir(), time.Now().Add(-cacheExpireDuration), time.Now().Add(-cacheExpireDuration))
 		assert.NilError(t, err, "failed to change cache directory times")
 	}
 
@@ -445,8 +444,7 @@ func TestCanRecreateCacheAfterTimeout(t *testing.T) {
 	assert.NilError(t, err, "failed to call GetModulesForService()")
 
 	for _, m := range mods {
-		cacheDir := modules.ModuleFSCacheDir(modules.ModuleID(m.URI, m.Version))
-		info, err := os.Stat(cacheDir)
+		info, err := os.Stat(m.FSCacheDir())
 		assert.NilError(t, err, "failed to stat cache directory")
 		cachedTime := time.Since(info.ModTime())
 		assert.Assert(t, cachedTime < time.Minute, "expected new cache: cached %v ago", cachedTime)

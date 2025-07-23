@@ -212,8 +212,8 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
-	moduleID := ModuleID(item.uri, versionID)
-	lockDir := ModuleVersionLockDir(moduleID)
+	moduleID := PathSlug(item.uri, versionID)
+	lockDir := VersionLockDir(moduleID)
 	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", lockDir)
@@ -222,8 +222,8 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
 	defer lock.Unlock()
 
-	cacheFile := filepath.Join(ModuleVersionCacheDir(moduleID), "version.json")
-	if useModuleCache(filepath.Dir(cacheFile)) {
+	cacheFile := filepath.Join(VersionCacheDir(moduleID), "version.json")
+	if useCache(filepath.Dir(cacheFile)) {
 		return getCachedModuleVersion(cacheFile)
 	}
 
