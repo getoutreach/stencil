@@ -222,8 +222,9 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	//nolint:errcheck // Why: Unlock error can be safely ignored here
 	defer lock.Unlock()
 
-	cacheFile := filepath.Join(VersionCacheDir(moduleID), "version.json")
-	if useCache(filepath.Dir(cacheFile)) {
+	cacheDir := VersionCacheDir(moduleID)
+	cacheFile := filepath.Join(cacheDir, "version.json")
+	if useCache(cacheDir) {
 		return getCachedModuleVersion(cacheFile)
 	}
 
