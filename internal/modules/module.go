@@ -137,7 +137,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
-	lockDir := filepath.Join(StencilCacheDir(), "ex_mf", ModuleCacheDirectory(m.URI, m.Version))
+	lockDir := ModuleFSLockDir(ModuleID(m.URI, m.Version))
 	lock, err := exclusiveLockDirectory(lockDir)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{},
@@ -193,7 +193,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
+	cacheDir := ModuleFSCacheDir(ModuleID(m.URI, m.Version))
 
 	if useModuleCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
@@ -285,16 +285,42 @@ func useModuleCache(path string) bool {
 	return true
 }
 
-// ModuleCacheDirectory generates a directory name for the module from the given URI and optional branch.
-func ModuleCacheDirectory(uri, branch string) string {
-	if branch == "" {
-		branch = "v0.0.0"
+// ModuleID returns a unique identifier for a module
+// using the given URI and versioning constraints.
+func ModuleID(uri, version string) string {
+	if version == "" {
+		version = "v0.0.0"
 	}
 
-	return regexp.MustCompile(`[^a-zA-Z0-9<>=.\[\]\-@]+`).ReplaceAllString(uri+"@"+branch, "_")
+	return regexp.MustCompile(`[^a-zA-Z0-9<>=.\[\]\-@]+`).ReplaceAllString(uri+"@"+version, "_")
 }
 
 // StencilCacheDir returns the directory where stencil caches its data.
 func StencilCacheDir() string {
 	return filepath.Join(os.TempDir(), "stencil_cache")
+}
+
+// ModuleCacheDir returns the cache directory for a module based on its type and ID.
+func ModuleCacheDir(cacheType, moduleID string) string {
+	return filepath.Join(StencilCacheDir(), cacheType, moduleID)
+}
+
+// ModuleFSCacheDir returns the cache directory for a module based on its ID.
+func ModuleFSCacheDir(moduleID string) string {
+	return ModuleCacheDir("module_fs", moduleID)
+}
+
+// ModuleVersionCacheDir returns the version cache directory for a module based on its ID.
+func ModuleVersionCacheDir(moduleID string) string {
+	return ModuleCacheDir("module_version", moduleID)
+}
+
+// ModuleVersionLockDir returns the lock directory for a module version based on its ID.
+func ModuleVersionLockDir(moduleID string) string {
+	return ModuleCacheDir("module_version_lock", moduleID)
+}
+
+// ModuleFSLockDir returns the lock directory for a module filesystem based on its ID.
+func ModuleFSLockDir(moduleID string) string {
+	return ModuleCacheDir("module_fs_lock", moduleID)
 }
