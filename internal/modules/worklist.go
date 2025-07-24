@@ -225,7 +225,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	cacheDir := VersionCacheDir(moduleID)
 	cacheFile := filepath.Join(cacheDir, "version.json")
 	if useCache(cacheDir) {
-		return getCachedModuleVersion(cacheFile)
+		return getCachedVersion(cacheFile)
 	}
 
 	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
@@ -253,7 +253,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
-	err = setModuleVersionCache(cacheFile, v)
+	err = setCachedVersion(cacheFile, v)
 	if err != nil {
 		return nil, err
 	}
@@ -261,8 +261,8 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	return v, nil
 }
 
-// getCachedModuleVersion returns the module version from the cache file.
-func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
+// getCachedVersion returns the module version from the cache file.
+func getCachedVersion(cacheFile string) (*resolver.Version, error) {
 	data, err := os.ReadFile(cacheFile)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read cached version from file %s", cacheFile)
@@ -277,8 +277,8 @@ func getCachedModuleVersion(cacheFile string) (*resolver.Version, error) {
 	return &cached, nil
 }
 
-// setModuleVersionCache writes the version for a module to a local cache file.
-func setModuleVersionCache(cacheFile string, v *resolver.Version) error {
+// setCachedVersion writes the version for a module to a local cache file.
+func setCachedVersion(cacheFile string, v *resolver.Version) error {
 	cacheDir := filepath.Dir(cacheFile)
 	data, err := json.Marshal(v)
 	if err != nil {
