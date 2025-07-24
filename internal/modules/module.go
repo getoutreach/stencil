@@ -26,6 +26,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -136,6 +137,16 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
+	lockDir := FSLockDir(m.PathSlug())
+	lock, err := exclusiveLockDirectory(lockDir)
+	if err != nil {
+		return configuration.TemplateRepositoryManifest{},
+			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
+	}
+
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer lock.Unlock()
+
 	fs, err := m.GetFS(ctx)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{}, errors.Wrap(err, "failed to download fs")
@@ -182,21 +193,20 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	cacheDir := filepath.Join(StencilCacheDir(), "module_fs", ModuleCacheDirectory(m.URI, m.Version))
-	logrus.Debug("cacheDir", cacheDir)
+	cacheDir := m.FSCacheDir()
 
-	if useModuleCache(cacheDir) {
+	if useCache(cacheDir) {
 		m.fs = osfs.New(cacheDir)
 		return m.fs, nil
 	}
 
 	err = os.RemoveAll(cacheDir)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale cache %q", cacheDir)
+		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
 	}
 
 	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrap(err, "failed to create cache directory")
+		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
 	}
 
 	m.fs = osfs.New(cacheDir)
@@ -237,26 +247,88 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	return m.fs, nil
 }
 
-// useModuleCache determines if the specified path should be used as a module cache.
-func useModuleCache(path string) bool {
+func (m *Module) PathSlug() string {
+	return PathSlug(m.URI, m.Version)
+}
+
+func (m *Module) FSCacheDir() string {
+	return FSCacheDir(m.PathSlug())
+}
+
+// exclusiveLockDirectory creates a new flock lock for the specified directory.
+func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
+	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
+	for {
+		locked, err := lock.TryLock()
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return nil, err
+			}
+
+			if err = os.MkdirAll(dir, 0o755); err != nil {
+				return nil, errors.Wrapf(err, "failed to create directory %q", dir)
+			}
+			continue
+		}
+
+		if locked {
+			break
+		}
+	}
+
+	return lock, nil
+}
+
+// useCache determines if the specified path should be used as a module cache.
+func useCache(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil || time.Since(info.ModTime()) > ModuleCacheTTL {
+		return false
+	}
+
+	if files, err := os.ReadDir(path); err != nil || len(files) == 0 {
 		return false
 	}
 
 	return true
 }
 
-// ModuleCacheDirectory generates a directory name for the module from the given URI and optional branch.
-func ModuleCacheDirectory(uri, branch string) string {
-	if branch == "" {
-		branch = "v0.0.0"
+// PathSlug returns a unique identifier for a module
+// using the given URI and versioning constraints.
+func PathSlug(uri, version string) string {
+	if version == "" {
+		version = "v0.0.0"
 	}
 
-	return regexp.MustCompile(`[^a-zA-Z0-9@]+`).ReplaceAllString(uri+"@"+branch, "_")
+	return regexp.MustCompile(`[^a-zA-Z0-9<>=.\[\]\-@]+`).ReplaceAllString(uri+"@"+version, "_")
 }
 
 // StencilCacheDir returns the directory where stencil caches its data.
 func StencilCacheDir() string {
 	return filepath.Join(os.TempDir(), "stencil_cache")
+}
+
+// CacheDir returns the cache directory for a module based on its type and ID.
+func CacheDir(cacheType, moduleID string) string {
+	return filepath.Join(StencilCacheDir(), cacheType, moduleID)
+}
+
+// FSCacheDir returns the cache directory for a module based on its ID.
+func FSCacheDir(moduleID string) string {
+	return CacheDir("module_fs", moduleID)
+}
+
+// VersionCacheDir returns the version cache directory for a module based on its ID.
+func VersionCacheDir(moduleID string) string {
+	return CacheDir("module_version", moduleID)
+}
+
+// VersionLockDir returns the lock directory for a module version based on its ID.
+func VersionLockDir(moduleID string) string {
+	return CacheDir("module_version_lock", moduleID)
+}
+
+// FSLockDir returns the lock directory for a module filesystem based on its ID.
+func FSLockDir(moduleID string) string {
+	return CacheDir("module_fs_lock", moduleID)
 }
