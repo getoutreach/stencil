@@ -7,6 +7,7 @@ package git
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"regexp"
 
@@ -32,6 +33,9 @@ var (
 func GetDefaultBranch(ctx context.Context, path string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin")
 	cmd.Dir = path
+	env := os.Environ()
+	env = append(env, "LC_ALL=C")
+	cmd.Env = env
 	out, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get head branch from remote origin")
