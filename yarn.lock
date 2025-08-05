@@ -739,9 +739,9 @@ chalk@^4.0.0:
     supports-color "^7.1.0"
 
 chalk@^5.4.1:
-  version "5.4.1"
-  resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.4.1.tgz#1b48bf0963ec158dce2aacf69c093ae2dd2092d8"
-  integrity sha512-zgVZuo2WcZgfUEmsn6eO3kINexW8RAE4maiQ8QNs8CtpPCSyMiYsULR3HQYkm3w8FIA3SberyMJMSldGsW+U3w==
+  version "5.5.0"
+  resolved "https://registry.yarnpkg.com/chalk/-/chalk-5.5.0.tgz#67ada1df5ca809dc84c9b819d76418ddcf128428"
+  integrity sha512-1tm8DTaJhPBG3bIkVeZt1iZM9GfSX2lzOeDVZH9R9ffRHpmHvxZ/QhgQH/aDTkswQVt+YHdXAdS/In/30OjCbg==
 
 char-regex@^1.0.2:
   version "1.0.2"
@@ -2076,9 +2076,9 @@ node-emoji@^2.2.0:
     skin-tone "^2.0.0"
 
 node-gyp@^11.0.0, node-gyp@^11.2.0:
-  version "11.2.0"
-  resolved "https://registry.yarnpkg.com/node-gyp/-/node-gyp-11.2.0.tgz#fe2ee7f0511424d6ad70f7a0c88d7346f2fc6a6e"
-  integrity sha512-T0S1zqskVUSxcsSTkAsLc7xCycrRYmtDHadDinzocrThjyQCn5kMlEBSj6H4qDbgsIOSLmmlRIeb0lZXj+UArA==
+  version "11.3.0"
+  resolved "https://registry.yarnpkg.com/node-gyp/-/node-gyp-11.3.0.tgz#e543e3dcd69877e4a9a682ce355150c5d6a6947b"
+  integrity sha512-9J0+C+2nt3WFuui/mC46z2XCZ21/cKlFDuywULmseD/LlmnOrSeEAE4c/1jw6aybXLmpZnQY3/LmOJfgyHIcng==
   dependencies:
     env-paths "^2.2.0"
     exponential-backoff "^3.1.1"
