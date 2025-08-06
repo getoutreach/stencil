@@ -186,7 +186,7 @@ workflows:
       - shared/test:
           <<: *test
           ## <<Stencil::Block(circleSharedTestExtra)>>
-
+          pre_setup_script: ./scripts/test-pre-setup.sh
           ## <</Stencil::Block>>
       - shared/publish_docs:
           context: *contexts
