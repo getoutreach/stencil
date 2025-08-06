@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.32.0
+  shared: getoutreach/shared@dev:2.33.0-rc.12
   queue: eddiewebb/queue@2.2.1
   ## <<Stencil::Block(CircleCIExtraOrbs)>>
 
@@ -42,7 +42,7 @@ test: &test
   ### Start parameters inserted by other modules
   ### End parameters inserted by other modules
   ## <<Stencil::Block(circleTestExtra)>>
-
+  docker_tag: latest
   ## <</Stencil::Block>>
 
 # Branches used for releasing code, pre-release or not
@@ -74,7 +74,6 @@ jobs:
   ### End jobs inserted by other modules
 
 workflows:
-  version: 2
   ## <<Stencil::Block(circleWorkflows)>>
 
   ## <</Stencil::Block>>
@@ -111,7 +110,7 @@ workflows:
       - shared/trigger_rc_release:
           context: *contexts
           ## <<Stencil::Block(circleAutoTriggerRCExtra)>>
-
+          docker_tag: latest
           ## <</Stencil::Block>>
 
   manual-release-rc:
@@ -120,7 +119,7 @@ workflows:
       - shared/trigger_rc_release:
           context: *contexts
           ## <<Stencil::Block(circleManualTriggerRCExtra)>>
-
+          docker_tag: latest
           ## <</Stencil::Block>>
 
   release:
@@ -143,7 +142,7 @@ workflows:
           dryrun: false
           context: *contexts
           ## <<Stencil::Block(circleReleaseExtra)>>
-
+          docker_tag: latest
           ## <</Stencil::Block>>
           requires:
             ## <<Stencil::Block(circleReleaseRequires)>>
@@ -158,7 +157,7 @@ workflows:
           dryrun: false
           context: *contexts
           ## <<Stencil::Block(circlePreReleaseExtra)>>
-
+          docker_tag: latest
           ## <</Stencil::Block>>
           requires:
             ## <<Stencil::Block(circlePreReleaseRequires)>>
@@ -174,7 +173,7 @@ workflows:
           dryrun: true
           context: *contexts
           ## <<Stencil::Block(circlePreReleaseDryRunExtra)>>
-
+          docker_tag: latest
           ## <</Stencil::Block>>
           requires:
             ## <<Stencil::Block(circlePreReleaseDryRunRequires)>>
