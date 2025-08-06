@@ -27,6 +27,8 @@ arguments:
     - deploy/launchdarkly/%(environment)s/launchdarkly
     - deploy/mint/%(environment)s/validation/mint-validator-payload
     - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
+  versions:
+    ufave-cli: v3
 modules:
   - name: github.com/getoutreach/stencil-base
     channel: rc

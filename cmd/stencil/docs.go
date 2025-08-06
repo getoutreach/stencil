@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // NewDocsCommand returns a new urfave/cli.Command for the
@@ -14,7 +14,7 @@ func NewDocsCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "docs",
 		Description: "Commands for generating documentation",
-		Subcommands: []*cli.Command{
+		Commands: []*cli.Command{
 			NewDocsGenerateCommand(),
 		},
 	}

@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,7 +31,7 @@ func NewConfigureModuleCmd() *cli.Command {
 				Usage: "Removes native extension configuration for the provided module",
 			},
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			// Call readAndMergeServiceYaml to update the service yaml to add or remove the native-extension fields.
 			if err := readAndMergeServiceYaml("service.yaml", c.Bool("remove-native-extension"), "foo"); err != nil {
 				if err.Error() == "no action" {
@@ -39,7 +40,7 @@ func NewConfigureModuleCmd() *cli.Command {
 				return err
 			}
 			//nolint:gosec // Why: intentional
-			cmd := exec.CommandContext(c.Context, os.Args[0])
+			cmd := exec.CommandContext(ctx, os.Args[0])
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin

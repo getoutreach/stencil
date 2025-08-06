@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // NewCreateCommand returns a new urfave/cli.Command for the
@@ -14,7 +14,7 @@ func NewCreateCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "create",
 		Description: "Commands to create template repositories, or stencil powered repositories",
-		Subcommands: []*cli.Command{
+		Commands: []*cli.Command{
 			NewCreateModule(),
 		},
 	}

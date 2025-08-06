@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // NewDescribeCmd returns a new urfave/cli.Command for the
@@ -21,7 +22,7 @@ func NewDescribeCmd() *cli.Command {
 	return &cli.Command{
 		Name:        "describe",
 		Description: "Print information about a known file rendered by a template",
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			if c.NArg() != 1 {
 				return errors.New("expected exactly one argument, path to file")
 			}
