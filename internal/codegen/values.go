@@ -15,6 +15,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/sirupsen/logrus"
 )
 
 // runtime contains information about the current state
@@ -145,7 +146,7 @@ func (v *Values) WithTemplate(name string) *Values {
 
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
-func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module) *Values {
+func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
 	vals := &Values{
 		Git: git{},
 		Runtime: runtime{
@@ -178,6 +179,7 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	if r, err := gogit.PlainOpen(""); err == nil {
 		db, err := stencilgit.GetDefaultBranch(ctx, "")
 		if err != nil {
+			log.Warnf("Failed to get default branch, defaulting to 'main': %v", err)
 			db = "main"
 		}
 		vals.Git.DefaultBranch = db

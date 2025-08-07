@@ -38,13 +38,14 @@ var fakeGeneratedBlockFile string
 func TestSingleFileRender(t *testing.T) {
 	m := modules.NewWithFS(context.Background(), "testing", memfs.New())
 
-	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"), logrus.New())
+	log := logrus.New()
+	tpl, err := NewTemplate(m, "virtual-file.tpl", 0o644, time.Now(), []byte("hello world!"), log)
 	assert.NilError(t, err, "failed to create basic template")
 
 	sm := &configuration.ServiceManifest{Name: "testing"}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
+	st := NewStencil(sm, []*modules.Module{m}, log)
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil, log))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, tpl.Files[0].String(), "hello world!", "expected Render() to modify first created file")
 }
@@ -54,16 +55,17 @@ func TestMultiFileRender(t *testing.T) {
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
+	log := logrus.New()
 	tpl, err := NewTemplate(m, "multi-file.tpl", 0o644,
-		time.Now(), []byte(multiFileTemplate), logrus.New())
+		time.Now(), []byte(multiFileTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
+	st := NewStencil(sm, []*modules.Module{m}, log)
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil, log))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -73,18 +75,19 @@ func TestMultiFileRender(t *testing.T) {
 }
 
 func TestMultiFileWithInputRender(t *testing.T) {
+	log := logrus.New()
 	fs := createFakeModuleFSWithManifest(t, "name: testing\narguments:\n  commands:\n    type: list")
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 	tpl, err := NewTemplate(m, "multi-file-input.tpl", 0o644,
-		time.Now(), []byte(multiFileInputTemplate), logrus.New())
+		time.Now(), []byte(multiFileInputTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
+	st := NewStencil(sm, []*modules.Module{m}, log)
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil, log))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 3, "expected Render() to create 3 files")
 
@@ -98,16 +101,17 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
+	log := logrus.New()
 	tpl, err := NewTemplate(m, "apply-template-passthrough.tpl", 0o644,
-		time.Now(), []byte(applyTemplatePassthroughTemplate), logrus.New())
+		time.Now(), []byte(applyTemplatePassthroughTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
-	err = tpl.Render(st, NewValues(context.Background(), sm, nil))
+	st := NewStencil(sm, []*modules.Module{m}, log)
+	err = tpl.Render(st, NewValues(context.Background(), sm, nil, log))
 	assert.NilError(t, err, "expected Render() to not fail")
 	assert.Equal(t, len(tpl.Files), 1, "expected Render() to create 1 files")
 
@@ -121,12 +125,13 @@ func TestGeneratedBlock(t *testing.T) {
 	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{}}
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
-	st := NewStencil(sm, []*modules.Module{m}, logrus.New())
+	log := logrus.New()
+	st := NewStencil(sm, []*modules.Module{m}, log)
 	assert.NilError(t, os.WriteFile(fakeFilePath, []byte(fakeGeneratedBlockFile), 0o644),
 		"failed to write generated file")
 
 	tpl, err := NewTemplate(m, "generated-block/template.tpl", 0o644,
-		time.Now(), []byte(generatedBlockTemplate), logrus.New())
+		time.Now(), []byte(generatedBlockTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
 	tplf, err := NewFile(fakeFilePath, 0o644, time.Now())
@@ -134,7 +139,7 @@ func TestGeneratedBlock(t *testing.T) {
 
 	// Add the file (fake) to the template so that the template uses it for blocks
 	tpl.Files = []*File{tplf}
-	tpl.Render(st, NewValues(context.Background(), sm, nil))
+	tpl.Render(st, NewValues(context.Background(), sm, nil, log))
 
 	assert.Equal(t, tpl.Files[0].String(), fakeGeneratedBlockFile, "expected fake to equal rendered output")
 }
