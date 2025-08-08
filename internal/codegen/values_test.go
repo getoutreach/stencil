@@ -67,7 +67,7 @@ func TestValues(t *testing.T) {
 			Name:    "testing",
 			Version: "1.2.3",
 		},
-	})
+	}, logrus.New())
 	assert.DeepEqual(t, &Values{
 		Git: git{
 			Ref:           plumbing.NewBranchReferenceName("main").String(),

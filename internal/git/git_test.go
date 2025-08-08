@@ -12,23 +12,22 @@ import (
 
 	stgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"gotest.tools/v3/assert"
 )
 
-// Makes sure that GetDefaultBranch works correctly even when the system language is not set to English.
-func TestGetDefaultBranchDifferentOSLanguage(t *testing.T) {
-	ctx := context.Background()
-
-	remoteRepoDir := t.TempDir()
-	remoteRepo, err := git.PlainInitWithOptions(remoteRepoDir, &git.PlainInitOptions{
-		InitOptions: git.InitOptions{DefaultBranch: "refs/heads/main"},
+func createTempGitRepo(t *testing.T, defaultBranch plumbing.ReferenceName) string {
+	t.Helper()
+	repoDir := t.TempDir()
+	repo, err := git.PlainInitWithOptions(repoDir, &git.PlainInitOptions{
+		InitOptions: git.InitOptions{DefaultBranch: defaultBranch},
 		Bare:        false,
 	})
 	assert.NilError(t, err)
-	wt, err := remoteRepo.Worktree()
+	wt, err := repo.Worktree()
 	assert.NilError(t, err)
-	assert.NilError(t, os.WriteFile(filepath.Join(remoteRepoDir, "test.txt"), []byte("hello world"), 0o644))
+	assert.NilError(t, os.WriteFile(filepath.Join(repoDir, "test.txt"), []byte("hello world"), 0o644))
 	_, err = wt.Add("test.txt")
 	assert.NilError(t, err)
 	_, err = wt.Commit("Initial commit", &git.CommitOptions{
@@ -38,10 +37,16 @@ func TestGetDefaultBranchDifferentOSLanguage(t *testing.T) {
 		},
 	})
 	assert.NilError(t, err)
+	return repoDir
+}
+
+// Makes sure that GetDefaultBranch works correctly even when the system language is not set to English.
+func TestGetDefaultBranchDifferentOSLanguage(t *testing.T) {
+	ctx := context.Background()
 
 	repoDir := t.TempDir()
-	_, err = git.PlainCloneContext(ctx, repoDir, false, &git.CloneOptions{
-		URL: remoteRepoDir,
+	_, err := git.PlainCloneContext(ctx, repoDir, false, &git.CloneOptions{
+		URL: createTempGitRepo(t, plumbing.Main),
 	})
 	assert.NilError(t, err)
 
@@ -49,4 +54,18 @@ func TestGetDefaultBranchDifferentOSLanguage(t *testing.T) {
 	defaultBranch, err := stgit.GetDefaultBranch(ctx, repoDir)
 	assert.NilError(t, err)
 	assert.Equal(t, defaultBranch, "main", "Expected default branch to be 'main'")
+}
+
+func TestGetDefaultBranchMaster(t *testing.T) {
+	ctx := context.Background()
+
+	repoDir := t.TempDir()
+	_, err := git.PlainCloneContext(ctx, repoDir, false, &git.CloneOptions{
+		URL: createTempGitRepo(t, plumbing.Master),
+	})
+	assert.NilError(t, err)
+
+	defaultBranch, err := stgit.GetDefaultBranch(ctx, repoDir)
+	assert.NilError(t, err)
+	assert.Equal(t, defaultBranch, "master", "Expected default branch to be 'master'")
 }

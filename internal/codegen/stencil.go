@@ -196,7 +196,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	}
 
 	log.Debug("Creating values for template")
-	vals := NewValues(ctx, s.m, s.modules)
+	vals := NewValues(ctx, s.m, s.modules, log)
 	log.Debug("Finished creating values")
 
 	// Add the templates to their modules template to allow them to be able to access
