@@ -7,9 +7,10 @@ package git
 
 import (
 	"context"
+	"os"
+	"os/exec"
+	"regexp"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
 )
 
@@ -22,32 +23,28 @@ var (
 	// ErrNoRemoteHeadBranch is returned when a repository's remote  default/HEAD branch
 	// cannot be determined.
 	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
+
+	// headPattern is used to parse git output to determine the head branch
+	headPattern = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
 )
 
 // GetDefaultBranch determines the default/HEAD branch for a given git
 // repository.
 func GetDefaultBranch(ctx context.Context, path string) (string, error) {
-	repo, err := git.PlainOpen(path)
+	cmd := exec.CommandContext(ctx, "git", "remote", "show", "origin")
+	cmd.Dir = path
+	env := os.Environ()
+	env = append(env, "LC_ALL=C")
+	cmd.Env = env
+	out, err := cmd.Output()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to open git repository")
+		return "", errors.Wrap(err, "failed to get head branch from remote origin")
 	}
-	origin, err := repo.Remote("origin")
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get remote origin")
-	}
-	refs, err := origin.ListContext(ctx, &git.ListOptions{})
-	if err != nil {
-		return "", errors.Wrap(err, "failed to list remote refs for origin")
-	}
-	var headRef *plumbing.Reference
-	for _, ref := range refs {
-		if ref.Type() == plumbing.SymbolicReference && ref.Name() == plumbing.HEAD {
-			headRef = ref
-			break
-		}
-	}
-	if headRef == nil {
+
+	matches := headPattern.FindStringSubmatch(string(out))
+	if len(matches) != 2 {
 		return "", ErrNoRemoteHeadBranch
 	}
-	return headRef.Target().Short(), nil
+
+	return matches[1], nil
 }
