@@ -16,10 +16,9 @@ NAME:
    stencil updater use - Use a specific version of the application
 
 USAGE:
-   stencil updater use [command options] [arguments...]
+   stencil updater use [command options]
 
 OPTIONS:
-   --list  List available versions (default: false)
-   
+   --help, -h  show help
 
 ```

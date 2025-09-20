@@ -16,10 +16,9 @@ NAME:
    stencil updater set-channel - Set the channel to check for updates
 
 USAGE:
-   stencil updater set-channel [command options] [arguments...]
+   stencil updater set-channel [command options]
 
 OPTIONS:
-   --reset  Reset the channel to the default (default: false)
-   
+   --help, -h  show help
 
 ```

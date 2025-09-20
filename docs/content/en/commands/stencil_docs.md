@@ -13,20 +13,19 @@ menu:
 
 ```bash
 NAME:
-   stencil docs - A new cli application
+   stencil docs
 
 USAGE:
-   stencil docs command [command options] [arguments...]
+   stencil docs [command options]
 
 DESCRIPTION:
    Commands for generating documentation
 
 COMMANDS:
-     generate  Generate documentation
-     help, h   Shows a list of commands or help for one command
+   generate  Generate documentation
+   help, h   Shows a list of commands or help for one command
 
 OPTIONS:
-   --help, -h  show help (default: false)
-   
+   --help, -h  show help
 
 ```

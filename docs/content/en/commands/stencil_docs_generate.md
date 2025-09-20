@@ -16,13 +16,12 @@ NAME:
    stencil docs generate - Generate documentation
 
 USAGE:
-   stencil docs generate [command options] [arguments...]
+   stencil docs generate [command options]
 
 DESCRIPTION:
    Generates documentation for the current stencil module
 
 OPTIONS:
-   --help, -h  show help (default: false)
-   
+   --help, -h  show help
 
 ```

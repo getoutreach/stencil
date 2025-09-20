@@ -16,10 +16,9 @@ NAME:
    stencil updater status - Returns the current status of the updater
 
 USAGE:
-   stencil updater status [command options] [arguments...]
+   stencil updater status [command options]
 
 OPTIONS:
-   --debug  Show debug information (default: false)
-   
+   --help, -h  show help
 
 ```
