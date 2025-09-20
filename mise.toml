@@ -8,7 +8,6 @@ includes = [".bootstrap/.mise/tasks", ".mise/tasks"]
 ## <</Stencil::Block>>
 
 [tools]
-bun = "1.2"
 "npm:prettier" = "2"
 
 ## <<Stencil::Block(customMiseTools)>>
