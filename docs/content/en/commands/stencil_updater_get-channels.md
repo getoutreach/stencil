@@ -16,10 +16,9 @@ NAME:
    stencil updater get-channels - Returns the valid channels
 
 USAGE:
-   stencil updater get-channels [command options] [arguments...]
+   stencil updater get-channels [command options]
 
 OPTIONS:
-   --help, -h  show help (default: false)
-   
+   --help, -h  show help
 
 ```

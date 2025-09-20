@@ -16,13 +16,12 @@ NAME:
    stencil describe
 
 USAGE:
-   stencil describe [command options] [arguments...]
+   stencil describe [command options]
 
 DESCRIPTION:
    Print information about a known file rendered by a template
 
 OPTIONS:
-   --help, -h  show help (default: false)
-   
+   --help, -h  show help
 
 ```

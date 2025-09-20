@@ -16,10 +16,9 @@ NAME:
    stencil updater rollback - Rollback to the previous version
 
 USAGE:
-   stencil updater rollback [command options] [arguments...]
+   stencil updater rollback [command options]
 
 OPTIONS:
-   --version value  The version to rollback to (default: "v1.28.0")
-   
+   --help, -h  show help
 
 ```

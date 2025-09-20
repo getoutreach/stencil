@@ -16,18 +16,17 @@ NAME:
    stencil updater - Commands for interacting with the built-in updater
 
 USAGE:
-   stencil updater command [command options] [arguments...]
+   stencil updater [command options]
 
 COMMANDS:
-     set-channel   Set the channel to check for updates
-     get-channels  Returns the valid channels
-     rollback      Rollback to the previous version
-     use           Use a specific version of the application
-     status        Returns the current status of the updater
-     help, h       Shows a list of commands or help for one command
+   set-channel   Set the channel to check for updates
+   get-channels  Returns the valid channels
+   rollback      Rollback to the previous version
+   use           Use a specific version of the application
+   status        Returns the current status of the updater
+   help, h       Shows a list of commands or help for one command
 
 OPTIONS:
-   --help, -h  show help (default: false)
-   
+   --help, -h  show help
 
 ```
