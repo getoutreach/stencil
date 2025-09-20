@@ -173,6 +173,10 @@ stencil.Arg
 stencil.Args
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/functions/stencil.debug/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil.Debug
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/functions/stencil.exists/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil.Exists
 </a>
@@ -226,6 +230,14 @@ stencil docs
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_docs_generate/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil docs generate
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_module/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil module
+</a>
+</li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_module_configure/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil module configure
 </a>
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
@@ -401,6 +413,16 @@ Note: This doesn&rsquo;t set default values and is instead representative of _al
 This is deprecated and will be removed in a future release.
 {{- (stencil.Args).name }}
 <a href=/stencil/functions/stencil.args/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/functions/stencil.debug/ class="link primary-color dim">stencil.Debug</a>
+</h1><div class="lh-copy links">
+Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
+{{- $_ := stencil.Debug "I'm a log!" }}
+<a href=/stencil/functions/stencil.debug/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
