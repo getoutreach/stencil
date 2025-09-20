@@ -1,6 +1,3 @@
-[build.environment]
-MISE_ENV = "docs"
-
 # Support /stencil/, which is how production is deployed.
 [[redirects]]
 from = "/stencil/*"
