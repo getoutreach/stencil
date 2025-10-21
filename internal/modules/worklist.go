@@ -180,11 +180,18 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		module.mu.Unlock()
 	}()
 
+	unique := make(map[string]bool)
 	for _, r := range history {
-		if r.constraint != "" {
-			constraints = append(constraints, r.constraint)
+		if r.constraint == "" {
+			continue
 		}
+		if _, exists := unique[r.constraint]; exists {
+			continue
+		}
+		unique[r.constraint] = true
+		constraints = append(constraints, r.constraint)
 	}
+	unique = nil
 
 	channel := m.conf.Channel
 	for _, r := range history {

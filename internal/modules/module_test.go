@@ -472,6 +472,202 @@ func TestCanRecreateCacheAfterTimeout(t *testing.T) {
 	}
 }
 
+func TestCanHandleDuplicateConstraints(t *testing.T) {
+	ctx := context.Background()
+	opts := &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "test-cache-timeout",
+			Modules: []*configuration.TemplateRepository{
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "stable",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: "<=2.34.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=v0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=v0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=v0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+				{
+					Name:    "github.com/getoutreach/stencil-base",
+					Version: ">=0.14.0",
+				},
+			},
+		},
+		Log: newLogger(),
+	}
+
+	_, err := modules.GetModulesForService(ctx, opts)
+	assert.NilError(t, err, "failed to call GetModulesForService()")
+}
+
 func assertFSExists(t *testing.T, fs billy.Filesystem) {
 	t.Helper()
 
