@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -165,14 +166,12 @@ func (list *workList) push(task *resolveModule) {
 
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *workItem, token cfg.SecretData) (*resolver.Version, error) {
-	constraints := make([]string, 0)
-	history := []resolution{}
-
 	m := item.spec
 	module := item.inProgressResolution
 
+	// copy history under lock and ensure we restore it at the end
 	module.mu.Lock()
-	history = append(history, module.history...)
+	history := append([]resolution{}, module.history...)
 	module.mu.Unlock()
 	defer func() {
 		module.mu.Lock()
@@ -180,34 +179,11 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		module.mu.Unlock()
 	}()
 
-	unique := make(map[string]bool)
-	for _, r := range history {
-		if r.constraint == "" {
-			continue
-		}
-		if _, exists := unique[r.constraint]; exists {
-			continue
-		}
-		unique[r.constraint] = true
-		constraints = append(constraints, r.constraint)
-	}
-	unique = nil
+	constraints := getUniqueConstraints(history)
 
-	channel := m.conf.Channel
-	for _, r := range history {
-		// if we don't have a channel, or the channel is stable, check to see if
-		// the channel we last resolved with doesn't match the current channel requested.
-		//
-		// If it doesn't match, we don't know how to resolve the module, so we error.
-		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return nil, fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				m.conf.Name, r.channel, r.parentModule, channel)
-		}
-
-		// use the first history entry that has a channel since we can't have multiple channels
-		channel = r.channel
-		break //nolint:staticcheck // Why: see above comment
+	channel, err := resolveChannel(m.conf.Name, m.conf.Channel, history)
+	if err != nil {
+		return nil, err
 	}
 
 	// If the last version we resolved is mutable, it's impossible for us
@@ -266,6 +242,47 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	return v, nil
+}
+
+// getUniqueConstraints returns a list of unique constraints from history.
+func getUniqueConstraints(history []resolution) []string {
+	unique := make(map[string]bool)
+	constraints := make([]string, 0)
+	for _, r := range history {
+		if r.constraint == "" {
+			continue
+		}
+		if unique[r.constraint] {
+			continue
+		}
+		unique[r.constraint] = true
+		constraints = append(constraints, r.constraint)
+	}
+	slices.Sort(constraints)
+
+	return constraints
+}
+
+// resolveChannel determines the channel to use and validates against history.
+func resolveChannel(moduleName, current string, history []resolution) (string, error) {
+	channel := current
+	for _, r := range history {
+		// if we don't have a channel, or the channel is stable, check to see if
+		// the channel we last resolved with doesn't match the current channel requested.
+		//
+		// If it doesn't match, we don't know how to resolve the module, so we error.
+		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
+			return "", fmt.Errorf("unable to resolve module %s: "+
+				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
+				moduleName, r.channel, r.parentModule, channel)
+		}
+
+		// use the first history entry that has a channel since we can't have multiple channels
+		channel = r.channel
+		break //nolint:staticcheck // Why: see above comment
+	}
+
+	return channel, nil
 }
 
 // getCachedVersion returns the module version from the cache file.

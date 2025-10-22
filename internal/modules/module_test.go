@@ -665,7 +665,7 @@ func TestCanHandleDuplicateConstraints(t *testing.T) {
 	}
 
 	_, err := modules.GetModulesForService(ctx, opts)
-	assert.NilError(t, err, "failed to call GetModulesForService()")
+	assert.NilError(t, err, "module resolution should succeed despite duplicate constraints")
 }
 
 func assertFSExists(t *testing.T, fs billy.Filesystem) {
