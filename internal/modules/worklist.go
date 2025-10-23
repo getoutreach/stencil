@@ -186,30 +186,21 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		}
 	}
 
-	channel := m.conf.Channel
-	for _, r := range history {
-		// if we don't have a channel, or the channel is stable, check to see if
-		// the channel we last resolved with doesn't match the current channel requested.
-		//
-		// If it doesn't match, we don't know how to resolve the module, so we error.
-		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return nil, fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				m.conf.Name, r.channel, r.parentModule, channel)
-		}
-
-		// use the first history entry that has a channel since we can't have multiple channels
-		channel = r.channel
-		break //nolint:staticcheck // Why: see above comment
+	channel, err := resolveChannel(m.conf.Name, m.conf.Channel, history)
+	if err != nil {
+		return nil, err
 	}
 
 	// If the last version we resolved is mutable, it's impossible for us
 	// to compare the two, so we have to use it.
+	module.mu.Lock()
 	if module.version != nil && module.version.Mutable {
 		// IDEA(jaredallard): We should log this as it's non-deterministic when we
 		// have a good interface for doing so.
+		defer module.mu.Unlock()
 		return module.version, nil
 	}
+	module.mu.Unlock()
 
 	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
 	moduleID := PathSlug(item.uri, versionID)
@@ -259,6 +250,28 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	return v, nil
+}
+
+// resolveChannel determines the channel to use and validates against history.
+func resolveChannel(moduleName, current string, history []resolution) (string, error) {
+	channel := current
+	for _, r := range history {
+		// if we don't have a channel, or the channel is stable, check to see if
+		// the channel we last resolved with doesn't match the current channel requested.
+		//
+		// If it doesn't match, we don't know how to resolve the module, so we error.
+		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
+			return "", fmt.Errorf("unable to resolve module %s: "+
+				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
+				moduleName, r.channel, r.parentModule, channel)
+		}
+
+		// use the first history entry that has a channel since we can't have multiple channels
+		channel = r.channel
+		break //nolint:staticcheck // Why: see above comment
+	}
+
+	return channel, nil
 }
 
 // getCachedVersion returns the module version from the cache file.
