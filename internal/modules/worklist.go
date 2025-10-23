@@ -197,7 +197,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	if module.version != nil && module.version.Mutable {
 		// IDEA(jaredallard): We should log this as it's non-deterministic when we
 		// have a good interface for doing so.
-		module.mu.Unlock()
+		defer module.mu.Unlock()
 		return module.version, nil
 	}
 	module.mu.Unlock()
