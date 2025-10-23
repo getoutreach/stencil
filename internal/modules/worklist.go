@@ -169,7 +169,6 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	m := item.spec
 	module := item.inProgressResolution
 
-	// copy history under lock and ensure we restore it at the end
 	module.mu.Lock()
 	history := append([]resolution{}, module.history...)
 	module.mu.Unlock()
@@ -188,11 +187,14 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 
 	// If the last version we resolved is mutable, it's impossible for us
 	// to compare the two, so we have to use it.
+	module.mu.Lock()
 	if module.version != nil && module.version.Mutable {
 		// IDEA(jaredallard): We should log this as it's non-deterministic when we
 		// have a good interface for doing so.
+		module.mu.Unlock()
 		return module.version, nil
 	}
+	module.mu.Unlock()
 
 	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
 	moduleID := PathSlug(item.uri, versionID)
