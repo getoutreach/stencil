@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -165,14 +166,11 @@ func (list *workList) push(task *resolveModule) {
 
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *workItem, token cfg.SecretData) (*resolver.Version, error) {
-	constraints := make([]string, 0)
-	history := []resolution{}
-
 	m := item.spec
 	module := item.inProgressResolution
 
 	module.mu.Lock()
-	history = append(history, module.history...)
+	history := append([]resolution{}, module.history...)
 	module.mu.Unlock()
 	defer func() {
 		module.mu.Lock()
@@ -180,11 +178,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		module.mu.Unlock()
 	}()
 
-	for _, r := range history {
-		if r.constraint != "" {
-			constraints = append(constraints, r.constraint)
-		}
-	}
+	constraints := getUniqueConstraints(history)
 
 	channel, err := resolveChannel(m.conf.Name, m.conf.Channel, history)
 	if err != nil {
@@ -250,6 +244,25 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	return v, nil
+}
+
+// getUniqueConstraints returns a list of unique constraints from history.
+func getUniqueConstraints(history []resolution) []string {
+	unique := make(map[string]bool)
+	constraints := make([]string, 0)
+	for _, r := range history {
+		if r.constraint == "" {
+			continue
+		}
+		if unique[r.constraint] {
+			continue
+		}
+		unique[r.constraint] = true
+		constraints = append(constraints, r.constraint)
+	}
+	slices.Sort(constraints)
+
+	return constraints
 }
 
 // resolveChannel determines the channel to use and validates against history.
