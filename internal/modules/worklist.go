@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -178,7 +179,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		module.mu.Unlock()
 	}()
 
-	constraints := getUniqueConstraints(history)
+	constraints := sortedUniqueConstraints(history)
 
 	channel, err := resolveChannel(m.conf.Name, m.conf.Channel, history)
 	if err != nil {
@@ -246,23 +247,18 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	return v, nil
 }
 
-// getUniqueConstraints returns a list of unique constraints from history.
-func getUniqueConstraints(history []resolution) []string {
+// sortedUniqueConstraints returns a unique and sorted list of constraints
+// from the resolution history to be used as a caching key.
+func sortedUniqueConstraints(history []resolution) []string {
 	unique := make(map[string]bool)
-	constraints := make([]string, 0)
 	for _, r := range history {
 		if r.constraint == "" {
 			continue
 		}
-		if unique[r.constraint] {
-			continue
-		}
 		unique[r.constraint] = true
-		constraints = append(constraints, r.constraint)
 	}
-	slices.Sort(constraints)
 
-	return constraints
+	return slices.Sorted(maps.Keys(unique))
 }
 
 // resolveChannel determines the channel to use and validates against history.
