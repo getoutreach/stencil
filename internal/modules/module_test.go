@@ -472,6 +472,42 @@ func TestCanRecreateCacheAfterTimeout(t *testing.T) {
 	}
 }
 
+func TestCanHandleDuplicateConstraints(t *testing.T) {
+	ctx := context.Background()
+	opts := &modules.ModuleResolveOptions{
+		ConcurrentResolvers: 5,
+		ServiceManifest: &configuration.ServiceManifest{
+			Name: "test-cache-timeout",
+			Modules: func() []*configuration.TemplateRepository {
+				bulkModules := []*configuration.TemplateRepository{
+					{
+						Name:    "github.com/getoutreach/stencil-base",
+						Channel: "stable",
+					},
+				}
+				for range 30 {
+					bulkModules = append(bulkModules, &configuration.TemplateRepository{
+						Name:    "github.com/getoutreach/stencil-base",
+						Version: "<=2.34.0",
+					})
+				}
+				for range 30 {
+					bulkModules = append(bulkModules, &configuration.TemplateRepository{
+						Name:    "github.com/getoutreach/stencil-base",
+						Version: ">=0.14.0",
+					})
+				}
+
+				return bulkModules
+			}(),
+		},
+		Log: newLogger(),
+	}
+
+	_, err := modules.GetModulesForService(ctx, opts)
+	assert.NilError(t, err, "module resolution should succeed despite duplicate constraints")
+}
+
 func assertFSExists(t *testing.T, fs billy.Filesystem) {
 	t.Helper()
 

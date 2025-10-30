@@ -9,8 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -165,14 +167,11 @@ func (list *workList) push(task *resolveModule) {
 
 // getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
 func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *workItem, token cfg.SecretData) (*resolver.Version, error) {
-	constraints := make([]string, 0)
-	history := []resolution{}
-
 	m := item.spec
 	module := item.inProgressResolution
 
 	module.mu.Lock()
-	history = append(history, module.history...)
+	history := append([]resolution{}, module.history...)
 	module.mu.Unlock()
 	defer func() {
 		module.mu.Lock()
@@ -180,11 +179,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		module.mu.Unlock()
 	}()
 
-	for _, r := range history {
-		if r.constraint != "" {
-			constraints = append(constraints, r.constraint)
-		}
-	}
+	constraints := sortedUniqueConstraints(history)
 
 	channel, err := resolveChannel(m.conf.Name, m.conf.Channel, history)
 	if err != nil {
@@ -250,6 +245,20 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	}
 
 	return v, nil
+}
+
+// sortedUniqueConstraints returns a unique and sorted list of constraints
+// from the resolution history to be used as a caching key.
+func sortedUniqueConstraints(history []resolution) []string {
+	unique := make(map[string]bool)
+	for _, r := range history {
+		if r.constraint == "" {
+			continue
+		}
+		unique[r.constraint] = true
+	}
+
+	return slices.Sorted(maps.Keys(unique))
 }
 
 // resolveChannel determines the channel to use and validates against history.
