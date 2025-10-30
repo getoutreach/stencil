@@ -485,13 +485,13 @@ func TestCanHandleDuplicateConstraints(t *testing.T) {
 						Channel: "stable",
 					},
 				}
-				for i := 0; i < 30; i++ {
+				for range 30 {
 					bulkModules = append(bulkModules, &configuration.TemplateRepository{
 						Name:    "github.com/getoutreach/stencil-base",
 						Version: "<=2.34.0",
 					})
 				}
-				for i := 0; i < 30; i++ {
+				for range 30 {
 					bulkModules = append(bulkModules, &configuration.TemplateRepository{
 						Name:    "github.com/getoutreach/stencil-base",
 						Version: ">=0.14.0",
