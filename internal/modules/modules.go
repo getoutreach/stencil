@@ -153,7 +153,7 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 
 	// if we're not using a local or in-memory replaced module, resolve the version
 	// (local modules & in-memory modules should be treated as always satisfying constraints)
-	if !uriIsLocal(item.uri) && opts.Replacements[item.importPath] == nil {
+	if !uriIsLocal(item.uri) && wl.replacements[item.importPath] == "" {
 		var err error
 		version, err = wl.getLatestModuleForConstraints(ctx, item, opts.Token)
 		if err != nil {
