@@ -59,9 +59,19 @@
       "host": "127.0.0.1",
       "port": 42097
       // <</Stencil::Block>>
-    }
+    },
     // <<Stencil::Block(vscodeLaunchConfigs)>>
-
+    {
+      "name": "Debug stencil run",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "envFile": "${workspaceRoot}/.vscode/private.env",
+      "program": "${workspaceRoot}/cmd/stencil/",
+      "buildFlags": "-tags=or_dev",
+      "args": ["run"],
+      "cwd": "${workspaceRoot}" // replace with directory of the targed service
+    }
     // <</Stencil::Block>>
   ]
 }
