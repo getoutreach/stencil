@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/getoutreach/gobox v1.110.3
-	github.com/go-git/go-billy/v5 v5.6.2
+	github.com/go-git/go-billy/v5 v5.7.0
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
