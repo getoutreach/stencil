@@ -1,8 +1,8 @@
 module github.com/getoutreach/stencil
 
-go 1.23.0
+go 1.25.0
 
-toolchain go1.23.4
+toolchain go1.25.6
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
