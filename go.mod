@@ -64,7 +64,7 @@ require (
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
