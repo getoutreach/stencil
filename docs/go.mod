@@ -2,7 +2,7 @@ module github.com/getoutreach/stencil/docs
 
 go 1.25.0
 
-toolchain go1.25.6
+toolchain go1.25.7
 
 require (
 	github.com/pkg/errors v0.9.1

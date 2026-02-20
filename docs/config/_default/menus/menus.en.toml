@@ -1,54 +1,54 @@
 [[docs]]
-  name = "About Stencil"
-  weight = 1
-  identifier = "about"
-  url = "/about/"
+name = "About Stencil"
+weight = 1
+identifier = "about"
+url = "/about/"
 
 [[docs]]
-  name = "Getting Started"
-  weight = 5
-  identifier = "getting-started"
-  post = "break"
-  url = "/getting-started/"
+name = "Getting Started"
+weight = 5
+identifier = "getting-started"
+post = "break"
+url = "/getting-started/"
 
 # Core Menus
 [[docs]]
-  name = "Reference Docs"
-  weight = 15
-  identifier = "reference"
-  url = "/reference/"
+name = "Reference Docs"
+weight = 15
+identifier = "reference"
+url = "/reference/"
 
 [[docs]]
-  name = "Functions"
-  weight = 30
-  identifier = "functions"
-  url = "/functions/"
+name = "Functions"
+weight = 30
+identifier = "functions"
+url = "/functions/"
 
 [[docs]]
-  name = "CLI"
-  weight = 40
-  post = "break"
-  identifier = "commands"
-  url = "/commands/"
+name = "CLI"
+weight = 40
+post = "break"
+identifier = "commands"
+url = "/commands/"
 
 # LOW LEVEL ITEMS
 [[docs]]
-  name = "Contribute"
-  weight = 100
-  post = "break"
-  identifier = "contribute"
-  url = "/contribute/"
+name = "Contribute"
+weight = 100
+post = "break"
+identifier = "contribute"
+url = "/contribute/"
 
 ## Links in the navbar
 [[global]]
-  name = "Docs"
-  weight = 5
-  identifier = "docs"
-  url = "/documentation/"
+name = "Docs"
+weight = 5
+identifier = "docs"
+url = "/documentation/"
 
 [[global]]
-  name = "GitHub"
-  weight = 200
-  identifier = "github"
-  post = "external"
-  url = "https://github.com/getoutreach/stencil"
+name = "GitHub"
+weight = 200
+identifier = "github"
+post = "external"
+url = "https://github.com/getoutreach/stencil"
