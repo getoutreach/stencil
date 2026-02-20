@@ -11,5 +11,5 @@ features = ["", ""]
 min_version = 0.38
 
 [author]
-  name = "Bud Parr"
-  homepage = "https://github.com/budparr"
+name = "Bud Parr"
+homepage = "https://github.com/budparr"
