@@ -194,7 +194,7 @@ func TestValidateStencilVersionBadConstraint(t *testing.T) {
 		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-bad-constraint")),
 	}
 	err := c.validateStencilVersion(ctx, mods, "v1.10.0")
-	assert.Error(t, err, "improper constraint: invalid")
+	assert.Error(t, err, `improper constraint: "invalid"`)
 }
 
 func TestValidateStencilVersionConstraintValidationFailure(t *testing.T) {
