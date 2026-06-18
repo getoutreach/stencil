@@ -1,3 +1,5 @@
+min_version = { hard = "2026.3.2" }
+
 [task_config]
 includes = [".bootstrap/.mise/tasks", ".mise/tasks"]
 

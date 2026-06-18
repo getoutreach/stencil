@@ -2,6 +2,9 @@
 version: "2"
 lintroller:
   tier: "platinum"
+  exclusions:
+    paths:
+      - "(^|/)node_modules(/|$)"
 output:
   formats:
     text:
@@ -155,6 +158,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - node_modules
 issues:
   max-same-issues: 10
 formatters:
@@ -167,3 +171,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - node_modules
