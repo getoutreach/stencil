@@ -21,9 +21,13 @@ import (
 	"github.com/princjef/gomarkdoc/logger"
 )
 
+// functionsTemplate is the template used to render the markdown
+// documentation for each template function.
+//
 //go:embed functions.md.tpl
 var functionsTemplate string
 
+// file represents a single markdown documentation file to be written to disk.
 type file struct {
 	Name     string
 	Contents string
@@ -77,7 +81,7 @@ func generateMarkdown() ([]file, error) {
 // saveMarkdown writes the markdown files to disk.
 func saveMarkdown(files []file) error {
 	for _, f := range files {
-		if err := os.WriteFile(filepath.Join("content", "en", "functions", f.Name+".md"), []byte(f.Contents), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join("content", "en", "functions", f.Name+".md"), []byte(f.Contents), 0o600); err != nil {
 			return err
 		}
 	}
