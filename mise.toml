@@ -1,3 +1,5 @@
+min_version = { hard = "2026.3.2" }
+
 [task_config]
 includes = [".bootstrap/.mise/tasks", ".mise/tasks"]
 
@@ -14,7 +16,7 @@ enter = ["$MISE_PROJECT_ROOT/scripts/devbase.sh"]
 ## <</Stencil::Block>>
 
 [tools]
-"npm:prettier" = "2"
+"npm:prettier" = "3"
 
 ## <<Stencil::Block(customMiseTools)>>
 

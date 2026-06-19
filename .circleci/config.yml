@@ -2,7 +2,7 @@
 # syntax, such as anchors, will be fixed automatically.
 version: 2.1
 orbs:
-  shared: getoutreach/shared@2.35.1
+  shared: getoutreach/shared@dev:2.39.0-rc.1
   queue: eddiewebb/queue@2.2.1
   ## <<Stencil::Block(CircleCIExtraOrbs)>>
 
@@ -31,6 +31,7 @@ contexts: &contexts
   - circleci-credentials
   - tray-webhooks
   - wizcli
+  - datadog
   ## <<Stencil::Block(extraContexts)>>
 
   ## <</Stencil::Block>>

@@ -12,6 +12,12 @@ indent_style = tab
 indent_style = space
 indent_size  = 2
 
+# Non-standard config for shfmt
+[[shell]]
+indent_style = space
+indent_size  = 2
+simplify = true
+
 [*.py]
 indent_style = space
 indent_size = 4

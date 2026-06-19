@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 // NewDocsGenerateCommand returns a new urfave/cli.Command for the

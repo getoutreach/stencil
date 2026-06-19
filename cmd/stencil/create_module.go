@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,7 +14,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +32,7 @@ func NewCreateModule() *cli.Command {
 				Usage: "Generates a native extension",
 			},
 		},
-		Action: func(c *cli.Context) error {
+		Action: func(ctx context.Context, c *cli.Command) error {
 			var manifestFileName = "service.yaml"
 
 			// ensure we have a name
@@ -118,7 +119,7 @@ func NewCreateModule() *cli.Command {
 			}
 
 			//nolint:gosec // Why: intentional
-			cmd := exec.CommandContext(c.Context, os.Args[0])
+			cmd := exec.CommandContext(ctx, os.Args[0])
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Stdin = os.Stdin
