@@ -13,7 +13,7 @@ updates:
     ignore:
       - dependency-name: github.com/getoutreach/gobox
       - dependency-name: github.com/getoutreach/stencil-golang/pkg
-      - dependency-name: github.com/urfave/cli/v2
+      - dependency-name: github.com/urfave/cli/v3
       ## <<Stencil::Block(dependabotGoIgnore)>>
 
       ## <</Stencil::Block>>
