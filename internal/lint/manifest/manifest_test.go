@@ -129,6 +129,16 @@ func TestValidate(t *testing.T) {
 			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
 		},
 		{
+			name: "https $ref schema reports finding (no network)",
+			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: https://example.com/schema.json\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
+		},
+		{
+			name: "file $ref schema reports finding (no filesystem read)",
+			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: file:///etc/hostname\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
+		},
+		{
 			name: "invalid stencilVersion",
 			in:   "name: testing\nstencilVersion: not-a-constraint\n",
 			want: []lint.Finding{{Severity: lint.SeverityError, Path: "stencilVersion"}},

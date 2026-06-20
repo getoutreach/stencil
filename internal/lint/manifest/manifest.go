@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"sort"
 	"strconv"
@@ -62,10 +63,6 @@ func Load(r io.Reader) (mf *configuration.TemplateRepositoryManifest,
 	var discard any
 	if err := lenientDec.Decode(&discard); err == nil {
 		multiDoc = true
-	} else if !errors.Is(err, io.EOF) {
-		// A decode error on the second document is not fatal to linting doc 1;
-		// ignore it (doc 1 is what we validate).
-		multiDoc = false
 	}
 
 	return mf, strictErr, multiDoc, nil
@@ -105,7 +102,7 @@ func Validate(mf *configuration.TemplateRepositoryManifest, strictErr error) []l
 func checkName(f *lint.Findings, mf *configuration.TemplateRepositoryManifest, strictErr error) {
 	if mf.Name == "" {
 		// Suppress the redundant emptiness finding when the decode error already
-		// references the name field (e.g. a type mismatch like `name: 123`).
+		// references the name field (e.g. a non-scalar like a mapping given for name).
 		if strictErr != nil && strings.Contains(strictErr.Error(), "name") {
 			return
 		}
@@ -204,6 +201,13 @@ func compileSchema(name string, schema map[string]interface{}) error {
 	}
 	jsc := jsonschema.NewCompiler()
 	jsc.Draft = jsonschema.Draft2020
+	// Fail closed on any external $ref: lint must not read the filesystem or
+	// network while compiling a manifest's schema. By default jsonschema's loader
+	// registry includes a "file" scheme loader, which would read local files for a
+	// file:// $ref; overriding LoadURL disables all external reference resolution.
+	jsc.LoadURL = func(ref string) (io.ReadCloser, error) {
+		return nil, fmt.Errorf("external $ref not allowed in lint: %s", ref)
+	}
 	url := "manifest.yaml/arguments/" + name
 	if err := jsc.AddResource(url, buf); err != nil {
 		return err
