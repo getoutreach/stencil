@@ -27,6 +27,17 @@ const (
 	TemplateRepositoryTypeTemplates TemplateRepositoryType = "templates"
 )
 
+// IsValid reports whether t is one of the recognized template repository
+// types (extension or templates).
+func (t TemplateRepositoryType) IsValid() bool {
+	switch t {
+	case TemplateRepositoryTypeExt, TemplateRepositoryTypeTemplates:
+		return true
+	default:
+		return false
+	}
+}
+
 // TemplateRepositoryTypes specifies what type of a stencil repository the current one is.
 // Use Contains to check for a type - it has special handling for the default case.
 // Even though it is a struct, it is marshalled and unmarshalled as a string with comma separated
@@ -65,6 +76,12 @@ func (ts *TemplateRepositoryTypes) UnmarshalYAML(value *yaml.Node) error {
 	}
 	ts.types = types
 	return nil
+}
+
+// Types returns the parsed template repository types in declaration order.
+// An empty result means the implicit templates-only default (see Contains).
+func (ts TemplateRepositoryTypes) Types() []TemplateRepositoryType {
+	return ts.types
 }
 
 // Contains returns true if current repo needs to serve inpt type, with default assumed

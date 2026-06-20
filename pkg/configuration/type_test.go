@@ -71,3 +71,47 @@ func TestTemplateRepositoryType(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplateRepositoryTypeIsValid(t *testing.T) {
+	assert.Assert(t, configuration.TemplateRepositoryTypeExt.IsValid())
+	assert.Assert(t, configuration.TemplateRepositoryTypeTemplates.IsValid())
+	assert.Assert(t, !configuration.TemplateRepositoryType("templaes").IsValid())
+	assert.Assert(t, !configuration.TemplateRepositoryType("").IsValid())
+}
+
+func TestTemplateRepositoryTypesTypes(t *testing.T) {
+	tests := []struct {
+		Name string
+		In   string
+		Want []configuration.TemplateRepositoryType
+	}{
+		{Name: "empty", In: "", Want: nil},
+		{
+			Name: "templates",
+			In:   "templates",
+			Want: []configuration.TemplateRepositoryType{configuration.TemplateRepositoryTypeTemplates},
+		},
+		{
+			Name: "both",
+			In:   "extension,templates",
+			Want: []configuration.TemplateRepositoryType{
+				configuration.TemplateRepositoryTypeExt,
+				configuration.TemplateRepositoryTypeTemplates,
+			},
+		},
+		{
+			Name: "unknown token preserved",
+			In:   "templaes",
+			Want: []configuration.TemplateRepositoryType{configuration.TemplateRepositoryType("templaes")},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			var ts configuration.TemplateRepositoryTypes
+			err := yaml.Unmarshal([]byte(test.In), &ts)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, test.Want, ts.Types())
+		})
+	}
+}
