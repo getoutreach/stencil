@@ -31,7 +31,8 @@ func TestRunManifestReaderValid(t *testing.T) {
 }
 
 func TestRunManifestReaderInvalid(t *testing.T) {
-	findings, err := runManifestReader(discardLogger(), "<test>", strings.NewReader("name: BadName\n"))
+	// An unknown top-level key is a strict-decode error → at least one finding.
+	findings, err := runManifestReader(discardLogger(), "<test>", strings.NewReader("name: testing\nnme: oops\n"))
 	assert.NilError(t, err)
 	assert.Assert(t, len(findings) > 0)
 }

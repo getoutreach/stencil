@@ -98,7 +98,9 @@ func Validate(mf *configuration.TemplateRepositoryManifest, strictErr error) []l
 	return f.Items()
 }
 
-// checkName implements check 2.
+// checkName implements check 2. A manifest's name is a Go import path
+// (e.g. github.com/getoutreach/stencil-base), not a service name, so the only
+// requirement is that it is present.
 func checkName(f *lint.Findings, mf *configuration.TemplateRepositoryManifest, strictErr error) {
 	if mf.Name == "" {
 		// Suppress the redundant emptiness finding when the decode error already
@@ -107,10 +109,6 @@ func checkName(f *lint.Findings, mf *configuration.TemplateRepositoryManifest, s
 			return
 		}
 		f.Errorf("name", "name is required")
-		return
-	}
-	if !configuration.ValidateName(mf.Name) {
-		f.Errorf("name", "name %q must match %s", mf.Name, configuration.ValidateNameRegexp)
 	}
 }
 

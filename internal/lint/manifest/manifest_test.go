@@ -108,12 +108,9 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid name",
-			in:   "name: MyModule\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "name"}},
-			wantMsg: map[string]string{
-				"name": "must match",
-			},
+			name: "import path name is valid (not a service name)",
+			in:   "name: github.com/getoutreach/stencil-base\n",
+			none: true,
 		},
 		{
 			name: "unknown type",
@@ -169,9 +166,9 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "errors and warnings combined",
-			in:   "name: BadName\narguments:\n  x:\n    type: string\n",
+			in:   "name: testing\ntype: bogus\narguments:\n  x:\n    type: string\n",
 			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "name"},
+				{Severity: lint.SeverityError, Path: "type"},
 				{Severity: lint.SeverityWarning, Path: "arguments.x.type"},
 			},
 		},
@@ -192,12 +189,9 @@ func TestValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "numeric name coerced then fails name regex",
+			name: "numeric name coerced to non-empty string is valid",
 			in:   "name: 123\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "name"}},
-			wantMsg: map[string]string{
-				"name": "must match",
-			},
+			none: true,
 		},
 		{
 			name: "from argument skips field checks",
