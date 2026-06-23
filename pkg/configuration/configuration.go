@@ -130,6 +130,31 @@ type PostRunCommandSpec struct {
 	Command string `yaml:"command"`
 }
 
+// DeprecationMessage is an argument's deprecation message. It is a string:
+// non-empty means the argument is deprecated and this is the migration message
+// shown to consumers; empty means not deprecated. Its custom UnmarshalYAML
+// rejects non-string YAML scalars (e.g. the legacy `deprecated: true` bool
+// form) so authors must supply a message string rather than a bare bool.
+type DeprecationMessage string
+
+// UnmarshalYAML accepts only a YAML string (!!str) or null (!!null); any other
+// node — bool, int, float, sequence, or mapping — is an error. This is
+// required because yaml.v3 otherwise coerces any scalar into a string
+// silently, which would let `deprecated: true` decode to the message "true".
+func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Tag {
+	case "!!null":
+		*d = ""
+		return nil
+	case "!!str":
+		*d = DeprecationMessage(value.Value)
+		return nil
+	default:
+		return fmt.Errorf("argument \"deprecated\" must be a string message, got %s (%q); "+
+			"the bool form is not supported — supply a migration message", value.Tag, value.Value)
+	}
+}
+
 // Argument is a user-input argument that can be passed to
 // templates
 type Argument struct {
@@ -145,6 +170,15 @@ type Argument struct {
 
 	// Schema is a JSON schema, in YAML, for the argument.
 	Schema map[string]interface{} `yaml:"schema"`
+
+	// When non-empty, this marks the argument as deprecated and is the
+	// human-readable migration message shown to consumers. An empty or absent
+	// value means the argument is not deprecated.
+	//
+	// In YAML this must be a string, e.g. `deprecated: "Use newArg instead."`.
+	// The bool form (`deprecated: true`) is rejected by
+	// DeprecationMessage.UnmarshalYAML; authors must supply a message string.
+	Deprecated DeprecationMessage `yaml:"deprecated,omitempty"`
 
 	// Deprecated fields below.
 
