@@ -94,10 +94,10 @@ func TestManifestRunnerMissingFileIsFinding(t *testing.T) {
 func TestNewLintCommandShape(t *testing.T) {
 	cmd := NewLintCommand()
 	assert.Equal(t, "lint", cmd.Name)
-	// the manifest subcommand exists
+	// the module-manifest subcommand exists
 	var hasManifest bool
 	for _, sub := range cmd.Commands {
-		if sub.Name == "manifest" {
+		if sub.Name == "module-manifest" {
 			hasManifest = true
 		}
 	}
@@ -105,7 +105,7 @@ func TestNewLintCommandShape(t *testing.T) {
 	// warnings-as-errors flag present on both the group and the subcommand
 	assert.Assert(t, flagPresent(cmd.Flags, "warnings-as-errors"))
 	for _, sub := range cmd.Commands {
-		if sub.Name == "manifest" {
+		if sub.Name == "module-manifest" {
 			assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
 		}
 	}

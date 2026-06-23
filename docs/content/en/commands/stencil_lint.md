@@ -22,7 +22,7 @@ DESCRIPTION:
    Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)
 
 COMMANDS:
-   manifest  Validate a module's manifest without resolving dependencies
+   module-manifest  Validate a module's manifest.yaml without resolving dependencies
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)

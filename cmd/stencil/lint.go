@@ -21,7 +21,7 @@ import (
 )
 
 // NewLintCommand returns the `lint` command group: an aggregate `lint [dir]`
-// plus a `lint manifest [path]` subcommand. Validation is local-only.
+// plus a `lint module-manifest [path]` subcommand. Validation is local-only.
 func NewLintCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "lint",
@@ -29,7 +29,7 @@ func NewLintCommand() *cli.Command {
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)",
 		Flags:       []cli.Flag{warningsAsErrorsFlag()},
-		Commands:    []*cli.Command{newLintManifestCommand()},
+		Commands:    []*cli.Command{newLintModuleManifestCommand()},
 		Action:      runLintAggregate,
 	}
 }
@@ -58,15 +58,15 @@ func newLintLogger(c *cli.Command) *logrus.Logger {
 // manifest runner.
 type runner func(log logrus.FieldLogger) ([]lint.Finding, error)
 
-// newLintManifestCommand builds the `lint manifest [path]` subcommand.
-func newLintManifestCommand() *cli.Command {
+// newLintModuleManifestCommand builds the `lint module-manifest [path]` subcommand.
+func newLintModuleManifestCommand() *cli.Command {
 	return &cli.Command{
-		Name:        "manifest",
-		Usage:       "Validate a module's manifest without resolving dependencies",
+		Name:        "module-manifest",
+		Usage:       "Validate a module's manifest.yaml without resolving dependencies",
 		ArgsUsage:   "[path]",
-		Description: "Validate a single manifest.yaml (defaults to ./manifest.yaml). Use '-' to read from stdin.",
+		Description: "Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.",
 		Flags:       []cli.Flag{warningsAsErrorsFlag()},
-		Action:      runLintManifest,
+		Action:      runLintModuleManifest,
 	}
 }
 
@@ -77,7 +77,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	}
 	if c.Args().Len() == 0 && stdinIsPipe() {
 		return errors.New("stencil lint expects a module directory, not piped input; " +
-			"use 'stencil lint manifest -' (or, once available, 'stencil lint templates -') to lint from stdin")
+			"use 'stencil lint module-manifest -' (or, once available, 'stencil lint templates -') to lint from stdin")
 	}
 
 	dir := "."
@@ -103,8 +103,8 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	return failIfFindings(all, c.Bool("warnings-as-errors"))
 }
 
-// runLintManifest is the `stencil lint manifest [path]` action.
-func runLintManifest(_ context.Context, c *cli.Command) error {
+// runLintModuleManifest is the `stencil lint module-manifest [path]` action.
+func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
 		return errors.New("expected at most one argument, a path to manifest.yaml")
 	}
