@@ -26,6 +26,19 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 		})
 	})
 
+	t.Run("warns when a deprecated arg is present with an empty value", func(t *testing.T) {
+		tt := fakeTemplate(t,
+			map[string]interface{}{"oldArg": ""}, // present in service.yaml, empty value
+			map[string]configuration.Argument{
+				"oldArg": {Deprecated: "use newArg instead"},
+			})
+		got, err := tt.s.deprecatedArgumentWarnings(context.Background())
+		assert.NilError(t, err)
+		assert.DeepEqual(t, got, []string{
+			`module "test" argument "oldArg" is deprecated: use newArg instead`,
+		})
+	})
+
 	t.Run("no warning when the deprecated arg is not set", func(t *testing.T) {
 		tt := fakeTemplate(t,
 			map[string]interface{}{}, // service.yaml does NOT set it
