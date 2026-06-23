@@ -45,3 +45,19 @@ func TestCountsEmpty(t *testing.T) {
 	assert.Equal(t, 0, errs)
 	assert.Equal(t, 0, warns)
 }
+
+func TestInfofAndCountsIgnoresInfo(t *testing.T) {
+	var f lint.Findings
+	f.Infof("arguments.x", "argument %q is deprecated: %s", "x", "use y")
+
+	items := f.Items()
+	assert.Equal(t, 1, len(items))
+	assert.Equal(t, lint.SeverityInfo, items[0].Severity)
+	assert.Equal(t, "arguments.x", items[0].Path)
+	assert.Equal(t, `argument "x" is deprecated: use y`, items[0].Message)
+
+	// Counts must ignore info: it tallies only errors and warnings.
+	errs, warns := f.Counts()
+	assert.Equal(t, 0, errs)
+	assert.Equal(t, 0, warns)
+}

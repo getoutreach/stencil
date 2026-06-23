@@ -222,6 +222,8 @@ func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 			entry.Warn(f.Message)
 		case lint.SeverityError:
 			entry.Error(f.Message)
+		case lint.SeverityInfo:
+			entry.Info(f.Message)
 		default:
 			// Defensive: surface any unexpected severity as an error so it is
 			// never silently dropped.

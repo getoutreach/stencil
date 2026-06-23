@@ -163,6 +163,9 @@ func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManife
 		if len(arg.Values) > 0 {
 			f.Warnf("arguments."+name+".values", "argument field 'values' is deprecated; use 'schema'")
 		}
+		if arg.Deprecated != "" {
+			f.Infof("arguments."+name, "argument %q is deprecated: %s", name, arg.Deprecated)
+		}
 	}
 }
 
