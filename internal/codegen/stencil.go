@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -199,6 +200,14 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	vals := NewValues(ctx, s.m, s.modules, log)
 	log.Debug("Finished creating values")
 
+	warnings, err := s.deprecatedArgumentWarnings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range warnings {
+		log.Warn(w)
+	}
+
 	// Add the templates to their modules template to allow them to be able to access
 	// functions declared in the same module
 	for _, t := range tplfiles {
@@ -235,6 +244,42 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	}
 
 	return tpls, nil
+}
+
+// deprecatedArgumentWarnings returns one warning message per (module, argument)
+// where the module's manifest marks the argument deprecated (a non-empty
+// Deprecated string) AND the service manifest sets a value for it. Messages are
+// returned in deterministic order: module slice order, arguments sorted by name.
+// from: re-export entries are skipped — the owning module carries the message.
+func (s *Stencil) deprecatedArgumentWarnings(ctx context.Context) ([]string, error) {
+	var warnings []string
+	for _, m := range s.modules {
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return nil, err
+		}
+		names := make([]string, 0, len(mf.Arguments))
+		for name := range mf.Arguments {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			arg := mf.Arguments[name]
+			if arg.From != "" {
+				continue
+			}
+			if arg.Deprecated == "" {
+				continue
+			}
+			if _, set := s.m.Arguments[name]; !set {
+				continue
+			}
+			warnings = append(warnings, fmt.Sprintf(
+				"module %q argument %q is deprecated: %s",
+				m.Name, name, arg.Deprecated))
+		}
+	}
+	return warnings, nil
 }
 
 // PostRun runs all post run commands specified in the modules that
