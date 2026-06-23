@@ -60,6 +60,25 @@ func TestFailIfFindingsInfoOnlyPasses(t *testing.T) {
 	assert.NilError(t, failIfFindings(infoOnly, false))
 }
 
+func TestFailManifestInfoOnlyLogsBareValidLine(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	// An info-only finding set must pass and log the bare "is valid" success
+	// line: info findings are not counted as warnings, so the "(N warning(s))"
+	// form must not appear.
+	infoOnly := []lint.Finding{{Severity: lint.SeverityInfo, Path: "arguments.x", Message: "deprecated msg"}}
+	err := failManifest(log, "manifest.yaml", infoOnly, true)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "is valid"), "expected success line, got: %s", out)
+	assert.Assert(t, !strings.Contains(out, "warning(s)"),
+		"info-only findings must not log the warning-count form, got: %s", out)
+}
+
 func TestLogFindingsRoutesInfoToInfoLevel(t *testing.T) {
 	var buf bytes.Buffer
 	log := logrus.New()
