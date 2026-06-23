@@ -133,6 +133,8 @@ func checkStencilVersion(f *lint.Findings, mf *configuration.TemplateRepositoryM
 
 // checkArguments implements checks 4, 6, and 7 (argument deprecations) in
 // sorted key order, skipping arguments that reference another module via from:.
+// Also emits an informational finding for each argument that sets the
+// deprecated property.
 func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManifest) {
 	names := make([]string, 0, len(mf.Arguments))
 	for name := range mf.Arguments {

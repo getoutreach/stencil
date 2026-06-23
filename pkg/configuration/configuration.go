@@ -150,7 +150,7 @@ func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
 		*d = DeprecationMessage(value.Value)
 		return nil
 	default:
-		return fmt.Errorf("argument \"deprecated\" must be a string message, got %s (%q); "+
+		return fmt.Errorf("deprecation message must be a string, got %s (%q); "+
 			"the bool form is not supported — supply a migration message", value.Tag, value.Value)
 	}
 }
