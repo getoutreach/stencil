@@ -199,6 +199,29 @@ func TestValidate(t *testing.T) {
 				"    type: string\n    schema:\n      type: notarealtype\n",
 			none: true,
 		},
+		{
+			name: "deprecated argument emits info finding",
+			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: use newArg instead\n",
+			want: []lint.Finding{
+				{Severity: lint.SeverityInfo, Path: "arguments.oldArg"},
+			},
+			wantMsg: map[string]string{
+				"arguments.oldArg": "argument \"oldArg\" is deprecated: use newArg instead",
+			},
+		},
+		{
+			name: "deprecated bool form is a strict-decode error",
+			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: true\n",
+			want: []lint.Finding{
+				{Severity: lint.SeverityError, Path: "manifest.yaml"},
+			},
+		},
+		{
+			name: "from: arg with deprecated produces no info finding",
+			in: "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n" +
+				"arguments:\n  shared:\n    from: github.com/getoutreach/stencil-base\n    deprecated: ignored\n",
+			none: true,
+		},
 	}
 
 	for _, test := range tests {

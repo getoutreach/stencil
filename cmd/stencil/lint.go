@@ -213,7 +213,7 @@ func runManifestReader(log logrus.FieldLogger, name string, r io.Reader) ([]lint
 }
 
 // logFindings logs each finding via logrus (stderr). Errors log at error level,
-// warnings at warn level.
+// warnings at warn level, and info findings at info level.
 func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 	for _, f := range findings {
 		entry := log.WithField("path", f.Path)
@@ -222,6 +222,8 @@ func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 			entry.Warn(f.Message)
 		case lint.SeverityError:
 			entry.Error(f.Message)
+		case lint.SeverityInfo:
+			entry.Info(f.Message)
 		default:
 			// Defensive: surface any unexpected severity as an error so it is
 			// never silently dropped.

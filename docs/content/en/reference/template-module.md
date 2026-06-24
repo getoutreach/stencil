@@ -56,6 +56,7 @@ The important keys that a module has are listed below, but an exhaustive list ca
   - `required` - whether or not the argument is required to be set
   - `default` - a default value for the argument, cannot be set when required is true
   - `from` - aliases this argument to another module's argument. Only supports one-level deep.
+  - `deprecated` - a string migration message. When non-empty, the argument is deprecated: a consuming repo that sets it in `service.yaml` gets a render-time warning, and `stencil lint module-manifest` reports it informationally. Empty or absent means not deprecated. Must be a string (e.g. `deprecated: "Use newArg instead."`); the bool form `deprecated: true` is not supported.
 
 #### Writing a JSON Schema
 

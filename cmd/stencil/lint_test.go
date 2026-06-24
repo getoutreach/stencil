@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -50,6 +51,50 @@ func TestFailIfFindingsPolicy(t *testing.T) {
 		"manifest validation failed: 1 error(s), 0 warning(s)")
 	assert.Error(t, failIfFindings(errOnly, false),
 		"manifest validation failed: 1 error(s), 0 warning(s)")
+}
+
+func TestFailIfFindingsInfoOnlyPasses(t *testing.T) {
+	infoOnly := []lint.Finding{{Severity: lint.SeverityInfo, Path: "arguments.x", Message: "i"}}
+	// Info never fails, regardless of warnings-as-errors.
+	assert.NilError(t, failIfFindings(infoOnly, true))
+	assert.NilError(t, failIfFindings(infoOnly, false))
+}
+
+func TestFailManifestInfoOnlyLogsBareValidLine(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	// An info-only finding set must pass and log the bare "is valid" success
+	// line: info findings are not counted as warnings, so the "(N warning(s))"
+	// form must not appear.
+	infoOnly := []lint.Finding{{Severity: lint.SeverityInfo, Path: "arguments.x", Message: "deprecated msg"}}
+	err := failManifest(log, "manifest.yaml", infoOnly, true)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "is valid"), "expected success line, got: %s", out)
+	assert.Assert(t, !strings.Contains(out, "warning(s)"),
+		"info-only findings must not log the warning-count form, got: %s", out)
+}
+
+func TestLogFindingsRoutesInfoToInfoLevel(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	logFindings(log, []lint.Finding{
+		{Severity: lint.SeverityInfo, Path: "arguments.x", Message: "deprecated msg"},
+	})
+
+	out := buf.String()
+	// logrus default text formatter writes level=info for Info(); it would be
+	// level=error if the info case were missing (the defensive default).
+	assert.Assert(t, strings.Contains(out, "level=info"),
+		"expected info-level log, got: %s", out)
+	assert.Assert(t, strings.Contains(out, "deprecated msg"))
 }
 
 func TestResolveManifestReaderMissing(t *testing.T) {

@@ -19,6 +19,8 @@ const (
 	// SeverityWarning marks a finding that fails only when warnings are
 	// treated as errors.
 	SeverityWarning Severity = "warning"
+	// SeverityInfo marks an informational finding that never fails a lint run.
+	SeverityInfo Severity = "info"
 )
 
 // Finding is a single problem discovered while linting.
@@ -55,6 +57,15 @@ func (f *Findings) Warnf(path, format string, a ...any) {
 	})
 }
 
+// Infof appends a SeverityInfo finding at path with a formatted message.
+func (f *Findings) Infof(path, format string, a ...any) {
+	f.items = append(f.items, Finding{
+		Severity: SeverityInfo,
+		Path:     path,
+		Message:  fmt.Sprintf(format, a...),
+	})
+}
+
 // Add appends a pre-built Finding.
 func (f *Findings) Add(find Finding) {
 	f.items = append(f.items, find)
@@ -78,6 +89,9 @@ func Counts(findings []Finding) (errors, warnings int) {
 			errors++
 		case SeverityWarning:
 			warnings++
+		case SeverityInfo:
+			// Info findings are intentionally not counted: they never fail a
+			// lint run, so they must not affect the error/warning tally.
 		}
 	}
 	return errors, warnings

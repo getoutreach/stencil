@@ -133,6 +133,8 @@ func checkStencilVersion(f *lint.Findings, mf *configuration.TemplateRepositoryM
 
 // checkArguments implements checks 4, 6, and 7 (argument deprecations) in
 // sorted key order, skipping arguments that reference another module via from:.
+// Also emits an informational finding for each argument that sets the
+// deprecated property.
 func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManifest) {
 	names := make([]string, 0, len(mf.Arguments))
 	for name := range mf.Arguments {
@@ -162,6 +164,9 @@ func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManife
 		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
 		if len(arg.Values) > 0 {
 			f.Warnf("arguments."+name+".values", "argument field 'values' is deprecated; use 'schema'")
+		}
+		if arg.Deprecated != "" {
+			f.Infof("arguments."+name, "argument %q is deprecated: %s", name, arg.Deprecated)
 		}
 	}
 }
