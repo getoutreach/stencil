@@ -137,6 +137,7 @@ func main() {
 		NewCreateCommand(),
 		NewDocsCommand(),
 		NewConfigureCommand(),
+		NewLintCommand(),
 		// <</Stencil::Block>>
 	}
 
