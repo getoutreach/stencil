@@ -63,3 +63,111 @@ func setIfAbsent(m *yaml.Node, key string, val *yaml.Node) bool {
 	m.Content = append(m.Content, k, val)
 	return true
 }
+
+// scalarsEqual reports whether a and b are both scalar nodes with equal values.
+func scalarsEqual(a, b *yaml.Node) bool {
+	return a != nil && b != nil &&
+		a.Kind == yaml.ScalarNode && b.Kind == yaml.ScalarNode &&
+		a.Value == b.Value
+}
+
+// fixArgType migrates a deprecated argument `type: X` into `schema.type: X`.
+// It is conservative: it only acts when type is a scalar, never overwrites an
+// existing differing schema.type, and reuses the original value node (keeping
+// its comment and style).
+func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
+	i := findKey(arg, "type")
+	if i < 0 {
+		return
+	}
+	typeVal := arg.Content[i+1]
+	if typeVal.Kind != yaml.ScalarNode {
+		return // non-scalar: leave for the linter
+	}
+	schema := ensureMapping(arg, "schema")
+	if si := findKey(schema, "type"); si >= 0 {
+		existing := schema.Content[si+1]
+		if !scalarsEqual(existing, typeVal) {
+			return // ambiguous: differing schema.type wins, change nothing
+		}
+		// Redundant: schema.type already equals the deprecated type.
+		removeKey(arg, "type")
+		*applied = append(*applied, Applied{
+			Path:    "arguments." + argName + ".type",
+			Message: "removed redundant 'type' (already set in schema.type)",
+		})
+		return
+	}
+	removeKey(arg, "type")
+	setIfAbsent(schema, "type", typeVal)
+	*applied = append(*applied, Applied{
+		Path:    "arguments." + argName + ".type",
+		Message: "migrated 'type' into 'schema.type'",
+	})
+}
+
+// fixArgValues migrates a deprecated argument `values: [...]` into
+// `schema.enum: [...]`. Same conservative rules as fixArgType; the sequence
+// node is reused verbatim so its flow/block style is preserved.
+func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
+	i := findKey(arg, "values")
+	if i < 0 {
+		return
+	}
+	valuesVal := arg.Content[i+1]
+	if valuesVal.Kind != yaml.SequenceNode {
+		return
+	}
+	schema := ensureMapping(arg, "schema")
+	if findKey(schema, "enum") >= 0 {
+		// schema.enum already present: drop the deprecated values, keep schema.
+		removeKey(arg, "values")
+		*applied = append(*applied, Applied{
+			Path:    "arguments." + argName + ".values",
+			Message: "removed redundant 'values' (schema.enum already set)",
+		})
+		return
+	}
+	removeKey(arg, "values")
+	setIfAbsent(schema, "enum", valuesVal)
+	*applied = append(*applied, Applied{
+		Path:    "arguments." + argName + ".values",
+		Message: "migrated 'values' into 'schema.enum'",
+	})
+}
+
+// fixModulePrerelease migrates a deprecated module `prerelease` field. A true
+// value becomes `channel: rc` (unless channel is already set, which is left
+// untouched); a false value is simply removed as a redundant default.
+func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
+	i := findKey(mod, "prerelease")
+	if i < 0 {
+		return
+	}
+	val := mod.Content[i+1]
+	if val.Kind != yaml.ScalarNode {
+		return
+	}
+	switch val.Value {
+	case "true":
+		removeKey(mod, "prerelease")
+		if setIfAbsent(mod, "channel",
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rc"}) {
+			*applied = append(*applied, Applied{
+				Path:    modPath + ".prerelease",
+				Message: "migrated 'prerelease: true' to 'channel: rc'",
+			})
+		} else {
+			*applied = append(*applied, Applied{
+				Path:    modPath + ".prerelease",
+				Message: "removed deprecated 'prerelease' (channel already set)",
+			})
+		}
+	case "false":
+		removeKey(mod, "prerelease")
+		*applied = append(*applied, Applied{
+			Path:    modPath + ".prerelease",
+			Message: "removed redundant 'prerelease: false'",
+		})
+	}
+}

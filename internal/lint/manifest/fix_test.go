@@ -67,3 +67,93 @@ func TestSetIfAbsent(t *testing.T) {
 	// Second call is a no-op.
 	assert.Assert(t, !setIfAbsent(m, "channel", v))
 }
+
+// argNode returns the value mapping for the single argument in
+// "arguments:\n  <name>:\n    ...". Helper for the per-argument fix tests.
+func argNode(t *testing.T, name, body string) *yaml.Node {
+	t.Helper()
+	m := mappingFrom(t, "arguments:\n  "+name+":\n"+body)
+	args := m.Content[findKey(m, "arguments")+1]
+	return args.Content[1] // value of the first (only) argument
+}
+
+func TestFixArgTypeMovesIntoSchema(t *testing.T) {
+	arg := argNode(t, "x", "    type: string\n")
+	var applied []Applied
+	fixArgType("x", arg, &applied)
+
+	assert.Assert(t, findKey(arg, "type") == -1) // removed
+	schema := arg.Content[findKey(arg, "schema")+1]
+	ti := findKey(schema, "type")
+	assert.Assert(t, ti >= 0)
+	assert.Equal(t, "string", schema.Content[ti+1].Value)
+	assert.Equal(t, 1, len(applied))
+	assert.Equal(t, "arguments.x.type", applied[0].Path)
+}
+
+func TestFixArgTypeRedundantWhenSchemaTypeEqual(t *testing.T) {
+	arg := argNode(t, "x", "    type: string\n    schema:\n      type: string\n")
+	var applied []Applied
+	fixArgType("x", arg, &applied)
+
+	// Deprecated type dropped; existing schema.type kept.
+	assert.Assert(t, findKey(arg, "type") == -1)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Equal(t, "string", schema.Content[findKey(schema, "type")+1].Value)
+	assert.Equal(t, 1, len(applied)) // still logged as a change (removed redundant)
+}
+
+func TestFixArgTypeNoChangeWhenSchemaTypeDiffers(t *testing.T) {
+	arg := argNode(t, "x", "    type: string\n    schema:\n      type: integer\n")
+	var applied []Applied
+	fixArgType("x", arg, &applied)
+
+	// Ambiguous: leave both, change nothing.
+	assert.Assert(t, findKey(arg, "type") >= 0)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Equal(t, "integer", schema.Content[findKey(schema, "type")+1].Value)
+	assert.Equal(t, 0, len(applied))
+}
+
+func TestFixArgValuesMovesIntoSchemaEnum(t *testing.T) {
+	arg := argNode(t, "x", "    values: [a, b]\n")
+	var applied []Applied
+	fixArgValues("x", arg, &applied)
+
+	assert.Assert(t, findKey(arg, "values") == -1)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	enum := schema.Content[findKey(schema, "enum")+1]
+	assert.Equal(t, yaml.SequenceNode, enum.Kind)
+	assert.Equal(t, 2, len(enum.Content))
+	assert.Equal(t, 1, len(applied))
+}
+
+func TestFixModulePrereleaseTrueAddsChannel(t *testing.T) {
+	mod := mappingFrom(t, "name: m\nprerelease: true\n")
+	var applied []Applied
+	fixModulePrerelease("modules.m", mod, &applied)
+
+	assert.Assert(t, findKey(mod, "prerelease") == -1)
+	assert.Equal(t, "rc", mod.Content[findKey(mod, "channel")+1].Value)
+	assert.Equal(t, 1, len(applied))
+}
+
+func TestFixModulePrereleaseKeepsExistingChannel(t *testing.T) {
+	mod := mappingFrom(t, "name: m\nchannel: stable\nprerelease: true\n")
+	var applied []Applied
+	fixModulePrerelease("modules.m", mod, &applied)
+
+	assert.Assert(t, findKey(mod, "prerelease") == -1)
+	assert.Equal(t, "stable", mod.Content[findKey(mod, "channel")+1].Value) // not overwritten
+	assert.Equal(t, 1, len(applied))
+}
+
+func TestFixModulePrereleaseFalseDropped(t *testing.T) {
+	mod := mappingFrom(t, "name: m\nprerelease: false\n")
+	var applied []Applied
+	fixModulePrerelease("modules.m", mod, &applied)
+
+	assert.Assert(t, findKey(mod, "prerelease") == -1)
+	assert.Assert(t, findKey(mod, "channel") == -1) // false is just removed
+	assert.Equal(t, 1, len(applied))
+}
