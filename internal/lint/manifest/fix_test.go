@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -156,4 +157,166 @@ func TestFixModulePrereleaseFalseDropped(t *testing.T) {
 	assert.Assert(t, findKey(mod, "prerelease") == -1)
 	assert.Assert(t, findKey(mod, "channel") == -1) // false is just removed
 	assert.Equal(t, 1, len(applied))
+}
+
+func encode(t *testing.T, doc *yaml.Node) string {
+	t.Helper()
+	var sb strings.Builder
+	enc := yaml.NewEncoder(&sb)
+	enc.SetIndent(2)
+	assert.NilError(t, enc.Encode(doc))
+	assert.NilError(t, enc.Close())
+	return sb.String()
+}
+
+// fixString decodes in, runs Fix, and returns the re-encoded YAML plus applied.
+func fixString(t *testing.T, in string) (string, []Applied) {
+	t.Helper()
+	var doc yaml.Node
+	assert.NilError(t, yaml.Unmarshal([]byte(in), &doc))
+	applied := Fix(&doc)
+	return encode(t, &doc), applied
+}
+
+func TestFix(t *testing.T) {
+	tests := []struct {
+		name      string
+		in        string
+		wantOut   string
+		wantCount int
+	}{
+		{
+			name:      "arg type only",
+			in:        "name: m\narguments:\n  x:\n    type: string\n",
+			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
+			wantCount: 1,
+		},
+		{
+			name:      "arg values only",
+			in:        "name: m\narguments:\n  x:\n    values: [a, b]\n",
+			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      enum: [a, b]\n",
+			wantCount: 1,
+		},
+		{
+			name: "arg type and values together",
+			in:   "name: m\narguments:\n  x:\n    type: string\n    values: [a, b]\n",
+			wantOut: "name: m\narguments:\n  x:\n    schema:\n      type: string\n" +
+				"      enum: [a, b]\n",
+			wantCount: 2,
+		},
+		{
+			name:      "module prerelease true",
+			in:        "name: m\nmodules:\n  - name: dep\n    prerelease: true\n",
+			wantOut:   "name: m\nmodules:\n  - name: dep\n    channel: rc\n",
+			wantCount: 1,
+		},
+		{
+			name:      "module prerelease false removed",
+			in:        "name: m\nmodules:\n  - name: dep\n    prerelease: false\n",
+			wantOut:   "name: m\nmodules:\n  - name: dep\n",
+			wantCount: 1,
+		},
+		{
+			name:      "from arg untouched",
+			in:        "name: m\narguments:\n  x:\n    from: dep\n    type: string\n",
+			wantOut:   "name: m\narguments:\n  x:\n    from: dep\n    type: string\n",
+			wantCount: 0,
+		},
+		{
+			name:      "nothing to fix is byte identical",
+			in:        "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
+			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
+			wantCount: 0,
+		},
+		{
+			name:      "schema.type differs leaves both",
+			in:        "name: m\narguments:\n  x:\n    type: string\n    schema:\n      type: integer\n",
+			wantOut:   "name: m\narguments:\n  x:\n    type: string\n    schema:\n      type: integer\n",
+			wantCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, applied := fixString(t, tt.in)
+			assert.Equal(t, tt.wantOut, out)
+			assert.Equal(t, tt.wantCount, len(applied))
+		})
+	}
+}
+
+func TestFixPreservesComment(t *testing.T) {
+	in := "name: m\narguments:\n  x:\n    type: string # keep me\n"
+	out, _ := fixString(t, in)
+	assert.Assert(t, strings.Contains(out, "# keep me"),
+		"comment must survive the move, got:\n%s", out)
+}
+
+func TestFixPreservesKeyOrder(t *testing.T) {
+	// Deliberately non-alphabetical key order at two levels.
+	in := "type: templates\n" +
+		"arguments:\n  a:\n    required: true\n    description: hi\n    type: string\n" +
+		"name: m\n"
+	out, _ := fixString(t, in)
+
+	// Top-level order: type, arguments, name (unchanged; encoder does not sort).
+	tIdx := strings.Index(out, "\ntype:")
+	if strings.HasPrefix(out, "type:") {
+		tIdx = 0
+	}
+	argIdx := strings.Index(out, "arguments:")
+	nameIdx := strings.Index(out, "\nname:")
+	assert.Assert(t, tIdx < argIdx && argIdx < nameIdx,
+		"top-level key order must be preserved, got:\n%s", out)
+
+	// Within argument a: required, description precede the migrated schema.
+	reqIdx := strings.Index(out, "required:")
+	descIdx := strings.Index(out, "description:")
+	schemaIdx := strings.Index(out, "schema:")
+	assert.Assert(t, reqIdx < descIdx && descIdx < schemaIdx,
+		"argument key order must be preserved, got:\n%s", out)
+}
+
+// TestFixArgValuesRedundantEnumDropped verifies that when both the deprecated
+// values: and schema.enum are present, fixArgValues drops values and keeps enum.
+func TestFixArgValuesRedundantEnumDropped(t *testing.T) {
+	arg := argNode(t, "x", "    values: [a]\n    schema:\n      enum: [a]\n")
+	var applied []Applied
+	fixArgValues("x", arg, &applied)
+
+	assert.Assert(t, findKey(arg, "values") == -1) // deprecated values removed
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Assert(t, findKey(schema, "enum") >= 0) // schema.enum kept
+	assert.Equal(t, 1, len(applied))
+}
+
+// TestFixConservativeSkips verifies that the conservative-skip paths produce no
+// change and no Applied entries when the deprecated field is not a fixable shape.
+func TestFixConservativeSkips(t *testing.T) {
+	t.Run("non-scalar type left alone", func(t *testing.T) {
+		arg := argNode(t, "x", "    type:\n      nested: true\n")
+		var applied []Applied
+		fixArgType("x", arg, &applied)
+
+		assert.Assert(t, findKey(arg, "type") >= 0) // left in place
+		assert.Equal(t, 0, len(applied))
+	})
+
+	t.Run("sequence prerelease left alone", func(t *testing.T) {
+		mod := mappingFrom(t, "name: m\nprerelease: [x]\n")
+		var applied []Applied
+		fixModulePrerelease("modules.m", mod, &applied)
+
+		assert.Assert(t, findKey(mod, "prerelease") >= 0) // left in place
+		assert.Equal(t, 0, len(applied))
+	})
+
+	t.Run("non-bool scalar prerelease left alone", func(t *testing.T) {
+		mod := mappingFrom(t, "name: m\nprerelease: maybe\n")
+		var applied []Applied
+		fixModulePrerelease("modules.m", mod, &applied)
+
+		assert.Assert(t, findKey(mod, "prerelease") >= 0) // left in place
+		assert.Equal(t, 0, len(applied))
+	})
 }

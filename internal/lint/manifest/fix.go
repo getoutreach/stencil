@@ -7,7 +7,12 @@
 
 package manifest
 
-import "gopkg.in/yaml.v3"
+import (
+	"sort"
+	"strconv"
+
+	"gopkg.in/yaml.v3"
+)
 
 // Applied records one fix the fixer made, for logging. Path mirrors the
 // corresponding lint.Finding.Path (e.g. "arguments.x.type").
@@ -170,4 +175,84 @@ func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
 			Message: "removed redundant 'prerelease: false'",
 		})
 	}
+}
+
+// Fix applies the safe deprecation migrations to the manifest document node in
+// place and returns the list of changes made. doc is the *yaml.Node from
+// yaml.Unmarshal (a DocumentNode wrapping a MappingNode). It never returns an
+// error: anything it cannot safely fix is left untouched. Arguments are
+// processed in sorted key order and modules in slice order, matching the
+// checker, so the result is deterministic.
+func Fix(doc *yaml.Node) []Applied {
+	if doc == nil || len(doc.Content) == 0 {
+		return nil
+	}
+	root := doc.Content[0]
+	if root.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	var applied []Applied
+	fixArguments(root, &applied)
+	fixModules(root, &applied)
+	return applied
+}
+
+// fixArguments applies argument migrations in sorted key order, skipping
+// arguments that set from: (whose other fields are ignored at render time).
+func fixArguments(root *yaml.Node, applied *[]Applied) {
+	ai := findKey(root, "arguments")
+	if ai < 0 {
+		return
+	}
+	args := root.Content[ai+1]
+	if args.Kind != yaml.MappingNode {
+		return
+	}
+
+	// Collect argument names in sorted order (keys are at even indices).
+	names := make([]string, 0, len(args.Content)/2)
+	for i := 0; i+1 < len(args.Content); i += 2 {
+		names = append(names, args.Content[i].Value)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		arg := args.Content[findKey(args, name)+1]
+		if arg.Kind != yaml.MappingNode {
+			continue
+		}
+		if findKey(arg, "from") >= 0 {
+			continue // from: arguments are skipped, matching checkArguments
+		}
+		fixArgType(name, arg, applied)
+		fixArgValues(name, arg, applied)
+	}
+}
+
+// fixModules applies module migrations in slice order.
+func fixModules(root *yaml.Node, applied *[]Applied) {
+	mi := findKey(root, "modules")
+	if mi < 0 {
+		return
+	}
+	modules := root.Content[mi+1]
+	if modules.Kind != yaml.SequenceNode {
+		return
+	}
+	for i, mod := range modules.Content {
+		if mod.Kind != yaml.MappingNode {
+			continue
+		}
+		fixModulePrerelease(moduleFixPath(mod, i), mod, applied)
+	}
+}
+
+// moduleFixPath builds the finding path for module i, preferring its name,
+// mirroring modulePath in the checker.
+func moduleFixPath(mod *yaml.Node, i int) string {
+	if ni := findKey(mod, "name"); ni >= 0 && mod.Content[ni+1].Value != "" {
+		return "modules." + mod.Content[ni+1].Value
+	}
+	return "modules[" + strconv.Itoa(i) + "]"
 }
