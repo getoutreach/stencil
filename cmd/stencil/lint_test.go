@@ -284,3 +284,24 @@ func TestRunLintModuleManifestFixStdin(t *testing.T) {
 	assert.Assert(t, strings.Contains(stdout.String(), "schema:"),
 		"fixed YAML must be written to stdout, got:\n%s", stdout.String())
 }
+
+func TestRunLintAggregateFixInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "manifest.yaml")
+	assert.NilError(t, os.WriteFile(path,
+		[]byte("name: m\nmodules:\n  - name: dep\n    prerelease: true\n"), 0o600))
+
+	// stencil lint <dir> --fix. The aggregate action runs on the root `lint`
+	// command itself, so args[0] is "lint" (its own name, per urfave/cli/v3's
+	// Command.Run convention) and the Writer is set on the root.
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(),
+		[]string{"lint", "--fix", dir})
+	assert.NilError(t, err) // prerelease warning fixed → exit 0
+
+	out, _ := os.ReadFile(path)
+	assert.Assert(t, strings.Contains(string(out), "channel: rc"),
+		"aggregate --fix should migrate prerelease, got:\n%s", string(out))
+	assert.Assert(t, !strings.Contains(string(out), "prerelease:"))
+}

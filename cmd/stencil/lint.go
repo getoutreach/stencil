@@ -97,6 +97,26 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	}
 
 	log := newLintLogger(c)
+
+	if c.Bool("fix") {
+		// Aggregate --fix covers the manifest only (templates: future DT-4828).
+		fixPath := filepath.Join(dir, "manifest.yaml")
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+		if readErr != nil {
+			if os.IsNotExist(readErr) {
+				finding := lint.Finding{
+					Severity: lint.SeverityError,
+					Path:     fixPath,
+					Message:  fmt.Sprintf("manifest file not found: %s", fixPath),
+				}
+				logFindings(log, []lint.Finding{finding})
+				return failIfFindings([]lint.Finding{finding}, c.Bool("warnings-as-errors"))
+			}
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
+	}
+
 	runners := []runner{
 		manifestRunner(filepath.Join(dir, "manifest.yaml")),
 		// DT-4828 appends a template runner here.
