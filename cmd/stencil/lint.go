@@ -213,10 +213,14 @@ func runManifestReader(log logrus.FieldLogger, name string, r io.Reader) ([]lint
 }
 
 // logFindings logs each finding via logrus (stderr). Errors log at error level,
-// warnings at warn level, and info findings at info level.
+// warnings at warn level, and info findings at info level. When a finding has a
+// resolved source line (Line > 0), it is attached as a "line" field.
 func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 	for _, f := range findings {
 		entry := log.WithField("path", f.Path)
+		if f.Line > 0 {
+			entry = entry.WithField("line", f.Line)
+		}
 		switch f.Severity {
 		case lint.SeverityWarning:
 			entry.Warn(f.Message)

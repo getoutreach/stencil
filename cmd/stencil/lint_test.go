@@ -97,6 +97,26 @@ func TestLogFindingsRoutesInfoToInfoLevel(t *testing.T) {
 	assert.Assert(t, strings.Contains(out, "deprecated msg"))
 }
 
+func TestLogFindingsIncludesLineWhenSet(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	logFindings(log, []lint.Finding{
+		{Severity: lint.SeverityWarning, Path: "arguments.x.type", Message: "dep", Line: 4},
+		{Severity: lint.SeverityError, Path: "manifest.yaml", Message: "empty"}, // Line 0
+	})
+
+	out := buf.String()
+	// The finding with a line emits a line field...
+	assert.Assert(t, strings.Contains(out, "line=4"),
+		"expected line field for the lined finding, got: %s", out)
+	// ...and the zero-line finding does not.
+	assert.Assert(t, !strings.Contains(out, "line=0"),
+		"zero-line findings must not emit a line field, got: %s", out)
+}
+
 func TestResolveManifestReaderMissing(t *testing.T) {
 	r, closer, finding, err := resolveManifestReader(filepath.Join(t.TempDir(), "nope.yaml"))
 	assert.NilError(t, err)
