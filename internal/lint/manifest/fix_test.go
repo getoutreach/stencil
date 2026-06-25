@@ -343,3 +343,31 @@ func TestFixBytesNoChange(t *testing.T) {
 	assert.Equal(t, 0, len(applied))
 	assert.Equal(t, "name: m\n", string(fixed))
 }
+
+func TestFixPreservesHeadAndFootComments(t *testing.T) {
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  x:\n" +
+		"    # head on values\n" +
+		"    values: [a, b] # line on values\n" +
+		"    # foot on values\n"
+	out, _ := fixString(t, in)
+	assert.Assert(t, strings.Contains(out, "# head on values"),
+		"head comment must survive migration, got:\n%s", out)
+	assert.Assert(t, strings.Contains(out, "# line on values"),
+		"line comment must survive migration, got:\n%s", out)
+	assert.Assert(t, strings.Contains(out, "# foot on values"),
+		"foot comment must survive migration, got:\n%s", out)
+}
+
+func TestFixPrereleaseCarriesHeadComment(t *testing.T) {
+	in := "name: m\n" +
+		"modules:\n" +
+		"  - name: dep\n" +
+		"    # use rc channel\n" +
+		"    prerelease: true\n"
+	out, _ := fixString(t, in)
+	assert.Assert(t, strings.Contains(out, "# use rc channel"),
+		"head comment must move to channel, got:\n%s", out)
+	assert.Assert(t, strings.Contains(out, "channel: rc"))
+}

@@ -70,6 +70,20 @@ func setIfAbsent(m *yaml.Node, key string, val *yaml.Node) bool {
 	return true
 }
 
+// carryKeyComments copies the head and foot comments from src (the original
+// key node being migrated away) onto the key node named key in mapping m.
+// yaml.v3 stores a mapping entry's head/foot comments on its KEY node, so when
+// a migration synthesizes a new key it must carry these over or they are lost.
+// The line comment is preserved separately via the reused value node.
+func carryKeyComments(m *yaml.Node, key string, src *yaml.Node) {
+	i := findKey(m, key)
+	if i < 0 {
+		return
+	}
+	m.Content[i].HeadComment = src.HeadComment
+	m.Content[i].FootComment = src.FootComment
+}
+
 // scalarsEqual reports whether a and b are both scalar nodes with equal values.
 func scalarsEqual(a, b *yaml.Node) bool {
 	return a != nil && b != nil &&
@@ -104,8 +118,10 @@ func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
 		})
 		return
 	}
+	srcKey := arg.Content[i] // capture before removeKey (i still valid here)
 	removeKey(arg, "type")
 	setIfAbsent(schema, "type", typeVal)
+	carryKeyComments(schema, "type", srcKey)
 	*applied = append(*applied, Applied{
 		Path:    "arguments." + argName + ".type",
 		Message: "migrated 'type' into 'schema.type'",
@@ -134,8 +150,10 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 		})
 		return
 	}
+	srcKey := arg.Content[i] // capture before removeKey
 	removeKey(arg, "values")
 	setIfAbsent(schema, "enum", valuesVal)
+	carryKeyComments(schema, "enum", srcKey)
 	*applied = append(*applied, Applied{
 		Path:    "arguments." + argName + ".values",
 		Message: "migrated 'values' into 'schema.enum'",
@@ -156,9 +174,11 @@ func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
 	}
 	switch val.Value {
 	case "true":
+		srcKey := mod.Content[i] // capture before removeKey
 		removeKey(mod, "prerelease")
 		if setIfAbsent(mod, "channel",
 			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rc"}) {
+			carryKeyComments(mod, "channel", srcKey)
 			*applied = append(*applied, Applied{
 				Path:    modPath + ".prerelease",
 				Message: "migrated 'prerelease: true' to 'channel: rc'",
