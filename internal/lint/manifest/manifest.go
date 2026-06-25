@@ -27,54 +27,75 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
-// Load reads a manifest from r and decodes it twice: once strictly
-// (rejecting unknown keys) to surface structural problems, and once leniently
-// so the returned manifest is populated for field-level checks even when the
-// strict decode failed.
+// LoadResult holds the outcome of decoding a manifest for linting.
+type LoadResult struct {
+	// Manifest is the leniently-decoded manifest, or nil if the YAML could not
+	// be decoded at all.
+	Manifest *configuration.TemplateRepositoryManifest
+	// Root is the first document's YAML node tree, used to resolve finding
+	// paths to source lines. It is nil if the bytes did not parse as a node.
+	Root *yaml.Node
+	// StrictErr is the strict-decode error (unknown keys / type errors), or nil.
+	// For empty input it is io.EOF.
+	StrictErr error
+	// MultiDoc is true when r contains more than one YAML document.
+	MultiDoc bool
+}
+
+// Load reads a manifest from r and decodes it: once strictly (rejecting unknown
+// keys) to surface structural problems, once leniently so the returned manifest
+// is populated for field-level checks even when the strict decode failed, and
+// once into a yaml.Node tree to retain source positions for line annotation.
 //
-// strictErr is the strict-decode error (if any); for empty input it is io.EOF.
-// mf is nil only when the lenient decode also fails (truly malformed YAML).
-// multiDoc is true when r contains more than one YAML document. readErr is
-// non-nil only when reading from r itself fails.
-func Load(r io.Reader) (mf *configuration.TemplateRepositoryManifest,
-	strictErr error, multiDoc bool, readErr error) {
+// The returned error is non-nil only when reading from r itself fails.
+func Load(r io.Reader) (*LoadResult, error) {
 	raw, err := io.ReadAll(r)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, err
 	}
+
+	res := &LoadResult{}
 
 	// Strict decode into a throwaway manifest to capture unknown-key/type errors.
 	strictDec := yaml.NewDecoder(bytes.NewReader(raw))
 	strictDec.KnownFields(true)
 	var strictManifest configuration.TemplateRepositoryManifest
-	strictErr = strictDec.Decode(&strictManifest)
+	res.StrictErr = strictDec.Decode(&strictManifest)
 
-	// Lenient decode so field checks can run regardless of strictErr. Retain the
+	// Node decode for source positions. A failure here is non-fatal: lint still
+	// runs on the struct path, just without line numbers.
+	var node yaml.Node
+	if err := yaml.Unmarshal(raw, &node); err == nil {
+		res.Root = &node
+	}
+
+	// Lenient decode so field checks can run regardless of StrictErr. Retain the
 	// decoder so we can probe for a second document afterward.
 	lenientDec := yaml.NewDecoder(bytes.NewReader(raw))
 	var lenientManifest configuration.TemplateRepositoryManifest
 	if err := lenientDec.Decode(&lenientManifest); err != nil {
 		// Empty or malformed input: no usable manifest for field checks.
-		return nil, strictErr, false, nil
+		return res, nil
 	}
-	mf = &lenientManifest
+	res.Manifest = &lenientManifest
 
 	// Probe for a second document on the (already-advanced) lenient decoder.
 	var discard any
 	if err := lenientDec.Decode(&discard); err == nil {
-		multiDoc = true
+		res.MultiDoc = true
 	}
 
-	return mf, strictErr, multiDoc, nil
+	return res, nil
 }
 
-// Validate runs the manifest lint checks and returns every finding. It never
-// fails fast. strictErr is the error (if any) returned by the strict YAML
-// decode in Load; mf may be nil if the YAML could not be decoded at all, in
-// which case only the strict-decode finding (check 1) is returned and checks
-// 2-7 are skipped.
-func Validate(mf *configuration.TemplateRepositoryManifest, strictErr error) []lint.Finding {
+// Validate runs the manifest lint checks and returns every finding, each
+// annotated with the source line of the YAML key it references when that line
+// can be resolved. It never fails fast. res.Manifest may be nil if the YAML
+// could not be decoded at all, in which case only the strict-decode finding
+// (check 1) is returned and checks 2-7 are skipped.
+func Validate(res *LoadResult) []lint.Finding {
 	var f lint.Findings
+	mf, strictErr := res.Manifest, res.StrictErr
 
 	// Check 1: strict decode succeeded.
 	if strictErr != nil {
@@ -95,7 +116,16 @@ func Validate(mf *configuration.TemplateRepositoryManifest, strictErr error) []l
 	checkArguments(&f, mf)
 	checkModules(&f, mf)
 
-	return f.Items()
+	// Annotate each finding with its source line where resolvable.
+	findings := f.Items()
+	if res.Root != nil {
+		for i := range findings {
+			if findings[i].Line == 0 {
+				findings[i].Line = resolvePath(res.Root, findings[i].Path)
+			}
+		}
+	}
+	return findings
 }
 
 // checkName implements check 2. A manifest's name is a Go import path

@@ -198,15 +198,15 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 }
 
 // runManifestReader loads + validates one manifest from r and returns its
-// findings. It does NOT log; logging is the command's responsibility so
-// findings are emitted exactly once. name is used in messages.
+// findings. It does NOT log the findings themselves; logging is the command's
+// responsibility so findings are emitted exactly once. name is used in messages.
 func runManifestReader(log logrus.FieldLogger, name string, r io.Reader) ([]lint.Finding, error) {
-	mf, strictErr, multiDoc, readErr := lintmanifest.Load(r)
-	if readErr != nil {
-		return nil, errors.Wrapf(readErr, "failed to read manifest %q", name)
+	res, err := lintmanifest.Load(r)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read manifest %q", name)
 	}
-	findings := lintmanifest.Validate(mf, strictErr)
-	if multiDoc {
+	findings := lintmanifest.Validate(res)
+	if res.MultiDoc {
 		log.WithField("path", name).Warn("additional YAML documents after the first are ignored")
 	}
 	return findings, nil

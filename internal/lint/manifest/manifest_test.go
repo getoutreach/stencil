@@ -15,53 +15,54 @@ import (
 )
 
 func TestLoadValid(t *testing.T) {
-	mf, strictErr, multiDoc, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
 	assert.NilError(t, readErr)
-	assert.NilError(t, strictErr)
-	assert.Equal(t, false, multiDoc)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name)
+	assert.NilError(t, res.StrictErr)
+	assert.Equal(t, false, res.MultiDoc)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name)
+	assert.Assert(t, res.Root != nil)
 }
 
 func TestLoadUnknownKeyStrictFailsButLenientPopulates(t *testing.T) {
 	// 'nme' is an unknown key: strict decode fails, but lenient decode still
 	// populates the rest so field checks can run.
-	mf, strictErr, _, readErr := lintmanifest.Load(strings.NewReader("name: testing\nnme: oops\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\nnme: oops\n"))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name)
+	assert.Assert(t, res.StrictErr != nil)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name)
 }
 
 func TestLoadNestedUnknownKey(t *testing.T) {
 	// An unknown key inside an argument must also trip strict decoding.
 	in := "name: testing\narguments:\n  foo:\n    scema: {}\n"
-	_, strictErr, _, readErr := lintmanifest.Load(strings.NewReader(in))
+	res, readErr := lintmanifest.Load(strings.NewReader(in))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil)
+	assert.Assert(t, res.StrictErr != nil)
 }
 
 func TestLoadEmptyInput(t *testing.T) {
-	mf, strictErr, _, readErr := lintmanifest.Load(strings.NewReader("   \n# just a comment\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("   \n# just a comment\n"))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil) // io.EOF
-	assert.Assert(t, mf == nil)
+	assert.Assert(t, res.StrictErr != nil) // io.EOF
+	assert.Assert(t, res.Manifest == nil)
 }
 
 func TestLoadMultiDocument(t *testing.T) {
-	mf, strictErr, multiDoc, readErr := lintmanifest.Load(
+	res, readErr := lintmanifest.Load(
 		strings.NewReader("name: testing\n---\nname: second\n"))
 	assert.NilError(t, readErr)
-	assert.NilError(t, strictErr)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name) // only doc 1 is read
-	assert.Equal(t, true, multiDoc)
+	assert.NilError(t, res.StrictErr)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name) // only doc 1 is read
+	assert.Equal(t, true, res.MultiDoc)
 }
 
 // validateString is a convenience that runs Load + Validate over a YAML string.
 func validateString(in string) []lint.Finding {
-	mf, strictErr, _, _ := lintmanifest.Load(strings.NewReader(in))
-	return lintmanifest.Validate(mf, strictErr)
+	res, _ := lintmanifest.Load(strings.NewReader(in))
+	return lintmanifest.Validate(res)
 }
 
 // hasFinding reports whether findings contains one with the given severity and path
