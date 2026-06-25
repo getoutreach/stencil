@@ -61,3 +61,16 @@ func TestInfofAndCountsIgnoresInfo(t *testing.T) {
 	assert.Equal(t, 0, errs)
 	assert.Equal(t, 0, warns)
 }
+
+func TestFindingLineDefaultsToZero(t *testing.T) {
+	var f lint.Findings
+	f.Errorf("name", "name is required")
+	items := f.Items()
+	assert.Equal(t, 1, len(items))
+	// Findings built via the helpers carry no line (0) by default.
+	assert.Equal(t, 0, items[0].Line)
+
+	// A Finding may carry an explicit line.
+	withLine := lint.Finding{Severity: lint.SeverityWarning, Path: "arguments.x.type", Message: "dep", Line: 4}
+	assert.Equal(t, 4, withLine.Line)
+}

@@ -15,53 +15,54 @@ import (
 )
 
 func TestLoadValid(t *testing.T) {
-	mf, strictErr, multiDoc, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
 	assert.NilError(t, readErr)
-	assert.NilError(t, strictErr)
-	assert.Equal(t, false, multiDoc)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name)
+	assert.NilError(t, res.StrictErr)
+	assert.Equal(t, false, res.MultiDoc)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name)
+	assert.Assert(t, res.Root != nil)
 }
 
 func TestLoadUnknownKeyStrictFailsButLenientPopulates(t *testing.T) {
 	// 'nme' is an unknown key: strict decode fails, but lenient decode still
 	// populates the rest so field checks can run.
-	mf, strictErr, _, readErr := lintmanifest.Load(strings.NewReader("name: testing\nnme: oops\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\nnme: oops\n"))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name)
+	assert.Assert(t, res.StrictErr != nil)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name)
 }
 
 func TestLoadNestedUnknownKey(t *testing.T) {
 	// An unknown key inside an argument must also trip strict decoding.
 	in := "name: testing\narguments:\n  foo:\n    scema: {}\n"
-	_, strictErr, _, readErr := lintmanifest.Load(strings.NewReader(in))
+	res, readErr := lintmanifest.Load(strings.NewReader(in))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil)
+	assert.Assert(t, res.StrictErr != nil)
 }
 
 func TestLoadEmptyInput(t *testing.T) {
-	mf, strictErr, _, readErr := lintmanifest.Load(strings.NewReader("   \n# just a comment\n"))
+	res, readErr := lintmanifest.Load(strings.NewReader("   \n# just a comment\n"))
 	assert.NilError(t, readErr)
-	assert.Assert(t, strictErr != nil) // io.EOF
-	assert.Assert(t, mf == nil)
+	assert.Assert(t, res.StrictErr != nil) // io.EOF
+	assert.Assert(t, res.Manifest == nil)
 }
 
 func TestLoadMultiDocument(t *testing.T) {
-	mf, strictErr, multiDoc, readErr := lintmanifest.Load(
+	res, readErr := lintmanifest.Load(
 		strings.NewReader("name: testing\n---\nname: second\n"))
 	assert.NilError(t, readErr)
-	assert.NilError(t, strictErr)
-	assert.Assert(t, mf != nil)
-	assert.Equal(t, "testing", mf.Name) // only doc 1 is read
-	assert.Equal(t, true, multiDoc)
+	assert.NilError(t, res.StrictErr)
+	assert.Assert(t, res.Manifest != nil)
+	assert.Equal(t, "testing", res.Manifest.Name) // only doc 1 is read
+	assert.Equal(t, true, res.MultiDoc)
 }
 
 // validateString is a convenience that runs Load + Validate over a YAML string.
 func validateString(in string) []lint.Finding {
-	mf, strictErr, _, _ := lintmanifest.Load(strings.NewReader(in))
-	return lintmanifest.Validate(mf, strictErr)
+	res, _ := lintmanifest.Load(strings.NewReader(in))
+	return lintmanifest.Validate(res)
 }
 
 // hasFinding reports whether findings contains one with the given severity and path
@@ -279,4 +280,76 @@ func hasFindingMsg(findings []lint.Finding, path, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestValidateAnnotatesLines(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   x:
+	// 4     type: string
+	// 5     values: [a, b]
+	const in = `name: testing
+arguments:
+  x:
+    type: string
+    values: [a, b]
+`
+	got := validateString(in)
+
+	// Both deprecation warnings carry the line of their key.
+	assert.Equal(t, 4, findingLine(t, got, "arguments.x.type"))
+	assert.Equal(t, 5, findingLine(t, got, "arguments.x.values"))
+}
+
+func TestValidateAnnotatesSchemaErrorLine(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   bad:
+	// 4     schema:
+	// 5       type: notarealtype
+	const in = `name: testing
+arguments:
+  bad:
+    schema:
+      type: notarealtype
+`
+	got := validateString(in)
+	assert.Equal(t, 4, findingLine(t, got, "arguments.bad.schema"))
+}
+
+func TestValidateAnnotatesRequiredDefaultLine(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   x:
+	// 4     required: true
+	// 5     default: hi
+	const in = `name: testing
+arguments:
+  x:
+    required: true
+    default: hi
+`
+	got := validateString(in)
+	// The required+default finding is anchored on the argument block key (x:).
+	assert.Equal(t, 3, findingLine(t, got, "arguments.x"))
+}
+
+func TestValidateWholeDocumentFindingHasNoLine(t *testing.T) {
+	got := validateString("  \n") // empty manifest → check-1 finding
+	assert.Equal(t, 1, len(got))
+	assert.Equal(t, "manifest.yaml", got[0].Path)
+	assert.Equal(t, 0, got[0].Line) // whole-document: no resolvable line
+}
+
+// findingLine returns the Line of the first finding at path, failing the test
+// if no such finding exists.
+func findingLine(t *testing.T, findings []lint.Finding, path string) int {
+	t.Helper()
+	for _, f := range findings {
+		if f.Path == path {
+			return f.Line
+		}
+	}
+	t.Fatalf("no finding at path %q in %v", path, findings)
+	return 0
 }

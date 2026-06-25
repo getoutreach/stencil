@@ -31,6 +31,9 @@ type Finding struct {
 	Path string
 	// Message is a human-readable description of the problem.
 	Message string
+	// Line is the 1-based source line of the YAML key this finding references,
+	// or 0 when no line is known (whole-document findings, or an unresolved path).
+	Line int
 }
 
 // Findings accumulates Finding values during a lint run. The zero value is
