@@ -281,3 +281,75 @@ func hasFindingMsg(findings []lint.Finding, path, substr string) bool {
 	}
 	return false
 }
+
+func TestValidateAnnotatesLines(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   x:
+	// 4     type: string
+	// 5     values: [a, b]
+	const in = `name: testing
+arguments:
+  x:
+    type: string
+    values: [a, b]
+`
+	got := validateString(in)
+
+	// Both deprecation warnings carry the line of their key.
+	assert.Equal(t, 4, findingLine(t, got, "arguments.x.type"))
+	assert.Equal(t, 5, findingLine(t, got, "arguments.x.values"))
+}
+
+func TestValidateAnnotatesSchemaErrorLine(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   bad:
+	// 4     schema:
+	// 5       type: notarealtype
+	const in = `name: testing
+arguments:
+  bad:
+    schema:
+      type: notarealtype
+`
+	got := validateString(in)
+	assert.Equal(t, 4, findingLine(t, got, "arguments.bad.schema"))
+}
+
+func TestValidateAnnotatesRequiredDefaultLine(t *testing.T) {
+	// 1 name: testing
+	// 2 arguments:
+	// 3   x:
+	// 4     required: true
+	// 5     default: hi
+	const in = `name: testing
+arguments:
+  x:
+    required: true
+    default: hi
+`
+	got := validateString(in)
+	// The required+default finding is anchored on the argument block key (x:).
+	assert.Equal(t, 3, findingLine(t, got, "arguments.x"))
+}
+
+func TestValidateWholeDocumentFindingHasNoLine(t *testing.T) {
+	got := validateString("  \n") // empty manifest → check-1 finding
+	assert.Equal(t, 1, len(got))
+	assert.Equal(t, "manifest.yaml", got[0].Path)
+	assert.Equal(t, 0, got[0].Line) // whole-document: no resolvable line
+}
+
+// findingLine returns the Line of the first finding at path, failing the test
+// if no such finding exists.
+func findingLine(t *testing.T, findings []lint.Finding, path string) int {
+	t.Helper()
+	for _, f := range findings {
+		if f.Path == path {
+			return f.Line
+		}
+	}
+	t.Fatalf("no finding at path %q in %v", path, findings)
+	return 0
+}
