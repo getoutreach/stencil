@@ -124,10 +124,21 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 
 	// stdin mode
 	if c.Args().First() == "-" {
-		if stdinIsTTY() {
+		if readerIsTTY(c.Reader) {
 			return errors.New("'-' expects piped input, not an interactive terminal")
 		}
-		findings, err := runManifestReader(log, "<stdin>", c.Reader)
+		raw, err := io.ReadAll(c.Reader)
+		if err != nil {
+			return errors.Wrap(err, "failed to read stdin")
+		}
+		if c.Bool("fix") {
+			// Fixed YAML goes to stdout; diagnostics go to the logger (stderr).
+			return fixAndRelint(c, log, "<stdin>", raw, func(fixed []byte) error {
+				_, werr := c.Writer.Write(fixed)
+				return werr
+			})
+		}
+		findings, err := runManifestReader(log, "<stdin>", bytes.NewReader(raw))
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -138,6 +149,30 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 	path := "./manifest.yaml"
 	if c.Args().Len() == 1 {
 		path = c.Args().First()
+	}
+
+	if c.Bool("fix") {
+		// Resolve a directory arg to its manifest.yaml, then fix in place.
+		fixPath := path
+		if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
+			fixPath = filepath.Join(path, "manifest.yaml")
+		}
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+		if readErr != nil {
+			if os.IsNotExist(readErr) {
+				// Missing file is a finding, consistent with the non-fix path.
+				finding := lint.Finding{
+					Severity: lint.SeverityError,
+					Path:     fixPath,
+					Message:  fmt.Sprintf("manifest file not found: %s", fixPath),
+				}
+				logFindings(log, []lint.Finding{finding})
+				return failManifest(log, fixPath, []lint.Finding{finding},
+					c.Bool("warnings-as-errors"))
+			}
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
 	}
 
 	r, closer, finding, err := resolveManifestReader(path)
@@ -268,6 +303,23 @@ func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
 	}
 }
 
+// writeFixedFile returns a writer that overwrites path with the fixed bytes,
+// but only when they differ from the current contents (so a no-op fix does not
+// dirty the file or bump its mtime). The existing file mode is preserved.
+func writeFixedFile(path string) func([]byte) error {
+	return func(fixed []byte) error {
+		current, err := os.ReadFile(path) //nolint:gosec // Why: user-provided lint target.
+		if err == nil && bytes.Equal(current, fixed) {
+			return nil // no change: leave the file untouched
+		}
+		mode := os.FileMode(0o644)
+		if info, statErr := os.Stat(path); statErr == nil {
+			mode = info.Mode().Perm()
+		}
+		return os.WriteFile(path, fixed, mode)
+	}
+}
+
 // fixAndRelint applies safe deprecation fixes to raw, writes the fixed bytes via
 // writeFixed (in-place for a file, or to stdout for '-'), logs each applied fix,
 // then re-lints the fixed content and applies the warnings-as-errors policy to
@@ -323,9 +375,18 @@ func stdinIsPipe() bool {
 	return info.Mode().IsRegular() && info.Size() > 0
 }
 
-// stdinIsTTY reports whether stdin is an interactive terminal.
-func stdinIsTTY() bool {
-	info, err := os.Stdin.Stat()
+// readerIsTTY reports whether r is an interactive terminal. Only an *os.File
+// backed by a character device (e.g. the real os.Stdin at a TTY) qualifies; any
+// other reader (a pipe, a file redirect, or a reader injected by a test or
+// programmatic caller) is treated as non-interactive. This keeps the real CLI
+// behavior identical (c.Reader defaults to os.Stdin) while letting in-process
+// callers feed piped input through c.Reader.
+func readerIsTTY(r io.Reader) bool {
+	f, ok := r.(*os.File)
+	if !ok {
+		return false
+	}
+	info, err := f.Stat()
 	if err != nil {
 		return false
 	}

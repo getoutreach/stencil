@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -192,4 +193,94 @@ func flagPresent(flags []cli.Flag, name string) bool {
 		}
 	}
 	return false
+}
+
+// runModuleManifest invokes the real `lint module-manifest` action via the
+// command tree, with the given trailing args, the --fix flag, and an optional
+// stdin reader / stdout writer. It returns the command's error (nil means exit
+// 0). Effects are asserted via the file, stdout, and this error; the action
+// builds its own logger, so logger text is not captured here.
+//
+// args[0] is the root command's own name ("lint"), per urfave/cli/v3's
+// Command.Run convention (args[0] is consumed as the program/command name).
+// The reader/writer are set on the module-manifest subcommand (the command that
+// runs the action); urfave/cli/v3 defaults each command's Reader/Writer
+// independently and does not inherit them from the parent.
+func runModuleManifest(t *testing.T, args []string, fix bool,
+	stdin io.Reader, stdout io.Writer) error {
+	t.Helper()
+	root := NewLintCommand()
+	for _, sub := range root.Commands {
+		if sub.Name == "module-manifest" {
+			sub.Writer = stdout
+			if stdin != nil {
+				sub.Reader = stdin
+			}
+		}
+	}
+
+	fullArgs := []string{"lint", "module-manifest"}
+	if fix {
+		fullArgs = append(fullArgs, "--fix")
+	}
+	fullArgs = append(fullArgs, args...)
+
+	return root.Run(context.Background(), fullArgs)
+}
+
+func TestRunLintModuleManifestFixInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "manifest.yaml")
+	assert.NilError(t, os.WriteFile(path,
+		[]byte("name: m\narguments:\n  x:\n    type: string\n"), 0o600))
+
+	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	assert.NilError(t, err) // the only finding was a fixable warning → exit 0
+
+	out, readErr := os.ReadFile(path)
+	assert.NilError(t, readErr)
+	assert.Assert(t, strings.Contains(string(out), "schema:"),
+		"file should be rewritten with schema, got:\n%s", string(out))
+	assert.Assert(t, !strings.Contains(string(out), "\n    type:"),
+		"deprecated type should be gone, got:\n%s", string(out))
+}
+
+func TestRunLintModuleManifestFixLeavesUnfixable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "manifest.yaml")
+	// A fixable warning (type) AND an unfixable error (bad type token).
+	assert.NilError(t, os.WriteFile(path,
+		[]byte("name: m\ntype: bogus\narguments:\n  x:\n    type: string\n"), 0o600))
+
+	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	assert.Assert(t, err != nil, "remaining error must fail the run")
+
+	out, _ := os.ReadFile(path)
+	assert.Assert(t, strings.Contains(string(out), "schema:"),
+		"the fixable warning should still have been applied")
+}
+
+func TestRunLintModuleManifestFixNoOpDoesNotRewrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "manifest.yaml")
+	clean := []byte("name: m\n")
+	assert.NilError(t, os.WriteFile(path, clean, 0o600))
+
+	info1, _ := os.Stat(path)
+	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	assert.NilError(t, err)
+
+	out, _ := os.ReadFile(path)
+	assert.Equal(t, string(clean), string(out)) // unchanged bytes
+	info2, _ := os.Stat(path)
+	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
+}
+
+func TestRunLintModuleManifestFixStdin(t *testing.T) {
+	in := strings.NewReader("name: m\narguments:\n  x:\n    type: string\n")
+	var stdout bytes.Buffer
+	err := runModuleManifest(t, []string{"-"}, true, in, &stdout)
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(stdout.String(), "schema:"),
+		"fixed YAML must be written to stdout, got:\n%s", stdout.String())
 }
