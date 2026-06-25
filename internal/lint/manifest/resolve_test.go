@@ -69,6 +69,8 @@ modules:
 		{"whole-document path misses", "manifest.yaml", 0},
 		{"nonexistent argument misses", "arguments.nope.type", 0},
 		{"out-of-range module index misses", "modules[9].url", 0},
+		{"malformed index brace misses", "modules[0.url", 0},
+		{"non-numeric index misses", "modules[x].url", 0},
 		{"nonexistent module name misses", "modules.no-such-module.url", 0},
 		{"empty path misses", "", 0},
 	}
