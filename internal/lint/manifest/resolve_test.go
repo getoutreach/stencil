@@ -30,10 +30,15 @@ func TestResolvePath(t *testing.T) {
 	// 7     values: [a, b]
 	// 8     schema:
 	// 9       type: string
-	// 10 modules:
-	// 11   - name: github.com/getoutreach/stencil-base
-	// 12     url: https://x
-	// 13     prerelease: true
+	// 10   aws.IRSA:
+	// 11     type: boolean
+	// 12   terraform.datadog.monitoring.generateSLOs:
+	// 13     type: boolean
+	// 14     default: true
+	// 15 modules:
+	// 16   - name: github.com/getoutreach/stencil-base
+	// 17     url: https://x
+	// 18     prerelease: true
 	const doc = `name: testing
 type: templates
 stencilVersion: ">=1.0.0"
@@ -43,6 +48,11 @@ arguments:
     values: [a, b]
     schema:
       type: string
+  aws.IRSA:
+    type: boolean
+  terraform.datadog.monitoring.generateSLOs:
+    type: boolean
+    default: true
 modules:
   - name: github.com/getoutreach/stencil-base
     url: https://x
@@ -62,10 +72,14 @@ modules:
 		{"argument type field", "arguments.foo.type", 6},
 		{"argument values field", "arguments.foo.values", 7},
 		{"argument schema field", "arguments.foo.schema", 8},
-		{"module url by name", "modules.github.com/getoutreach/stencil-base.url", 12},
-		{"module prerelease by name", "modules.github.com/getoutreach/stencil-base.prerelease", 13},
-		{"module url by index", "modules[0].url", 12},
-		{"module prerelease by index", "modules[0].prerelease", 13},
+		{"dotted argument name, type field", "arguments.aws.IRSA.type", 11},
+		{"dotted argument name, bare", "arguments.aws.IRSA", 10},
+		{"deeply dotted argument name, type field", "arguments.terraform.datadog.monitoring.generateSLOs.type", 13},
+		{"deeply dotted argument name, bare", "arguments.terraform.datadog.monitoring.generateSLOs", 12},
+		{"module url by name", "modules.github.com/getoutreach/stencil-base.url", 17},
+		{"module prerelease by name", "modules.github.com/getoutreach/stencil-base.prerelease", 18},
+		{"module url by index", "modules[0].url", 17},
+		{"module prerelease by index", "modules[0].prerelease", 18},
 		{"whole-document path misses", "manifest.yaml", 0},
 		{"nonexistent argument misses", "arguments.nope.type", 0},
 		{"out-of-range module index misses", "modules[9].url", 0},
@@ -105,13 +119,20 @@ arguments:
 	assert.Equal(t, 2, resolvePath(root, "arguments.foo.type"))
 }
 
-func TestResolvePathDottedArgNameIsKnownLimitation(t *testing.T) {
-	// An argument whose name contains a dot mis-splits; documents the accepted
-	// limitation. "weird.name" splits into "weird"/"name", which won't match.
+func TestResolvePathDottedArgName(t *testing.T) {
+	// Argument names commonly contain dots for namespacing (e.g. "aws.IRSA",
+	// "dependencies.optional"). The resolver must treat the segment between the
+	// "arguments." prefix and a known trailing field as a single flat key.
+	// 1 arguments:
+	// 2   weird.name:
+	// 3     type: string
 	const doc = `arguments:
   weird.name:
     type: string
 `
 	root := parseNode(t, doc)
-	assert.Equal(t, 0, resolvePath(root, "arguments.weird.name.type"))
+	// Field form resolves to the field key line; bare form resolves to the
+	// argument's own key line.
+	assert.Equal(t, 3, resolvePath(root, "arguments.weird.name.type"))
+	assert.Equal(t, 2, resolvePath(root, "arguments.weird.name"))
 }

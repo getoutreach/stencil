@@ -17,9 +17,10 @@ import (
 // finding path within root, or 0 if root is nil or the path cannot be matched.
 // root is a yaml.v3 DocumentNode; the top mapping is its first content child.
 //
-// Module paths are special-cased because module names are Go import paths that
-// contain dots (e.g. github.com/getoutreach/stencil-base), which a naive split
-// on "." would shred. All other paths are walked as dotted mapping keys.
+// Module and argument paths are special-cased because their names contain dots
+// (module names are Go import paths like github.com/getoutreach/stencil-base;
+// argument names are namespaced like aws.IRSA), which a naive split on "." would
+// shred. All other paths are walked as dotted mapping keys.
 //
 // On any failure to match, resolvePath returns 0. It never panics.
 func resolvePath(root *yaml.Node, path string) int {
@@ -37,9 +38,12 @@ func resolvePath(root *yaml.Node, path string) int {
 		return 0
 	}
 
-	// Module paths need bespoke parsing (names contain dots).
+	// Module and argument paths need bespoke parsing (names contain dots).
 	if path == "modules" || strings.HasPrefix(path, "modules.") || strings.HasPrefix(path, "modules[") {
 		return resolveModulePath(top, path)
+	}
+	if strings.HasPrefix(path, "arguments.") {
+		return resolveArgumentPath(top, path)
 	}
 
 	// General dotted mapping walk.
@@ -57,6 +61,45 @@ func resolvePath(root *yaml.Node, path string) int {
 		cur = deref(valNode)
 	}
 	return lastKeyLine
+}
+
+// argumentFields are the per-argument keys the linter emits finding paths for.
+// They form a closed set, so a finding path "arguments.NAME.FIELD" can be split
+// unambiguously even when NAME itself contains dots: the trailing FIELD is one
+// of these, and everything between "arguments." and it is the (flat) NAME.
+var argumentFields = []string{"type", "values", "schema"}
+
+// resolveArgumentPath resolves "arguments.NAME" and "arguments.NAME.FIELD"
+// within the top mapping, where NAME is a single flat key that may contain dots
+// (e.g. aws.IRSA). FIELD, when present, is one of argumentFields. Returns the
+// FIELD key's line, or the NAME key's line for the bare form, or 0 on any miss.
+func resolveArgumentPath(top *yaml.Node, path string) int {
+	rest := strings.TrimPrefix(path, "arguments.")
+	_, argsVal := mappingChild(top, "arguments")
+	args := deref(argsVal)
+	if args == nil || args.Kind != yaml.MappingNode {
+		return 0
+	}
+
+	// Split off a known trailing field if present; otherwise the whole rest is
+	// the (bare) argument name.
+	name, field := rest, ""
+	for _, fld := range argumentFields {
+		if strings.HasSuffix(rest, "."+fld) {
+			name = strings.TrimSuffix(rest, "."+fld)
+			field = fld
+			break
+		}
+	}
+
+	keyNode, valNode := mappingChild(args, name)
+	if keyNode == nil {
+		return 0
+	}
+	if field == "" {
+		return keyNode.Line
+	}
+	return fieldLineIn(deref(valNode), field)
 }
 
 // resolveModulePath resolves "modules[N].field" and "modules.NAME.field" within
