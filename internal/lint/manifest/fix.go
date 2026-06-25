@@ -8,6 +8,7 @@
 package manifest
 
 import (
+	"bytes"
 	"sort"
 	"strconv"
 
@@ -255,4 +256,32 @@ func moduleFixPath(mod *yaml.Node, i int) string {
 		return "modules." + mod.Content[ni+1].Value
 	}
 	return "modules[" + strconv.Itoa(i) + "]"
+}
+
+// FixBytes decodes raw as a YAML node, applies the safe deprecation migrations,
+// and re-encodes the result with the canonical 2-space indent. ok is false only
+// when raw cannot be decoded as a YAML node, in which case the caller should
+// skip fixing and run the normal lint (which reports the decode error). When ok
+// is true and applied is empty, the document had nothing to fix.
+func FixBytes(raw []byte) (fixed []byte, applied []Applied, ok bool) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, nil, false
+	}
+	if len(doc.Content) == 0 {
+		// Empty document: nothing to fix, but not an error.
+		return raw, nil, true
+	}
+	applied = Fix(&doc)
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		return nil, nil, false
+	}
+	if err := enc.Close(); err != nil {
+		return nil, nil, false
+	}
+	return buf.Bytes(), applied, true
 }

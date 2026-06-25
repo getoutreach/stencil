@@ -320,3 +320,26 @@ func TestFixConservativeSkips(t *testing.T) {
 		assert.Equal(t, 0, len(applied))
 	})
 }
+
+func TestFixBytes(t *testing.T) {
+	in := []byte("name: m\narguments:\n  x:\n    type: string\n")
+	fixed, applied, ok := FixBytes(in)
+	assert.Assert(t, ok)
+	assert.Equal(t, 1, len(applied))
+	assert.Assert(t, strings.Contains(string(fixed), "schema:"))
+	assert.Assert(t, strings.Contains(string(fixed), "type: string"))
+}
+
+func TestFixBytesMalformed(t *testing.T) {
+	// A tab-indented mapping is invalid YAML; FixBytes reports ok=false.
+	_, _, ok := FixBytes([]byte("name: m\n\tbad: true\n"))
+	assert.Assert(t, !ok)
+}
+
+func TestFixBytesNoChange(t *testing.T) {
+	in := []byte("name: m\n")
+	fixed, applied, ok := FixBytes(in)
+	assert.Assert(t, ok)
+	assert.Equal(t, 0, len(applied))
+	assert.Equal(t, "name: m\n", string(fixed))
+}
