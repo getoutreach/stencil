@@ -174,6 +174,13 @@ func TestNewLintCommandShape(t *testing.T) {
 			assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
 		}
 	}
+	// --fix flag present on both the group and the subcommand.
+	assert.Assert(t, flagPresent(cmd.Flags, "fix"))
+	for _, sub := range cmd.Commands {
+		if sub.Name == "module-manifest" {
+			assert.Assert(t, flagPresent(sub.Flags, "fix"))
+		}
+	}
 }
 
 func flagPresent(flags []cli.Flag, name string) bool {

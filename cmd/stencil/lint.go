@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ func NewLintCommand() *cli.Command {
 		Usage:       "Validate a Stencil module without resolving dependencies",
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Commands:    []*cli.Command{newLintModuleManifestCommand()},
 		Action:      runLintAggregate,
 	}
@@ -41,6 +42,16 @@ func warningsAsErrorsFlag() cli.Flag {
 		Name:  "warnings-as-errors",
 		Usage: "treat warnings as errors (fail on any finding)",
 		Value: true,
+	}
+}
+
+// fixFlag is declared on both the lint group and the module-manifest
+// subcommand, since urfave/cli/v3 does not inherit parent flags. It is opt-in.
+func fixFlag() cli.Flag {
+	return &cli.BoolFlag{
+		Name:  "fix",
+		Usage: "automatically fix safe deprecations in place (re-lints after fixing)",
+		Value: false,
 	}
 }
 
@@ -65,7 +76,7 @@ func newLintModuleManifestCommand() *cli.Command {
 		Usage:       "Validate a module's manifest.yaml without resolving dependencies",
 		ArgsUsage:   "[path]",
 		Description: "Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Action:      runLintModuleManifest,
 	}
 }
@@ -248,6 +259,44 @@ func failManifest(log logrus.FieldLogger, name string, findings []lint.Finding, 
 		log.Infof("manifest %q is valid", name)
 	}
 	return nil
+}
+
+// logApplied logs one info line per fix the fixer applied.
+func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
+	for _, a := range applied {
+		log.WithField("path", a.Path).Infof("fixed: %s", a.Message)
+	}
+}
+
+// fixAndRelint applies safe deprecation fixes to raw, writes the fixed bytes via
+// writeFixed (in-place for a file, or to stdout for '-'), logs each applied fix,
+// then re-lints the fixed content and applies the warnings-as-errors policy to
+// whatever remains. If raw cannot be parsed as YAML, fixing is skipped and the
+// normal lint runs so the decode error is reported.
+func fixAndRelint(c *cli.Command, log *logrus.Logger, name string, raw []byte,
+	writeFixed func([]byte) error) error {
+	fixed, applied, ok := lintmanifest.FixBytes(raw)
+	if !ok {
+		// Unparseable: fall back to a normal lint of the original bytes.
+		findings, err := runManifestReader(log, name, bytes.NewReader(raw))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		logFindings(log, findings)
+		return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
+	}
+
+	if err := writeFixed(fixed); err != nil {
+		return errors.Wrap(err, "failed to write fixed manifest")
+	}
+	logApplied(log, applied)
+
+	findings, err := runManifestReader(log, name, bytes.NewReader(fixed))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	logFindings(log, findings)
+	return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
 }
 
 // failIfFindings returns a summary error when the findings fail the policy:
