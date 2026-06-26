@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate the CLI command docs under docs/content/en/commands."
+
+# The generator (docs/gen/commands) builds these docs from stencil's --help.
+# STENCIL_ROOT points it at this working tree (so unreleased flags are
+# captured), and STENCIL_DOCS_VERSION sets the VERSION line, which would
+# otherwise be gobox's placeholder URL.
+set -euo pipefail
+
+root="${MISE_PROJECT_ROOT:?MISE_PROJECT_ROOT is not set; run via 'mise run generate:cli-docs'}"
+version="${STENCIL_DOCS_VERSION:-$(git -C "$root" describe --tags --abbrev=0 2>/dev/null || true)}"
+if [[ -z $version ]]; then
+  echo "Could not determine a version from git tags; set STENCIL_DOCS_VERSION." >&2
+  exit 1
+fi
+
+echo "Regenerating command docs with stencil $version..."
+STENCIL_ROOT="$root" STENCIL_DOCS_VERSION="$version" go run -C "$root/docs" ./gen/commands

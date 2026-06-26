@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -32,12 +33,27 @@ type file struct {
 	Contents string
 }
 
+// stencilCommand returns the base argv used to invoke stencil, a bare
+// "stencil" on PATH by default. When STENCIL_ROOT is set it instead runs that
+// checkout via `go run` (with `-C` because docs/ is its own module), so
+// unreleased flags are documented without installing stencil, and injects
+// STENCIL_DOCS_VERSION into gobox's app.Version for an accurate VERSION line.
+func stencilCommand() []string {
+	root := os.Getenv("STENCIL_ROOT")
+	if root == "" {
+		return []string{"stencil"}
+	}
+	ldflags := "-ldflags=-X=github.com/getoutreach/gobox/pkg/app.Version=" + os.Getenv("STENCIL_DOCS_VERSION")
+	return []string{"go", "run", "-C", root, ldflags, "./cmd/stencil"}
+}
+
 // generateMarkdown generates the markdown files for all functions.
 func generateMarkdown() ([]file, error) {
 	files := make([]file, 0)
 
 	// start with stencil --help
 	commands := [][]string{{}}
+	base := stencilCommand()
 	i := 0 // can't iterate over a slice while modifying it
 	// loop until we've run out of commands (commands grows during iteration)
 	for i < len(commands) {
@@ -49,7 +65,9 @@ func generateMarkdown() ([]file, error) {
 		cmdArgs := append([]string{"--skip-update"}, append(args, "--help")...)
 
 		fmt.Println("Generating documentation for command:", strings.Join(cmdArgs, " "))
-		b, err := exec.Command("stencil", cmdArgs...).CombinedOutput()
+		fullArgs := slices.Concat(base[1:], cmdArgs)
+		//nolint:gosec // Why: dev-only generator; the only variable arg is the trusted STENCIL_ROOT path.
+		b, err := exec.Command(base[0], fullArgs...).CombinedOutput()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to generate docs for command %q", strings.Join(args, " "))
 		}
