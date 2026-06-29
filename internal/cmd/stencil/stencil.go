@@ -28,8 +28,8 @@ import (
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/term"
-	"gopkg.in/yaml.v3"
 )
 
 // Command is a thin wrapper around the codegen package that

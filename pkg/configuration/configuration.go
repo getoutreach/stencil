@@ -11,7 +11,7 @@ import (
 	"os"
 	"regexp"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // ValidateNameRegexp is the regex used to validate the service's name

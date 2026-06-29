@@ -27,9 +27,9 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/urfave/cli/v3 v3.7.0
+	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/sync v0.21.0
 	golang.org/x/term v0.44.0
-	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -145,4 +145,5 @@ require (
 	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
