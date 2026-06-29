@@ -2,7 +2,6 @@
 title: stencil
 linktitle: stencil
 description: a smart templating engine for service development
-date: 2022-05-04
 categories: [commands]
 menu:
   docs:
@@ -16,10 +15,10 @@ NAME:
    stencil - A new cli application
 
 USAGE:
-   stencil [global options] command [command options]
+   stencil [global options] [command [command options]]
 
 VERSION:
-   v1.43.0
+   v1.44.0-rc.2
 
 DESCRIPTION:
    a smart templating engine for service development
@@ -29,19 +28,20 @@ COMMANDS:
    create    
    docs      
    module    
+   lint      Validate a Stencil module without resolving dependencies
    updater   Commands for interacting with the built-in updater
    help, h   Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --concurrent-resolvers value, -c value  Number of concurrent resolvers to use when resolving modules (default: 5)
-   --dry-run, --dryrun                     Don't write files to disk (default: false)
-   --frozen-lockfile                       Use versions from the lockfile instead of the latest (default: false)
-   --use-prerelease                        Use prerelease versions of stencil modules (default: false)
-   --allow-major-version-upgrades          Allow major version upgrades without confirmation (default: false)
-   --debug, -d                             Enables debug logging for version resolution, template render, and other useful information (default: false)
-   --skip-update                           Skips the updater check (default: false)
-   --force-update-check                    Force checking for an update (default: false)
-   --help, -h                              show help
-   --version, -v                           print the version
+   --concurrent-resolvers string, -c string  Number of concurrent resolvers to use when resolving modules (default: 5)
+   --dry-run, --dryrun                       Don't write files to disk
+   --frozen-lockfile                         Use versions from the lockfile instead of the latest
+   --use-prerelease                          Use prerelease versions of stencil modules
+   --allow-major-version-upgrades            Allow major version upgrades without confirmation
+   --debug, -d                               Enables debug logging for version resolution, template render, and other useful information
+   --skip-update                             Skips the updater check
+   --force-update-check                      Force checking for an update
+   --help, -h                                show help
+   --version, -v                             print the version
 
 ```

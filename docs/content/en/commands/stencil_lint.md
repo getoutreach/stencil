@@ -1,8 +1,7 @@
 ---
 title: stencil lint
 linktitle: stencil lint
-description: Validate a Stencil module without resolving dependencies
-date: 2026-06-19
+description: Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)
 categories: [commands]
 menu:
   docs:
