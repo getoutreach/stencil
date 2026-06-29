@@ -22,6 +22,7 @@ DESCRIPTION:
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
+   --fix                 automatically fix safe deprecations in place (re-lints after fixing)
    --help, -h            show help
 
 GLOBAL OPTIONS:
