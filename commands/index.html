@@ -252,16 +252,8 @@ stencil module configure
 stencil updater
 </a>
 </li><li class="f6 fw4">
-<a href=/stencil/commands/stencil_updater_get-channel/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
-stencil updater get-channel
-</a>
-</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_get-channels/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil updater get-channels
-</a>
-</li><li class="f6 fw4">
-<a href=/stencil/commands/stencil_updater_list-releases/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
-stencil updater list-releases
 </a>
 </li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_updater_rollback/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
@@ -304,24 +296,6 @@ Commands Quick Reference
 <p>Below are all of the commands and options exposed by stencil since this documentation was last updated.</p></div></article><div class="flex flex-wrap">
 <section class="flex-ns flex-wrap justify-between w-100">
 <div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
-<div class="bg-white mb2 pa3 pa4-l gray">
-<h1 class="near-black f3">
-<a href=/stencil/commands/stencil_lint/ class="link primary-color dim">stencil lint</a>
-</h1><div class="lh-copy links">
-Validate a Stencil module without resolving dependencies
-<a href=/stencil/commands/stencil_lint/ class="f6 mt2 db link primary-color dim">
-Read More &#187;
-</a>
-</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
-<div class="bg-white mb2 pa3 pa4-l gray">
-<h1 class="near-black f3">
-<a href=/stencil/commands/stencil_lint_module-manifest/ class="link primary-color dim">stencil lint module-manifest</a>
-</h1><div class="lh-copy links">
-Validate a module&rsquo;s manifest.yaml without resolving dependencies
-<a href=/stencil/commands/stencil_lint_module-manifest/ class="f6 mt2 db link primary-color dim">
-Read More &#187;
-</a>
-</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
 <div class="bg-white mb2 pa3 pa4-l gray">
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil/ class="link primary-color dim">stencil</a>
@@ -378,6 +352,24 @@ Read More &#187;
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
 <div class="bg-white mb2 pa3 pa4-l gray">
 <h1 class="near-black f3">
+<a href=/stencil/commands/stencil_lint/ class="link primary-color dim">stencil lint</a>
+</h1><div class="lh-copy links">
+Validate a Stencil module&rsquo;s manifest without resolving dependencies (template linting follows in DT-4828)
+<a href=/stencil/commands/stencil_lint/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
+<a href=/stencil/commands/stencil_lint_module-manifest/ class="link primary-color dim">stencil lint module-manifest</a>
+</h1><div class="lh-copy links">
+Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use &lsquo;-&rsquo; to read from stdin.
+<a href=/stencil/commands/stencil_lint_module-manifest/ class="f6 mt2 db link primary-color dim">
+Read More &#187;
+</a>
+</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
+<div class="bg-white mb2 pa3 pa4-l gray">
+<h1 class="near-black f3">
 <a href=/stencil/commands/stencil_module/ class="link primary-color dim">stencil module</a>
 </h1><div class="lh-copy links">
 Commands to configure template repositories for native-extension functionality, or stencil powered repositories
@@ -398,17 +390,8 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater/ class="link primary-color dim">stencil updater</a>
 </h1><div class="lh-copy links">
-stencil updater NAME: stencil updater - Commands for interacting with the built-in updater USAGE: stencil updater [command options] COMMANDS: set-channel Set the channel to check for updates get-channels Returns the valid channels rollback Rollback to the previous version use Use a specific version of the application status Returns the current status of the updater help, h Shows a list of commands or help for one command OPTIONS: --help, -h show help
+stencil updater NAME: stencil updater - Commands for interacting with the built-in updater USAGE: stencil updater [command [command options]] COMMANDS: set-channel Set the channel to check for updates get-channels Returns the valid channels rollback Rollback to the previous version use Use a specific version of the application status Returns the current status of the updater OPTIONS: --help, -h show help
 <a href=/stencil/commands/stencil_updater/ class="f6 mt2 db link primary-color dim">
-Read More &#187;
-</a>
-</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
-<div class="bg-white mb2 pa3 pa4-l gray">
-<h1 class="near-black f3">
-<a href=/stencil/commands/stencil_updater_get-channel/ class="link primary-color dim">stencil updater get-channel</a>
-</h1><div class="lh-copy links">
-stencil updater get-channel NAME: stencil updater get-channel - Returns the current channel: release or rc USAGE: stencil updater get-channel [command options] [arguments...] OPTIONS: --help, -h show help (default: false)
-<a href=/stencil/commands/stencil_updater_get-channel/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
@@ -416,17 +399,8 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_get-channels/ class="link primary-color dim">stencil updater get-channels</a>
 </h1><div class="lh-copy links">
-stencil updater get-channels NAME: stencil updater get-channels - Returns the valid channels USAGE: stencil updater get-channels [command options] OPTIONS: --help, -h show help
+stencil updater get-channels NAME: stencil updater get-channels - Returns the valid channels USAGE: stencil updater get-channels [options] OPTIONS: --help, -h show help GLOBAL OPTIONS: --concurrent-resolvers string, -c string Number of concurrent resolvers to use when resolving modules (default: 5) --dry-run, --dryrun Don't write files to disk --frozen-lockfile Use versions from the lockfile instead of the latest --use-prerelease Use prerelease versions of stencil modules --allow-major-version-upgrades Allow major version upgrades without confirmation --debug, -d Enables debug logging for version resolution, template render, and other useful information --skip-update Skips the updater check --force-update-check Force checking for an update
 <a href=/stencil/commands/stencil_updater_get-channels/ class="f6 mt2 db link primary-color dim">
-Read More &#187;
-</a>
-</div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
-<div class="bg-white mb2 pa3 pa4-l gray">
-<h1 class="near-black f3">
-<a href=/stencil/commands/stencil_updater_list-releases/ class="link primary-color dim">stencil updater list-releases</a>
-</h1><div class="lh-copy links">
-stencil updater list-releases NAME: stencil updater list-releases - List all releases USAGE: stencil updater list-releases [command options] [arguments...] OPTIONS: --limit value, -L value The number of releases to list (default: 50) --help, -h show help (default: false)
-<a href=/stencil/commands/stencil_updater_list-releases/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
 </div></div></div><div class="relative flex-auto w-100 w-40-l mr3 mb3 bg-white ba b--moon-gray nested-copy-line-height weight-0">
@@ -434,7 +408,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_rollback/ class="link primary-color dim">stencil updater rollback</a>
 </h1><div class="lh-copy links">
-stencil updater rollback NAME: stencil updater rollback - Rollback to the previous version USAGE: stencil updater rollback [command options] OPTIONS: --help, -h show help
+stencil updater rollback NAME: stencil updater rollback - Rollback to the previous version USAGE: stencil updater rollback [options] OPTIONS: --help, -h show help GLOBAL OPTIONS: --concurrent-resolvers string, -c string Number of concurrent resolvers to use when resolving modules (default: 5) --dry-run, --dryrun Don't write files to disk --frozen-lockfile Use versions from the lockfile instead of the latest --use-prerelease Use prerelease versions of stencil modules --allow-major-version-upgrades Allow major version upgrades without confirmation --debug, -d Enables debug logging for version resolution, template render, and other useful information --skip-update Skips the updater check --force-update-check Force checking for an update
 <a href=/stencil/commands/stencil_updater_rollback/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -443,7 +417,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_set-channel/ class="link primary-color dim">stencil updater set-channel</a>
 </h1><div class="lh-copy links">
-stencil updater set-channel NAME: stencil updater set-channel - Set the channel to check for updates USAGE: stencil updater set-channel [command options] OPTIONS: --help, -h show help
+stencil updater set-channel NAME: stencil updater set-channel - Set the channel to check for updates USAGE: stencil updater set-channel [options] OPTIONS: --help, -h show help GLOBAL OPTIONS: --concurrent-resolvers string, -c string Number of concurrent resolvers to use when resolving modules (default: 5) --dry-run, --dryrun Don't write files to disk --frozen-lockfile Use versions from the lockfile instead of the latest --use-prerelease Use prerelease versions of stencil modules --allow-major-version-upgrades Allow major version upgrades without confirmation --debug, -d Enables debug logging for version resolution, template render, and other useful information --skip-update Skips the updater check --force-update-check Force checking for an update
 <a href=/stencil/commands/stencil_updater_set-channel/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -452,7 +426,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_status/ class="link primary-color dim">stencil updater status</a>
 </h1><div class="lh-copy links">
-stencil updater status NAME: stencil updater status - Returns the current status of the updater USAGE: stencil updater status [command options] OPTIONS: --help, -h show help
+stencil updater status NAME: stencil updater status - Returns the current status of the updater USAGE: stencil updater status [options] OPTIONS: --help, -h show help GLOBAL OPTIONS: --concurrent-resolvers string, -c string Number of concurrent resolvers to use when resolving modules (default: 5) --dry-run, --dryrun Don't write files to disk --frozen-lockfile Use versions from the lockfile instead of the latest --use-prerelease Use prerelease versions of stencil modules --allow-major-version-upgrades Allow major version upgrades without confirmation --debug, -d Enables debug logging for version resolution, template render, and other useful information --skip-update Skips the updater check --force-update-check Force checking for an update
 <a href=/stencil/commands/stencil_updater_status/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
@@ -461,7 +435,7 @@ Read More &#187;
 <h1 class="near-black f3">
 <a href=/stencil/commands/stencil_updater_use/ class="link primary-color dim">stencil updater use</a>
 </h1><div class="lh-copy links">
-stencil updater use NAME: stencil updater use - Use a specific version of the application USAGE: stencil updater use [command options] OPTIONS: --help, -h show help
+stencil updater use NAME: stencil updater use - Use a specific version of the application USAGE: stencil updater use [options] OPTIONS: --help, -h show help GLOBAL OPTIONS: --concurrent-resolvers string, -c string Number of concurrent resolvers to use when resolving modules (default: 5) --dry-run, --dryrun Don't write files to disk --frozen-lockfile Use versions from the lockfile instead of the latest --use-prerelease Use prerelease versions of stencil modules --allow-major-version-upgrades Allow major version upgrades without confirmation --debug, -d Enables debug logging for version resolution, template render, and other useful information --skip-update Skips the updater check --force-update-check Force checking for an update
 <a href=/stencil/commands/stencil_updater_use/ class="f6 mt2 db link primary-color dim">
 Read More &#187;
 </a>
