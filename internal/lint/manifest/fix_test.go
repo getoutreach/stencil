@@ -480,3 +480,64 @@ func TestFixDoesNotConsolidateSiblingsWithoutDeprecatedType(t *testing.T) {
 		"properties must be left untouched when there is no deprecated type, got:\n%s", out)
 	assert.Equal(t, 0, len(applied))
 }
+
+func TestFixDoesNotConsolidateSiblingsOnRedundantTypePath(t *testing.T) {
+	// Deprecated `type` equals an existing `schema.type` (redundant path): the
+	// fixer drops the redundant `type` but, by design, does NOT consolidate a
+	// stranded `properties` sibling on this path. The orphan is left for a human
+	// and the strict re-lint still reports it as an error.
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  x:\n" +
+		"    type: object\n" +
+		"    schema:\n" +
+		"      type: object\n" +
+		"    properties:\n" +
+		"      a:\n" +
+		"        type: string\n"
+	out, applied := fixString(t, in)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+
+	// The redundant deprecated `type` is removed...
+	assert.Assert(t, findKey(arg, "type") == -1, "redundant deprecated type should be removed, got:\n%s", out)
+	// ...but `properties` is intentionally left orphaned (not swept into schema).
+	assert.Assert(t, findKey(arg, "properties") >= 0,
+		"properties must stay orphaned on the redundant path, got:\n%s", out)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Assert(t, findKey(schema, "properties") == -1,
+		"properties must NOT be moved into schema on the redundant path, got:\n%s", out)
+	// Exactly one change: the redundant-type removal. No sibling migration entries.
+	assert.Equal(t, 1, len(applied))
+	assert.Equal(t, "arguments.x.type", applied[0].Path)
+
+	// The orphaned sibling is still an unfixable error after fixing.
+	assert.Assert(t, len(fixRelintErrors(t, in)) >= 1,
+		"orphaned properties must remain a strict-decode error")
+}
+
+func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
+	// Deprecated `type` disagrees with an existing `schema.type` (differs path):
+	// the fixer makes NO change at all — neither the type nor the orphaned
+	// `properties` is touched — because the conflict is ambiguous.
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  x:\n" +
+		"    type: object\n" +
+		"    schema:\n" +
+		"      type: string\n" +
+		"    properties:\n" +
+		"      a:\n" +
+		"        type: string\n"
+	out, applied := fixString(t, in)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+
+	// Nothing moved: deprecated type, schema.type, and properties all stay put.
+	assert.Assert(t, findKey(arg, "type") >= 0, "deprecated type must stay on the differs path, got:\n%s", out)
+	assert.Assert(t, findKey(arg, "properties") >= 0, "properties must stay orphaned on the differs path, got:\n%s", out)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Equal(t, "string", schema.Content[findKey(schema, "type")+1].Value)
+	assert.Assert(t, findKey(schema, "properties") == -1)
+	assert.Equal(t, 0, len(applied))
+}
