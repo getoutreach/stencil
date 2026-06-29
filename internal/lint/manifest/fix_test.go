@@ -10,6 +10,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 	"gotest.tools/v3/assert"
+
+	"github.com/getoutreach/stencil/internal/lint"
 )
 
 // mappingFrom decodes a YAML mapping document and returns its root mapping node.
@@ -370,4 +372,111 @@ func TestFixPrereleaseCarriesHeadComment(t *testing.T) {
 	assert.Assert(t, strings.Contains(out, "# use rc channel"),
 		"head comment must move to channel, got:\n%s", out)
 	assert.Assert(t, strings.Contains(out, "channel: rc"))
+}
+
+// fixRelintErrors runs the post-fix strict lint over the fixed output and
+// returns the error-severity findings that remain. It mirrors what the CLI does
+// after writing a fixed manifest.
+func fixRelintErrors(t *testing.T, in string) []lint.Finding {
+	t.Helper()
+	out, _ := fixString(t, in)
+	mf, strictErr, _, readErr := Load(strings.NewReader(out))
+	assert.NilError(t, readErr)
+	var errs []lint.Finding
+	for _, f := range Validate(mf, strictErr) {
+		if f.Severity == lint.SeverityError {
+			errs = append(errs, f)
+		}
+	}
+	return errs
+}
+
+func TestFixConsolidatesUnknownSiblingIntoSchema(t *testing.T) {
+	// The legacy object form: a deprecated `type: object` next to bare schema
+	// keywords (`properties`) placed as siblings of the argument. The fixer must
+	// move BOTH into `schema`, producing a strict-valid object schema.
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  irsa:\n" +
+		"    type: object\n" +
+		"    properties:\n" +
+		"      msk:\n" +
+		"        type: boolean\n" +
+		"    description: IRSA access.\n"
+	out, applied := fixString(t, in)
+
+	// type and properties both live under schema now; description stays an arg field.
+	assert.Assert(t, strings.Contains(out, "schema:"), "got:\n%s", out)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	assert.Assert(t, findKey(arg, "type") == -1, "deprecated type must leave the arg, got:\n%s", out)
+	assert.Assert(t, findKey(arg, "properties") == -1, "stranded properties must leave the arg, got:\n%s", out)
+	assert.Assert(t, findKey(arg, "description") >= 0, "description must remain an arg field, got:\n%s", out)
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Assert(t, findKey(schema, "type") >= 0, "schema.type expected, got:\n%s", out)
+	assert.Assert(t, findKey(schema, "properties") >= 0, "schema.properties expected, got:\n%s", out)
+	assert.Assert(t, len(applied) >= 1)
+
+	// The whole point: the fixed manifest must strictly decode (no unknown-field error).
+	assert.Equal(t, 0, len(fixRelintErrors(t, in)),
+		"fixed manifest must have no remaining strict-decode errors")
+}
+
+func TestFixConsolidatesArraySibling(t *testing.T) {
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  tags:\n" +
+		"    type: array\n" +
+		"    items:\n" +
+		"      type: string\n"
+	out, _ := fixString(t, in)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	schema := arg.Content[findKey(arg, "schema")+1]
+	assert.Assert(t, findKey(schema, "items") >= 0, "items must move into schema, got:\n%s", out)
+	assert.Assert(t, findKey(arg, "items") == -1, "items must leave the arg, got:\n%s", out)
+	assert.Equal(t, 0, len(fixRelintErrors(t, in)))
+}
+
+func TestFixSiblingConsolidationKeepsKnownArgFields(t *testing.T) {
+	// description, required, default must NOT be swept into schema.
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  x:\n" +
+		"    type: object\n" +
+		"    properties:\n" +
+		"      a:\n" +
+		"        type: string\n" +
+		"    required: false\n" +
+		"    default: {}\n" +
+		"    description: keep me\n"
+	out, _ := fixString(t, in)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	for _, k := range []string{"required", "default", "description"} {
+		assert.Assert(t, findKey(arg, k) >= 0, "%s must remain an arg field, got:\n%s", k, out)
+	}
+	schema := arg.Content[findKey(arg, "schema")+1]
+	for _, k := range []string{"required", "default", "description"} {
+		assert.Assert(t, findKey(schema, k) == -1, "%s must NOT be in schema, got:\n%s", k, out)
+	}
+	assert.Equal(t, 0, len(fixRelintErrors(t, in)))
+}
+
+func TestFixDoesNotConsolidateSiblingsWithoutDeprecatedType(t *testing.T) {
+	// No deprecated `type` trigger: a stranded sibling is left for a human.
+	in := "name: m\n" +
+		"arguments:\n" +
+		"  x:\n" +
+		"    schema:\n" +
+		"      type: object\n" +
+		"    properties:\n" +
+		"      a:\n" +
+		"        type: string\n"
+	out, applied := fixString(t, in)
+	doc := mappingFrom(t, out)
+	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	assert.Assert(t, findKey(arg, "properties") >= 0,
+		"properties must be left untouched when there is no deprecated type, got:\n%s", out)
+	assert.Equal(t, 0, len(applied))
 }

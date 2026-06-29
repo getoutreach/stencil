@@ -91,6 +91,48 @@ func scalarsEqual(a, b *yaml.Node) bool {
 		a.Value == b.Value
 }
 
+// knownArgFields are the recognized fields of configuration.Argument. Any other
+// key on an argument mapping is unknown to the struct: the lenient render-time
+// decoder drops it, and the strict lint decoder rejects it. The legacy `type:`
+// form placed JSON-Schema keywords (properties, items, …) here as siblings, so
+// these are the keys the fixer consolidates into `schema` when migrating `type`.
+var knownArgFields = map[string]bool{
+	"description": true,
+	"required":    true,
+	"default":     true,
+	"schema":      true,
+	"deprecated":  true,
+	"type":        true,
+	"values":      true,
+	"from":        true,
+}
+
+// consolidateSchemaSiblings moves every argument sibling key that is not a
+// recognized Argument field into schema, reusing each node verbatim (preserving
+// comments and style). An existing schema key of the same name is never
+// overwritten (setIfAbsent); a colliding sibling is left in place for the
+// linter. Names are collected before mutating, since removal shifts the slice.
+func consolidateSchemaSiblings(arg, schema *yaml.Node, argName string, applied *[]Applied) {
+	var siblings []string
+	for j := 0; j+1 < len(arg.Content); j += 2 {
+		key := arg.Content[j].Value
+		if !knownArgFields[key] {
+			siblings = append(siblings, key)
+		}
+	}
+	for _, key := range siblings {
+		srcKey := arg.Content[findKey(arg, key)]
+		val := removeKey(arg, key)
+		if setIfAbsent(schema, key, val) {
+			carryKeyComments(schema, key, srcKey)
+			*applied = append(*applied, Applied{
+				Path:    "arguments." + argName + "." + key,
+				Message: "migrated schema keyword '" + key + "' into 'schema'",
+			})
+		}
+	}
+}
+
 // fixArgType migrates a deprecated argument `type: X` into `schema.type: X`.
 // It is conservative: it only acts when type is a scalar, never overwrites an
 // existing differing schema.type, and reuses the original value node (keeping
@@ -126,6 +168,9 @@ func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
 		Path:    "arguments." + argName + ".type",
 		Message: "migrated 'type' into 'schema.type'",
 	})
+	// Clean migration path only: relocate any stranded schema-keyword siblings
+	// (e.g. the legacy `type: object` + bare `properties`) into the same schema.
+	consolidateSchemaSiblings(arg, schema, argName, applied)
 }
 
 // fixArgValues migrates a deprecated argument `values: [...]` into
