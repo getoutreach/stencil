@@ -100,18 +100,16 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 
 	if c.Bool("fix") {
 		// Aggregate --fix covers the manifest only (templates: future DT-4828).
-		fixPath := filepath.Join(dir, "manifest.yaml")
+		fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		if finding != nil {
+			logFindings(log, []lint.Finding{*finding})
+			return failIfFindings([]lint.Finding{*finding}, c.Bool("warnings-as-errors"))
+		}
 		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
 		if readErr != nil {
-			if os.IsNotExist(readErr) {
-				finding := lint.Finding{
-					Severity: lint.SeverityError,
-					Path:     fixPath,
-					Message:  fmt.Sprintf("manifest file not found: %s", fixPath),
-				}
-				logFindings(log, []lint.Finding{finding})
-				return failIfFindings([]lint.Finding{finding}, c.Bool("warnings-as-errors"))
-			}
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
 		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
@@ -173,23 +171,17 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 
 	if c.Bool("fix") {
 		// Resolve a directory arg to its manifest.yaml, then fix in place.
-		fixPath := path
-		if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
-			fixPath = filepath.Join(path, "manifest.yaml")
+		fixPath, finding, err := resolveManifestPath(path)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		if finding != nil {
+			logFindings(log, []lint.Finding{*finding})
+			return failManifest(log, fixPath, []lint.Finding{*finding},
+				c.Bool("warnings-as-errors"))
 		}
 		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
 		if readErr != nil {
-			if os.IsNotExist(readErr) {
-				// Missing file is a finding, consistent with the non-fix path.
-				finding := lint.Finding{
-					Severity: lint.SeverityError,
-					Path:     fixPath,
-					Message:  fmt.Sprintf("manifest file not found: %s", fixPath),
-				}
-				logFindings(log, []lint.Finding{finding})
-				return failManifest(log, fixPath, []lint.Finding{finding},
-					c.Bool("warnings-as-errors"))
-			}
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
 		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
@@ -232,6 +224,29 @@ func manifestRunner(path string) runner {
 		}
 		return runManifestReader(log, path, r)
 	}
+}
+
+// resolveManifestPath resolves path to the manifest file to operate on. If path
+// is a directory, it appends "manifest.yaml". A missing file yields a "manifest
+// file not found" finding (not an error), mirroring resolveManifestReader so the
+// --fix and non-fix paths agree on target location and absence reporting.
+func resolveManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+	info, statErr := os.Stat(path)
+	if statErr == nil && info.IsDir() {
+		path = filepath.Join(path, "manifest.yaml")
+		_, statErr = os.Stat(path)
+	}
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return path, &lint.Finding{
+				Severity: lint.SeverityError,
+				Path:     path,
+				Message:  fmt.Sprintf("manifest file not found: %s", path),
+			}, nil
+		}
+		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
+	}
+	return path, nil, nil
 }
 
 // resolveManifestReader resolves path to an io.Reader. If path is a directory,
@@ -345,7 +360,7 @@ func writeFixedFile(path string) func([]byte) error {
 // then re-lints the fixed content and applies the warnings-as-errors policy to
 // whatever remains. If raw cannot be parsed as YAML, fixing is skipped and the
 // normal lint runs so the decode error is reported.
-func fixAndRelint(c *cli.Command, log *logrus.Logger, name string, raw []byte,
+func fixAndRelint(c *cli.Command, log logrus.FieldLogger, name string, raw []byte,
 	writeFixed func([]byte) error) error {
 	fixed, applied, ok := lintmanifest.FixBytes(raw)
 	if !ok {
