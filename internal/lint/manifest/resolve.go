@@ -169,16 +169,14 @@ func deref(n *yaml.Node) *yaml.Node {
 }
 
 // mappingChild finds the key/value pair in a mapping node whose key scalar
-// equals key. Returns (nil, nil) if not found or m is not a mapping.
+// equals key. Returns (nil, nil) if not found or m is not a mapping. Shares the
+// even-index key walk with findKey in fix.go.
 func mappingChild(m *yaml.Node, key string) (keyNode, valNode *yaml.Node) {
 	if m == nil || m.Kind != yaml.MappingNode {
 		return nil, nil
 	}
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		k := m.Content[i]
-		if k.Value == key {
-			return k, m.Content[i+1]
-		}
+	if i := findKey(m, key); i >= 0 {
+		return m.Content[i], m.Content[i+1]
 	}
 	return nil, nil
 }

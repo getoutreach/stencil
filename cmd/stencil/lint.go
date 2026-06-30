@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ func NewLintCommand() *cli.Command {
 		Usage:       "Validate a Stencil module without resolving dependencies",
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Commands:    []*cli.Command{newLintModuleManifestCommand()},
 		Action:      runLintAggregate,
 	}
@@ -41,6 +42,17 @@ func warningsAsErrorsFlag() cli.Flag {
 		Name:  "warnings-as-errors",
 		Usage: "treat warnings as errors (fail on any finding)",
 		Value: true,
+	}
+}
+
+// fixFlag is declared on both the lint group and the module-manifest
+// subcommand, since urfave/cli/v3 does not inherit parent flags. It is opt-in.
+func fixFlag() cli.Flag {
+	return &cli.BoolFlag{
+		Name: "fix",
+		Usage: "automatically fix safe deprecations in place, re-encoding the " +
+			"manifest at 2-space indent when a fix is applied (re-lints after fixing)",
+		Value: false,
 	}
 }
 
@@ -65,7 +77,7 @@ func newLintModuleManifestCommand() *cli.Command {
 		Usage:       "Validate a module's manifest.yaml without resolving dependencies",
 		ArgsUsage:   "[path]",
 		Description: "Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Action:      runLintModuleManifest,
 	}
 }
@@ -86,6 +98,24 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	}
 
 	log := newLintLogger(c)
+
+	if c.Bool("fix") {
+		// Aggregate --fix covers the manifest only (templates: future DT-4828).
+		fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		if finding != nil {
+			logFindings(log, []lint.Finding{*finding})
+			return failIfFindings([]lint.Finding{*finding}, c.Bool("warnings-as-errors"))
+		}
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
+	}
+
 	runners := []runner{
 		manifestRunner(filepath.Join(dir, "manifest.yaml")),
 		// DT-4828 appends a template runner here.
@@ -113,10 +143,21 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 
 	// stdin mode
 	if c.Args().First() == "-" {
-		if stdinIsTTY() {
+		if readerIsTTY(c.Reader) {
 			return errors.New("'-' expects piped input, not an interactive terminal")
 		}
-		findings, err := runManifestReader(log, "<stdin>", c.Reader)
+		raw, err := io.ReadAll(c.Reader)
+		if err != nil {
+			return errors.Wrap(err, "failed to read stdin")
+		}
+		if c.Bool("fix") {
+			// Fixed YAML goes to stdout; diagnostics go to the logger (stderr).
+			return fixAndRelint(c, log, "<stdin>", raw, func(fixed []byte) error {
+				_, werr := c.Writer.Write(fixed)
+				return werr
+			})
+		}
+		findings, err := runManifestReader(log, "<stdin>", bytes.NewReader(raw))
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -127,6 +168,24 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 	path := "./manifest.yaml"
 	if c.Args().Len() == 1 {
 		path = c.Args().First()
+	}
+
+	if c.Bool("fix") {
+		// Resolve a directory arg to its manifest.yaml, then fix in place.
+		fixPath, finding, err := resolveManifestPath(path)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		if finding != nil {
+			logFindings(log, []lint.Finding{*finding})
+			return failManifest(log, fixPath, []lint.Finding{*finding},
+				c.Bool("warnings-as-errors"))
+		}
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
 	}
 
 	r, closer, finding, err := resolveManifestReader(path)
@@ -166,6 +225,29 @@ func manifestRunner(path string) runner {
 		}
 		return runManifestReader(log, path, r)
 	}
+}
+
+// resolveManifestPath resolves path to the manifest file to operate on. If path
+// is a directory, it appends "manifest.yaml". A missing file yields a "manifest
+// file not found" finding (not an error), mirroring resolveManifestReader so the
+// --fix and non-fix paths agree on target location and absence reporting.
+func resolveManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+	info, statErr := os.Stat(path)
+	if statErr == nil && info.IsDir() {
+		path = filepath.Join(path, "manifest.yaml")
+		_, statErr = os.Stat(path)
+	}
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return path, &lint.Finding{
+				Severity: lint.SeverityError,
+				Path:     path,
+				Message:  fmt.Sprintf("manifest file not found: %s", path),
+			}, nil
+		}
+		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
+	}
+	return path, nil, nil
 }
 
 // resolveManifestReader resolves path to an io.Reader. If path is a directory,
@@ -250,6 +332,61 @@ func failManifest(log logrus.FieldLogger, name string, findings []lint.Finding, 
 	return nil
 }
 
+// logApplied logs one info line per fix the fixer applied.
+func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
+	for _, a := range applied {
+		log.WithField("path", a.Path).Infof("fixed: %s", a.Message)
+	}
+}
+
+// writeFixedFile returns a writer that overwrites path with the fixed bytes,
+// but only when they differ from the current contents (so a no-op fix does not
+// dirty the file or bump its mtime). The existing file mode is preserved.
+func writeFixedFile(path string) func([]byte) error {
+	return func(fixed []byte) error {
+		current, err := os.ReadFile(path) //nolint:gosec // Why: user-provided lint target.
+		if err == nil && bytes.Equal(current, fixed) {
+			return nil // no change: leave the file untouched
+		}
+		mode := os.FileMode(0o644)
+		if info, statErr := os.Stat(path); statErr == nil {
+			mode = info.Mode().Perm()
+		}
+		return os.WriteFile(path, fixed, mode)
+	}
+}
+
+// fixAndRelint applies safe deprecation fixes to raw, writes the fixed bytes via
+// writeFixed (in-place for a file, or to stdout for '-'), logs each applied fix,
+// then re-lints the fixed content and applies the warnings-as-errors policy to
+// whatever remains. If raw cannot be parsed as YAML, fixing is skipped and the
+// normal lint runs so the decode error is reported.
+func fixAndRelint(c *cli.Command, log logrus.FieldLogger, name string, raw []byte,
+	writeFixed func([]byte) error) error {
+	fixed, applied, ok := lintmanifest.FixBytes(raw)
+	if !ok {
+		// Unparseable: fall back to a normal lint of the original bytes.
+		findings, err := runManifestReader(log, name, bytes.NewReader(raw))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		logFindings(log, findings)
+		return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
+	}
+
+	if err := writeFixed(fixed); err != nil {
+		return errors.Wrap(err, "failed to write fixed manifest")
+	}
+	logApplied(log, applied)
+
+	findings, err := runManifestReader(log, name, bytes.NewReader(fixed))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	logFindings(log, findings)
+	return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
+}
+
 // failIfFindings returns a summary error when the findings fail the policy:
 // with warningsAsErrors, any finding fails; otherwise only error findings fail.
 func failIfFindings(findings []lint.Finding, warningsAsErrors bool) error {
@@ -274,9 +411,18 @@ func stdinIsPipe() bool {
 	return info.Mode().IsRegular() && info.Size() > 0
 }
 
-// stdinIsTTY reports whether stdin is an interactive terminal.
-func stdinIsTTY() bool {
-	info, err := os.Stdin.Stat()
+// readerIsTTY reports whether r is an interactive terminal. Only an *os.File
+// backed by a character device (e.g. the real os.Stdin at a TTY) qualifies; any
+// other reader (a pipe, a file redirect, or a reader injected by a test or
+// programmatic caller) is treated as non-interactive. This keeps the real CLI
+// behavior identical (c.Reader defaults to os.Stdin) while letting in-process
+// callers feed piped input through c.Reader.
+func readerIsTTY(r io.Reader) bool {
+	f, ok := r.(*os.File)
+	if !ok {
+		return false
+	}
+	info, err := f.Stat()
 	if err != nil {
 		return false
 	}
