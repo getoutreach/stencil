@@ -284,7 +284,7 @@ func fixArguments(root *yaml.Node, applied *[]Applied) {
 	sort.Strings(names)
 
 	for _, name := range names {
-		arg := args.Content[findKey(args, name)+1]
+		arg := deref(args.Content[findKey(args, name)+1])
 		if arg.Kind != yaml.MappingNode {
 			continue
 		}
@@ -306,7 +306,8 @@ func fixModules(root *yaml.Node, applied *[]Applied) {
 	if modules.Kind != yaml.SequenceNode {
 		return
 	}
-	for i, mod := range modules.Content {
+	for i, raw := range modules.Content {
+		mod := deref(raw)
 		if mod.Kind != yaml.MappingNode {
 			continue
 		}
