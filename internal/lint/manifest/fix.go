@@ -10,7 +10,6 @@ package manifest
 import (
 	"bytes"
 	"sort"
-	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,6 +23,7 @@ type Applied struct {
 
 // findKey returns the index in m.Content of the key node named key, or -1.
 // m must be a MappingNode (Content is a flat [key, value, key, value, ...]).
+// This is the package's single even-index key walk; mappingChild builds on it.
 func findKey(m *yaml.Node, key string) int {
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		if m.Content[i].Value == key {
@@ -314,13 +314,14 @@ func fixModules(root *yaml.Node, applied *[]Applied) {
 	}
 }
 
-// moduleFixPath builds the finding path for module i, preferring its name,
-// mirroring modulePath in the checker.
+// moduleFixPath builds the finding path for module i, preferring its name, by
+// delegating to the checker's shared moduleIDPath formatter.
 func moduleFixPath(mod *yaml.Node, i int) string {
-	if ni := findKey(mod, "name"); ni >= 0 && mod.Content[ni+1].Value != "" {
-		return "modules." + mod.Content[ni+1].Value
+	name := ""
+	if ni := findKey(mod, "name"); ni >= 0 {
+		name = mod.Content[ni+1].Value
 	}
-	return "modules[" + strconv.Itoa(i) + "]"
+	return moduleIDPath(name, i)
 }
 
 // FixBytes decodes raw as a YAML node, applies the safe deprecation migrations,

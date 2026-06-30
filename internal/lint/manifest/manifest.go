@@ -216,12 +216,19 @@ func checkModules(f *lint.Findings, mf *configuration.TemplateRepositoryManifest
 	}
 }
 
-// modulePath builds the finding path for module i, preferring its name.
-func modulePath(m *configuration.TemplateRepository, i int) string {
-	if m.Name != "" {
-		return "modules." + m.Name
+// moduleIDPath builds the finding path for module i, preferring its name over
+// its slice index. Shared by the checker (modulePath) and the fixer
+// (moduleFixPath) so their finding paths stay identical.
+func moduleIDPath(name string, i int) string {
+	if name != "" {
+		return "modules." + name
 	}
 	return "modules[" + strconv.Itoa(i) + "]"
+}
+
+// modulePath builds the finding path for module i, preferring its name.
+func modulePath(m *configuration.TemplateRepository, i int) string {
+	return moduleIDPath(m.Name, i)
 }
 
 // compileSchema compiles a single argument schema (Draft 2020-12) without
