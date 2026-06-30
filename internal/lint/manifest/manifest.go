@@ -21,7 +21,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/santhosh-tekuri/jsonschema/v5"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/getoutreach/stencil/internal/lint"
 	"github.com/getoutreach/stencil/pkg/configuration"

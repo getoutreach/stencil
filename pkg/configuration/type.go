@@ -7,7 +7,7 @@ package configuration
 import (
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // TemplateRepositoryType specifies what type of a stencil repository the current one is.

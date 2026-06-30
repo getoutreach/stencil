@@ -29,7 +29,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // localModuleVersion is the version string used for local modules

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // resolvePath returns the 1-based line of the key node identified by a dotted
