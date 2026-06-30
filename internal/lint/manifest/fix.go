@@ -11,7 +11,7 @@ import (
 	"bytes"
 	"sort"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Applied records one fix the fixer made, for logging. Path mirrors the
