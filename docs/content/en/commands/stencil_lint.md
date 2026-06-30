@@ -25,7 +25,7 @@ COMMANDS:
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
-   --fix                 automatically fix safe deprecations in place (re-lints after fixing)
+   --fix                 automatically fix safe deprecations in place, re-encoding the manifest at 2-space indent when a fix is applied (re-lints after fixing)
    --help, -h            show help
 
 ```

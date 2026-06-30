@@ -49,8 +49,9 @@ func warningsAsErrorsFlag() cli.Flag {
 // subcommand, since urfave/cli/v3 does not inherit parent flags. It is opt-in.
 func fixFlag() cli.Flag {
 	return &cli.BoolFlag{
-		Name:  "fix",
-		Usage: "automatically fix safe deprecations in place (re-lints after fixing)",
+		Name: "fix",
+		Usage: "automatically fix safe deprecations in place, re-encoding the " +
+			"manifest at 2-space indent when a fix is applied (re-lints after fixing)",
 		Value: false,
 	}
 }

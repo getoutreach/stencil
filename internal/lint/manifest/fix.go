@@ -206,8 +206,9 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 }
 
 // fixModulePrerelease migrates a deprecated module `prerelease` field. A true
-// value becomes `channel: rc` (unless channel is already set, which is left
-// untouched); a false value is simply removed as a redundant default.
+// value becomes `channel: rc`, unless `channel` is already set, in which case
+// `channel` is preserved and `prerelease` is just dropped; a false value is
+// simply removed as a redundant default.
 func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
 	i := findKey(mod, "prerelease")
 	if i < 0 {
