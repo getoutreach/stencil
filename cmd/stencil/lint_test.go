@@ -305,3 +305,28 @@ func TestRunLintAggregateFixInPlace(t *testing.T) {
 		"aggregate --fix should migrate prerelease, got:\n%s", string(out))
 	assert.Assert(t, !strings.Contains(string(out), "prerelease:"))
 }
+
+// TestRunLintFixMissingManifest pins Fix 4: a --fix run whose target manifest
+// does not exist reports the "manifest file not found" finding (via the shared
+// resolveManifestPath) and fails, on both the module-manifest and aggregate
+// paths — matching the non-fix path's not-found handling rather than crashing
+// or silently succeeding.
+func TestRunLintFixMissingManifest(t *testing.T) {
+	t.Run("module-manifest", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "nope.yaml")
+		err := runModuleManifest(t, []string{missing}, true, nil, io.Discard)
+		assert.Assert(t, err != nil, "missing manifest must fail")
+		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
+			"expected the not-found finding to fail the run, got: %v", err)
+	})
+
+	t.Run("aggregate dir without manifest", func(t *testing.T) {
+		dir := t.TempDir() // no manifest.yaml inside
+		root := NewLintCommand()
+		root.Writer = io.Discard
+		err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+		assert.Assert(t, err != nil, "missing manifest must fail")
+		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
+			"expected the not-found finding to fail the run, got: %v", err)
+	})
+}

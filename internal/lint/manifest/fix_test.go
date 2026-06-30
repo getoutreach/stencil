@@ -348,6 +348,25 @@ func TestFixBytesNoChange(t *testing.T) {
 	assert.Equal(t, "name: m\n", string(fixed))
 }
 
+// TestFixBytesNoOpPreservesNonCanonicalFormatting pins Fix 1: when no
+// deprecation is fixed, FixBytes returns the original bytes verbatim rather
+// than re-encoding them. The input here is clean (nothing to fix) but uses
+// 4-space indentation, which the yaml.v3 encoder would rewrite to 2-space if
+// the no-op path re-encoded. Byte-identical output proves the no-op short
+// circuit; without it this would reformat.
+func TestFixBytesNoOpPreservesNonCanonicalFormatting(t *testing.T) {
+	in := []byte("name: m\n" +
+		"arguments:\n" +
+		"    greeting:\n" +
+		"        schema:\n" +
+		"            type: string\n")
+	fixed, applied, ok := FixBytes(in)
+	assert.Assert(t, ok)
+	assert.Equal(t, 0, len(applied))
+	assert.Equal(t, string(in), string(fixed),
+		"a no-op fix must not reformat the manifest, got:\n%s", string(fixed))
+}
+
 func TestFixPreservesHeadAndFootComments(t *testing.T) {
 	in := "name: m\n" +
 		"arguments:\n" +
@@ -586,4 +605,25 @@ func TestFixArgumentsOrderAndFromSkip(t *testing.T) {
 		"arguments.a.type",
 		"arguments.b.type",
 	}, paths)
+}
+
+// TestFixDerefsAliasedModule pins Fix 9: a module list entry that is a YAML
+// alias to an anchored mapping is dereferenced before the mapping-kind guard,
+// so its deprecated `prerelease` is migrated. Without the deref, fixModules
+// skips the alias node (Kind == AliasNode, not MappingNode) and the deprecation
+// is left in place.
+func TestFixDerefsAliasedModule(t *testing.T) {
+	in := "name: m\n" +
+		"definitions:\n" +
+		"  dep: &dep\n" +
+		"    name: github.com/getoutreach/dep\n" +
+		"    prerelease: true\n" +
+		"modules:\n" +
+		"  - *dep\n"
+	out, applied := fixString(t, in)
+	assert.Assert(t, len(applied) >= 1, "aliased module should be fixed, got %d applied", len(applied))
+	assert.Assert(t, strings.Contains(out, "channel: rc"),
+		"aliased module's prerelease should migrate to channel: rc, got:\n%s", out)
+	assert.Assert(t, !strings.Contains(out, "prerelease:"),
+		"prerelease should be removed from the aliased module, got:\n%s", out)
 }
