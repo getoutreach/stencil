@@ -380,10 +380,10 @@ func TestFixPrereleaseCarriesHeadComment(t *testing.T) {
 func fixRelintErrors(t *testing.T, in string) []lint.Finding {
 	t.Helper()
 	out, _ := fixString(t, in)
-	mf, strictErr, _, readErr := Load(strings.NewReader(out))
+	res, readErr := Load(strings.NewReader(out))
 	assert.NilError(t, readErr)
 	var errs []lint.Finding
-	for _, f := range Validate(mf, strictErr) {
+	for _, f := range Validate(res) {
 		if f.Severity == lint.SeverityError {
 			errs = append(errs, f)
 		}
