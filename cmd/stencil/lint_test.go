@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -225,7 +224,7 @@ func runModuleManifest(t *testing.T, args []string, fix bool,
 	}
 	fullArgs = append(fullArgs, args...)
 
-	return root.Run(context.Background(), fullArgs)
+	return root.Run(t.Context(), fullArgs)
 }
 
 func TestRunLintModuleManifestFixInPlace(t *testing.T) {
@@ -296,7 +295,7 @@ func TestRunLintAggregateFixInPlace(t *testing.T) {
 	// Command.Run convention) and the Writer is set on the root.
 	root := NewLintCommand()
 	root.Writer = io.Discard
-	err := root.Run(context.Background(),
+	err := root.Run(t.Context(),
 		[]string{"lint", "--fix", dir})
 	assert.NilError(t, err) // prerelease warning fixed → exit 0
 
@@ -324,7 +323,7 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 		dir := t.TempDir() // no manifest.yaml inside
 		root := NewLintCommand()
 		root.Writer = io.Discard
-		err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+		err := root.Run(t.Context(), []string{"lint", "--fix", dir})
 		assert.Assert(t, err != nil, "missing manifest must fail")
 		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
 			"expected the not-found finding to fail the run, got: %v", err)
