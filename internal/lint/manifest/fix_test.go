@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/getoutreach/stencil/internal/lint"
+	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
 // mappingFrom decodes a YAML mapping document and returns its root mapping node.
@@ -540,4 +542,48 @@ func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
 	assert.Equal(t, "string", schema.Content[findKey(schema, "type")+1].Value)
 	assert.Assert(t, findKey(schema, "properties") == -1)
 	assert.Equal(t, 0, len(applied))
+}
+
+// TestKnownArgFieldsMatchesArgument asserts knownArgFields lists exactly the
+// yaml tags on configuration.Argument, so a new field cannot be silently swept
+// into schema by consolidateSchemaSiblings.
+func TestKnownArgFieldsMatchesArgument(t *testing.T) {
+	want := map[string]bool{}
+	rt := reflect.TypeOf(configuration.Argument{})
+	for i := 0; i < rt.NumField(); i++ {
+		tag := rt.Field(i).Tag.Get("yaml")
+		if tag == "" || tag == "-" {
+			continue
+		}
+		name := strings.Split(tag, ",")[0]
+		if name == "" {
+			continue
+		}
+		want[name] = true
+	}
+	assert.DeepEqual(t, want, knownArgFields)
+}
+
+// TestFixArgumentsOrderAndFromSkip pins the fixer's iteration contract to the
+// checker's: arguments are visited in sorted key order, and any argument with a
+// from: reference is skipped (its other fields are ignored at render time).
+func TestFixArgumentsOrderAndFromSkip(t *testing.T) {
+	// b and a both have a fixable `type`; c is a from: ref with a `type` that
+	// must be left untouched. Applied paths reflect visitation order.
+	in := "name: m\narguments:\n" +
+		"  b:\n    type: string\n" +
+		"  a:\n    type: string\n" +
+		"  c:\n    from: other\n    type: string\n"
+	root := mappingFrom(t, in)
+	var applied []Applied
+	fixArguments(root, &applied)
+
+	var paths []string
+	for _, a := range applied {
+		paths = append(paths, a.Path)
+	}
+	assert.DeepEqual(t, []string{
+		"arguments.a.type",
+		"arguments.b.type",
+	}, paths)
 }
