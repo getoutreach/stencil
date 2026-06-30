@@ -339,6 +339,12 @@ func FixBytes(raw []byte) (fixed []byte, applied []Applied, ok bool) {
 		return raw, nil, true
 	}
 	applied = Fix(&doc)
+	if len(applied) == 0 {
+		// Nothing changed: return the original bytes verbatim so a no-op
+		// --fix never reformats the file (yaml.v3 does not preserve the
+		// original textual representation).
+		return raw, nil, true
+	}
 
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
