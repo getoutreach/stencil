@@ -74,17 +74,6 @@ func validateString(in string) []lint.Finding {
 	return lintmanifest.Validate(res)
 }
 
-// hasFinding reports whether findings contains one with the given severity and path
-// whose message contains substr.
-func hasFinding(findings []lint.Finding, sev lint.Severity, path, substr string) bool {
-	for _, f := range findings {
-		if f.Severity == sev && f.Path == path && strings.Contains(f.Message, substr) {
-			return true
-		}
-	}
-	return false
-}
-
 // renderFindings formats findings one per line as aligned columns
 // "SEVERITY  PATH:LINE  MESSAGE", or the literal "(no findings)" when empty,
 // for stable, readable snapshotting.
@@ -232,16 +221,6 @@ func TestValidateFromCarveOut(t *testing.T) {
 		"    required: true\n    default: hi\n    type: string\n"
 	got := validateString(in)
 	assert.Equal(t, 0, len(got))
-}
-
-// hasFindingMsg reports whether findings has one at path whose message contains substr.
-func hasFindingMsg(findings []lint.Finding, path, substr string) bool {
-	for _, f := range findings {
-		if f.Path == path && strings.Contains(f.Message, substr) {
-			return true
-		}
-	}
-	return false
 }
 
 func TestValidateAnnotatesLines(t *testing.T) {
