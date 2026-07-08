@@ -5,10 +5,12 @@
 package manifest
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"go.yaml.in/yaml/v3"
 	"gotest.tools/v3/assert"
 
@@ -182,69 +184,66 @@ func fixString(t *testing.T, in string) (string, []Applied) {
 	return encode(t, &doc), applied
 }
 
+// renderFix formats the fixed YAML followed by an "--- applied ---" section
+// listing each applied change as "path  message", or "(none)" when nothing was
+// applied, for stable, readable snapshotting.
+func renderFix(out string, applied []Applied) string {
+	var b strings.Builder
+	b.WriteString(out)
+	b.WriteString("--- applied ---\n")
+	if len(applied) == 0 {
+		b.WriteString("(none)\n")
+		return b.String()
+	}
+	for _, a := range applied {
+		fmt.Fprintf(&b, "%s  %s\n", a.Path, a.Message)
+	}
+	return b.String()
+}
+
 func TestFix(t *testing.T) {
 	tests := []struct {
-		name      string
-		in        string
-		wantOut   string
-		wantCount int
+		name string
+		in   string
 	}{
 		{
-			name:      "arg type only",
-			in:        "name: m\narguments:\n  x:\n    type: string\n",
-			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
-			wantCount: 1,
+			name: "arg type only",
+			in:   "name: m\narguments:\n  x:\n    type: string\n",
 		},
 		{
-			name:      "arg values only",
-			in:        "name: m\narguments:\n  x:\n    values: [a, b]\n",
-			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      enum: [a, b]\n",
-			wantCount: 1,
+			name: "arg values only",
+			in:   "name: m\narguments:\n  x:\n    values: [a, b]\n",
 		},
 		{
 			name: "arg type and values together",
 			in:   "name: m\narguments:\n  x:\n    type: string\n    values: [a, b]\n",
-			wantOut: "name: m\narguments:\n  x:\n    schema:\n      type: string\n" +
-				"      enum: [a, b]\n",
-			wantCount: 2,
 		},
 		{
-			name:      "module prerelease true",
-			in:        "name: m\nmodules:\n  - name: dep\n    prerelease: true\n",
-			wantOut:   "name: m\nmodules:\n  - name: dep\n    channel: rc\n",
-			wantCount: 1,
+			name: "module prerelease true",
+			in:   "name: m\nmodules:\n  - name: dep\n    prerelease: true\n",
 		},
 		{
-			name:      "module prerelease false removed",
-			in:        "name: m\nmodules:\n  - name: dep\n    prerelease: false\n",
-			wantOut:   "name: m\nmodules:\n  - name: dep\n",
-			wantCount: 1,
+			name: "module prerelease false removed",
+			in:   "name: m\nmodules:\n  - name: dep\n    prerelease: false\n",
 		},
 		{
-			name:      "from arg untouched",
-			in:        "name: m\narguments:\n  x:\n    from: dep\n    type: string\n",
-			wantOut:   "name: m\narguments:\n  x:\n    from: dep\n    type: string\n",
-			wantCount: 0,
+			name: "from arg untouched",
+			in:   "name: m\narguments:\n  x:\n    from: dep\n    type: string\n",
 		},
 		{
-			name:      "nothing to fix is byte identical",
-			in:        "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
-			wantOut:   "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
-			wantCount: 0,
+			name: "nothing to fix is byte identical",
+			in:   "name: m\narguments:\n  x:\n    schema:\n      type: string\n",
 		},
 		{
-			name:      "schema.type differs leaves both",
-			in:        "name: m\narguments:\n  x:\n    type: string\n    schema:\n      type: integer\n",
-			wantOut:   "name: m\narguments:\n  x:\n    type: string\n    schema:\n      type: integer\n",
-			wantCount: 0,
+			name: "schema.type differs leaves both",
+			in:   "name: m\narguments:\n  x:\n    type: string\n    schema:\n      type: integer\n",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out, applied := fixString(t, tt.in)
-			assert.Equal(t, tt.wantOut, out)
-			assert.Equal(t, tt.wantCount, len(applied))
+			cupaloy.SnapshotT(t, renderFix(out, applied))
 		})
 	}
 }

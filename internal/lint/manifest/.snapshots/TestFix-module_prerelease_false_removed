@@ -1,0 +1,6 @@
+name: m
+modules:
+  - name: dep
+--- applied ---
+modules.dep.prerelease  removed redundant 'prerelease: false'
+
