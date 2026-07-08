@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate all cupaloy test snapshots (UPDATE_SNAPSHOTS=true go test ./...)."
+
+# Deliberately regenerates every committed .snapshots/ golden from current code.
+# Run this by hand after an intended behavior change, then review the diff before
+# committing. It must never be wired into a normal test run — auto-regenerating
+# snapshots would make them assert nothing.
+set -euo pipefail
+
+root="${MISE_PROJECT_ROOT:?MISE_PROJECT_ROOT is not set; run via 'mise run update-test-snapshots'}"
+
+echo "Regenerating cupaloy snapshots..."
+UPDATE_SNAPSHOTS=true go test -C "$root" ./...
