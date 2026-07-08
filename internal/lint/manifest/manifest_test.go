@@ -5,14 +5,23 @@
 package manifest_test
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"gotest.tools/v3/assert"
 
 	lint "github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
 )
+
+// absSchemaURL matches the machine-specific absolute file:// URL that the JSON
+// schema compiler embeds in error messages (it absolutizes the manifest URL
+// against the current working directory). Normalizing it keeps snapshots
+// portable across checkouts and CI without losing the meaningful suffix.
+var absSchemaURL = regexp.MustCompile(`file://[^ ]*/manifest\.yaml`)
 
 func TestLoadValid(t *testing.T) {
 	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
@@ -76,174 +85,127 @@ func hasFinding(findings []lint.Finding, sev lint.Severity, path, substr string)
 	return false
 }
 
+// renderFindings formats findings one per line as aligned columns
+// "SEVERITY  PATH:LINE  MESSAGE", or the literal "(no findings)" when empty,
+// for stable, readable snapshotting.
+func renderFindings(findings []lint.Finding) string {
+	if len(findings) == 0 {
+		return "(no findings)"
+	}
+	// Compute the path:line column width so the message column aligns.
+	locs := make([]string, len(findings))
+	locWidth := 0
+	for i, f := range findings {
+		locs[i] = fmt.Sprintf("%s:%d", f.Path, f.Line)
+		if len(locs[i]) > locWidth {
+			locWidth = len(locs[i])
+		}
+	}
+	var b strings.Builder
+	for i, f := range findings {
+		msg := absSchemaURL.ReplaceAllString(f.Message, "file://manifest.yaml")
+		fmt.Fprintf(&b, "%-7s  %-*s  %s\n", f.Severity, locWidth, locs[i], msg)
+	}
+	return b.String()
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		name    string
-		in      string
-		want    []lint.Finding // exact set (severity+path), message checked via wantMsg
-		wantMsg map[string]string
-		none    bool // expect zero findings
+		name string
+		in   string
 	}{
 		{
 			name: "valid minimal",
 			in:   "name: testing\n",
-			none: true,
 		},
 		{
 			name: "valid full",
 			in: "name: testing\ntype: templates,extension\nstencilVersion: \">=1.0.0\"\n" +
 				"arguments:\n  greeting:\n    schema:\n      type: string\n",
-			none: true,
 		},
 		{
 			name: "unknown top-level key",
 			in:   "name: testing\nnme: oops\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
 		},
 		{
 			name: "missing name",
 			in:   "type: templates\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "name"}},
-			wantMsg: map[string]string{
-				"name": "name is required",
-			},
 		},
 		{
 			name: "import path name is valid (not a service name)",
 			in:   "name: github.com/getoutreach/stencil-base\n",
-			none: true,
 		},
 		{
 			name: "unknown type",
 			in:   "name: testing\ntype: templaes\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "type"}},
-			wantMsg: map[string]string{
-				"type": "unknown type",
-			},
 		},
 		{
 			name: "invalid schema",
 			in:   "name: testing\narguments:\n  bad:\n    schema:\n      type: notarealtype\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
 		},
 		{
 			name: "https $ref schema reports finding (no network)",
 			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: https://example.com/schema.json\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
 		},
 		{
 			name: "file $ref schema reports finding (no filesystem read)",
 			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: file:///etc/hostname\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
 		},
 		{
 			name: "invalid stencilVersion",
 			in:   "name: testing\nstencilVersion: not-a-constraint\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "stencilVersion"}},
 		},
 		{
 			name: "required with default",
 			in:   "name: testing\narguments:\n  x:\n    required: true\n    default: hi\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.x"}},
-			wantMsg: map[string]string{
-				"arguments.x": "required argument must not set a default",
-			},
 		},
 		{
 			name: "deprecated argument fields",
 			in:   "name: testing\narguments:\n  x:\n    type: string\n    values: [a, b]\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityWarning, Path: "arguments.x.type"},
-				{Severity: lint.SeverityWarning, Path: "arguments.x.values"},
-			},
 		},
 		{
 			name: "deprecated module fields",
 			in:   "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n    url: https://x\n    prerelease: true\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityWarning, Path: "modules.github.com/getoutreach/stencil-base.url"},
-				{Severity: lint.SeverityWarning, Path: "modules.github.com/getoutreach/stencil-base.prerelease"},
-			},
 		},
 		{
 			name: "errors and warnings combined",
 			in:   "name: testing\ntype: bogus\narguments:\n  x:\n    type: string\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "type"},
-				{Severity: lint.SeverityWarning, Path: "arguments.x.type"},
-			},
 		},
 		{
 			name: "strict failure still yields field findings",
 			in:   "name: testing\ntype: templaes\nnme: oops\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "manifest.yaml"},
-				{Severity: lint.SeverityError, Path: "type"},
-			},
 		},
 		{
 			name: "empty input",
 			in:   "  \n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
-			wantMsg: map[string]string{
-				"manifest.yaml": "manifest is empty",
-			},
 		},
 		{
 			name: "numeric name coerced to non-empty string is valid",
 			in:   "name: 123\n",
-			none: true,
 		},
 		{
 			name: "from argument skips field checks",
 			in: "name: testing\narguments:\n  x:\n    from: other\n    required: true\n    default: hi\n" +
 				"    type: string\n    schema:\n      type: notarealtype\n",
-			none: true,
 		},
 		{
 			name: "deprecated argument emits info finding",
 			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: use newArg instead\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityInfo, Path: "arguments.oldArg"},
-			},
-			wantMsg: map[string]string{
-				"arguments.oldArg": "argument \"oldArg\" is deprecated: use newArg instead",
-			},
 		},
 		{
 			name: "deprecated bool form is a strict-decode error",
 			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: true\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "manifest.yaml"},
-			},
 		},
 		{
 			name: "from: arg with deprecated produces no info finding",
 			in: "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n" +
 				"arguments:\n  shared:\n    from: github.com/getoutreach/stencil-base\n    deprecated: ignored\n",
-			none: true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := validateString(test.in)
-			if test.none {
-				assert.Equal(t, 0, len(got), "expected no findings, got %v", got)
-				return
-			}
-			// every expected (severity,path) must be present
-			for _, w := range test.want {
-				assert.Assert(t, hasFinding(got, w.Severity, w.Path, ""),
-					"missing finding %s at %q in %v", w.Severity, w.Path, got)
-			}
-			// no error findings beyond those expected (warnings may include extras only if expected)
-			assert.Equal(t, len(test.want), len(got),
-				"finding count mismatch: want %d, got %v", len(test.want), got)
-			for path, substr := range test.wantMsg {
-				assert.Assert(t, hasFindingMsg(got, path, substr),
-					"missing message %q at %q in %v", substr, path, got)
-			}
+			cupaloy.SnapshotT(t, renderFindings(validateString(test.in)))
 		})
 	}
 }
