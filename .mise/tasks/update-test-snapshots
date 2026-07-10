@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Regenerate all cupaloy test snapshots (UPDATE_SNAPSHOTS=true go test ./...)."
+#MISE description="Regenerate and verify all cupaloy test snapshots"
 
 # Deliberately regenerates every committed .snapshots/ golden from current code.
 # Run this by hand after an intended behavior change, then review the diff before
