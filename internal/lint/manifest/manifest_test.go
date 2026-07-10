@@ -5,9 +5,11 @@
 package manifest_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"gotest.tools/v3/assert"
 
 	lint "github.com/getoutreach/stencil/internal/lint"
@@ -65,62 +67,133 @@ func validateString(in string) []lint.Finding {
 	return lintmanifest.Validate(res)
 }
 
-// hasFinding reports whether findings contains one with the given severity and path
-// whose message contains substr.
-func hasFinding(findings []lint.Finding, sev lint.Severity, path, substr string) bool {
-	for _, f := range findings {
-		if f.Severity == sev && f.Path == path && strings.Contains(f.Message, substr) {
-			return true
+// renderFindings formats findings one per line as aligned columns
+// "SEVERITY  PATH:LINE  MESSAGE", or the literal "(no findings)" when empty,
+// for stable, readable snapshotting.
+//
+// It is used only for findings whose messages are stencil-owned and stable.
+// Cases whose message is third-party text (JSON-schema compiler output) or a
+// Go-internal type name (strict-decode errors) are asserted by severity+path in
+// TestValidateExternalErrors instead, so a dependency bump or type rename does
+// not churn a golden file.
+func renderFindings(findings []lint.Finding) string {
+	if len(findings) == 0 {
+		return "(no findings)\n"
+	}
+	// Compute the severity and path:line column widths so the message column
+	// aligns regardless of which severities are present.
+	sevWidth := 0
+	locs := make([]string, len(findings))
+	locWidth := 0
+	for i, f := range findings {
+		if len(f.Severity) > sevWidth {
+			sevWidth = len(f.Severity)
+		}
+		locs[i] = fmt.Sprintf("%s:%d", f.Path, f.Line)
+		if len(locs[i]) > locWidth {
+			locWidth = len(locs[i])
 		}
 	}
-	return false
+	var b strings.Builder
+	for i, f := range findings {
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n", sevWidth, f.Severity, locWidth, locs[i], f.Message)
+	}
+	return b.String()
 }
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		name    string
-		in      string
-		want    []lint.Finding // exact set (severity+path), message checked via wantMsg
-		wantMsg map[string]string
-		none    bool // expect zero findings
+		name string
+		in   string
 	}{
 		{
 			name: "valid minimal",
 			in:   "name: testing\n",
-			none: true,
 		},
 		{
 			name: "valid full",
 			in: "name: testing\ntype: templates,extension\nstencilVersion: \">=1.0.0\"\n" +
 				"arguments:\n  greeting:\n    schema:\n      type: string\n",
-			none: true,
-		},
-		{
-			name: "unknown top-level key",
-			in:   "name: testing\nnme: oops\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
 		},
 		{
 			name: "missing name",
 			in:   "type: templates\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "name"}},
-			wantMsg: map[string]string{
-				"name": "name is required",
-			},
 		},
 		{
 			name: "import path name is valid (not a service name)",
 			in:   "name: github.com/getoutreach/stencil-base\n",
-			none: true,
 		},
 		{
 			name: "unknown type",
 			in:   "name: testing\ntype: templaes\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "type"}},
-			wantMsg: map[string]string{
-				"type": "unknown type",
-			},
 		},
+		{
+			name: "invalid stencilVersion",
+			in:   "name: testing\nstencilVersion: not-a-constraint\n",
+		},
+		{
+			name: "required with default",
+			in:   "name: testing\narguments:\n  x:\n    required: true\n    default: hi\n",
+		},
+		{
+			name: "deprecated argument fields",
+			in:   "name: testing\narguments:\n  x:\n    type: string\n    values: [a, b]\n",
+		},
+		{
+			name: "deprecated module fields",
+			in:   "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n    url: https://x\n    prerelease: true\n",
+		},
+		{
+			name: "errors and warnings combined",
+			in:   "name: testing\ntype: bogus\narguments:\n  x:\n    type: string\n",
+		},
+		{
+			name: "empty input",
+			in:   "  \n",
+		},
+		{
+			name: "numeric name coerced to non-empty string is valid",
+			in:   "name: 123\n",
+		},
+		{
+			name: "from argument skips field checks",
+			in: "name: testing\narguments:\n  x:\n    from: other\n    required: true\n    default: hi\n" +
+				"    type: string\n    schema:\n      type: notarealtype\n",
+		},
+		{
+			name: "deprecated argument emits info finding",
+			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: use newArg instead\n",
+		},
+		{
+			name: "deprecated bool form is a strict-decode error",
+			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: true\n",
+		},
+		{
+			name: "from: arg with deprecated produces no info finding",
+			in: "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n" +
+				"arguments:\n  shared:\n    from: github.com/getoutreach/stencil-base\n    deprecated: ignored\n",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cupaloy.SnapshotT(t, renderFindings(validateString(test.in)))
+		})
+	}
+}
+
+// TestValidateExternalErrors covers cases whose finding messages are not
+// stencil-owned: JSON-schema compiler output and strict-decode errors carry
+// third-party wording, an internal schema pointer, or the Go type name
+// configuration.TemplateRepositoryManifest. Snapshotting those would couple the
+// goldens to a dependency's exact output, so these assert only severity+path —
+// the contract stencil actually owns — matching the pre-snapshot test.
+func TestValidateExternalErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []lint.Finding // severity+path only; message is third-party text
+	}{
 		{
 			name: "invalid schema",
 			in:   "name: testing\narguments:\n  bad:\n    schema:\n      type: notarealtype\n",
@@ -137,41 +210,9 @@ func TestValidate(t *testing.T) {
 			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
 		},
 		{
-			name: "invalid stencilVersion",
-			in:   "name: testing\nstencilVersion: not-a-constraint\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "stencilVersion"}},
-		},
-		{
-			name: "required with default",
-			in:   "name: testing\narguments:\n  x:\n    required: true\n    default: hi\n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.x"}},
-			wantMsg: map[string]string{
-				"arguments.x": "required argument must not set a default",
-			},
-		},
-		{
-			name: "deprecated argument fields",
-			in:   "name: testing\narguments:\n  x:\n    type: string\n    values: [a, b]\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityWarning, Path: "arguments.x.type"},
-				{Severity: lint.SeverityWarning, Path: "arguments.x.values"},
-			},
-		},
-		{
-			name: "deprecated module fields",
-			in:   "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n    url: https://x\n    prerelease: true\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityWarning, Path: "modules.github.com/getoutreach/stencil-base.url"},
-				{Severity: lint.SeverityWarning, Path: "modules.github.com/getoutreach/stencil-base.prerelease"},
-			},
-		},
-		{
-			name: "errors and warnings combined",
-			in:   "name: testing\ntype: bogus\narguments:\n  x:\n    type: string\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "type"},
-				{Severity: lint.SeverityWarning, Path: "arguments.x.type"},
-			},
+			name: "unknown top-level key",
+			in:   "name: testing\nnme: oops\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
 		},
 		{
 			name: "strict failure still yields field findings",
@@ -181,68 +222,19 @@ func TestValidate(t *testing.T) {
 				{Severity: lint.SeverityError, Path: "type"},
 			},
 		},
-		{
-			name: "empty input",
-			in:   "  \n",
-			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
-			wantMsg: map[string]string{
-				"manifest.yaml": "manifest is empty",
-			},
-		},
-		{
-			name: "numeric name coerced to non-empty string is valid",
-			in:   "name: 123\n",
-			none: true,
-		},
-		{
-			name: "from argument skips field checks",
-			in: "name: testing\narguments:\n  x:\n    from: other\n    required: true\n    default: hi\n" +
-				"    type: string\n    schema:\n      type: notarealtype\n",
-			none: true,
-		},
-		{
-			name: "deprecated argument emits info finding",
-			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: use newArg instead\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityInfo, Path: "arguments.oldArg"},
-			},
-			wantMsg: map[string]string{
-				"arguments.oldArg": "argument \"oldArg\" is deprecated: use newArg instead",
-			},
-		},
-		{
-			name: "deprecated bool form is a strict-decode error",
-			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: true\n",
-			want: []lint.Finding{
-				{Severity: lint.SeverityError, Path: "manifest.yaml"},
-			},
-		},
-		{
-			name: "from: arg with deprecated produces no info finding",
-			in: "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n" +
-				"arguments:\n  shared:\n    from: github.com/getoutreach/stencil-base\n    deprecated: ignored\n",
-			none: true,
-		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := validateString(test.in)
-			if test.none {
-				assert.Equal(t, 0, len(got), "expected no findings, got %v", got)
-				return
-			}
-			// every expected (severity,path) must be present
-			for _, w := range test.want {
-				assert.Assert(t, hasFinding(got, w.Severity, w.Path, ""),
-					"missing finding %s at %q in %v", w.Severity, w.Path, got)
-			}
-			// no error findings beyond those expected (warnings may include extras only if expected)
 			assert.Equal(t, len(test.want), len(got),
-				"finding count mismatch: want %d, got %v", len(test.want), got)
-			for path, substr := range test.wantMsg {
-				assert.Assert(t, hasFindingMsg(got, path, substr),
-					"missing message %q at %q in %v", substr, path, got)
+				"finding count mismatch; got %v", got)
+			// Findings come out in a guaranteed order (checks run in a fixed
+			// sequence and arguments are sorted; see TestValidateDeterministicOrder),
+			// so the positional match against want is intentional, not incidental.
+			for i, w := range test.want {
+				assert.Equal(t, w.Severity, got[i].Severity)
+				assert.Equal(t, w.Path, got[i].Path)
 			}
 		})
 	}
@@ -270,16 +262,6 @@ func TestValidateFromCarveOut(t *testing.T) {
 		"    required: true\n    default: hi\n    type: string\n"
 	got := validateString(in)
 	assert.Equal(t, 0, len(got))
-}
-
-// hasFindingMsg reports whether findings has one at path whose message contains substr.
-func hasFindingMsg(findings []lint.Finding, path, substr string) bool {
-	for _, f := range findings {
-		if f.Path == path && strings.Contains(f.Message, substr) {
-			return true
-		}
-	}
-	return false
 }
 
 func TestValidateAnnotatesLines(t *testing.T) {

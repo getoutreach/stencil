@@ -1,0 +1,2 @@
+error  manifest.yaml:0  invalid manifest: deprecation message must be a string, got !!bool ("true"); the bool form is not supported — supply a migration message
+

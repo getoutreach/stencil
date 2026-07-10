@@ -1,0 +1,8 @@
+name: m
+arguments:
+  x:
+    schema:
+      type: string
+--- applied ---
+(none)
+

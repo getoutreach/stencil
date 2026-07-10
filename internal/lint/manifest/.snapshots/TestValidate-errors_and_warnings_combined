@@ -1,0 +1,3 @@
+error    type:2              unknown type "bogus" (valid: extension, templates)
+warning  arguments.x.type:5  argument field 'type' is deprecated; use 'schema'
+

@@ -1,0 +1,10 @@
+name: m
+arguments:
+  x:
+    schema:
+      type: string
+      enum: [a, b]
+--- applied ---
+arguments.x.type  migrated 'type' into 'schema.type'
+arguments.x.values  migrated 'values' into 'schema.enum'
+

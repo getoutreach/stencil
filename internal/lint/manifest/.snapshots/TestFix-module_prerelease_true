@@ -1,0 +1,7 @@
+name: m
+modules:
+  - name: dep
+    channel: rc
+--- applied ---
+modules.dep.prerelease  migrated 'prerelease: true' to 'channel: rc'
+

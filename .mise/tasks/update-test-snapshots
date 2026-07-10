@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate and verify all cupaloy test snapshots"
+
+# Deliberately regenerates every committed .snapshots/ golden from current code.
+# Run this by hand after an intended behavior change, then review the diff before
+# committing. It must never be wired into a normal test run — auto-regenerating
+# snapshots would make them assert nothing.
+#
+# With cupaloy's default FailOnUpdate, updating a snapshot makes `go test` exit
+# non-zero (each change is reported as a test error), so we can't rely on the
+# regeneration pass's exit code. Instead we regenerate, then run the tests again
+# normally: once the goldens match the code, that second pass fails only on real
+# problems (panics, compile errors, non-snapshot assertions).
+#
+# Note: pkg/stenciltest regenerates its template snapshots on a different trigger
+# (CI being unset, not UPDATE_SNAPSHOTS), so running this outside CI may also
+# refresh those. That RegenerateSnapshots() API is a kludge and future stencil
+# module testing will not carry it, so it is not a pattern to follow.
+set -euo pipefail
+
+root="${MISE_PROJECT_ROOT:?MISE_PROJECT_ROOT is not set; run via 'mise run update-test-snapshots'}"
+
+echo "Regenerating cupaloy snapshots..."
+UPDATE_SNAPSHOTS=true go test -C "$root" ./... >/dev/null 2>&1 || true
+
+echo "Verifying the suite passes against the regenerated snapshots..."
+if ! go test -C "$root" ./...; then
+  echo
+  echo "Tests still fail after regeneration — this is a real failure, not a snapshot update (see output above)." >&2
+  exit 1
+fi
+
+echo
+echo "Snapshots regenerated — review the diff before committing."
