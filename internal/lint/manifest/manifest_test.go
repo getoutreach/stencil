@@ -67,11 +67,6 @@ func validateString(in string) []lint.Finding {
 	return lintmanifest.Validate(res)
 }
 
-// sevColWidth is the fixed width of the severity column in rendered findings.
-// It is len("warning"), the widest of the three severity values; widen this if
-// a longer severity is ever added.
-const sevColWidth = 7
-
 // renderFindings formats findings one per line as aligned columns
 // "SEVERITY  PATH:LINE  MESSAGE", or the literal "(no findings)" when empty,
 // for stable, readable snapshotting.
@@ -85,10 +80,15 @@ func renderFindings(findings []lint.Finding) string {
 	if len(findings) == 0 {
 		return "(no findings)\n"
 	}
-	// Compute the path:line column width so the message column aligns.
+	// Compute the severity and path:line column widths so the message column
+	// aligns regardless of which severities are present.
+	sevWidth := 0
 	locs := make([]string, len(findings))
 	locWidth := 0
 	for i, f := range findings {
+		if len(f.Severity) > sevWidth {
+			sevWidth = len(f.Severity)
+		}
 		locs[i] = fmt.Sprintf("%s:%d", f.Path, f.Line)
 		if len(locs[i]) > locWidth {
 			locWidth = len(locs[i])
@@ -96,7 +96,7 @@ func renderFindings(findings []lint.Finding) string {
 	}
 	var b strings.Builder
 	for i, f := range findings {
-		fmt.Fprintf(&b, "%-*s  %-*s  %s\n", sevColWidth, f.Severity, locWidth, locs[i], f.Message)
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n", sevWidth, f.Severity, locWidth, locs[i], f.Message)
 	}
 	return b.String()
 }
@@ -229,6 +229,9 @@ func TestValidateExternalErrors(t *testing.T) {
 			got := validateString(test.in)
 			assert.Equal(t, len(test.want), len(got),
 				"finding count mismatch; got %v", got)
+			// Findings come out in a guaranteed order (checks run in a fixed
+			// sequence and arguments are sorted; see TestValidateDeterministicOrder),
+			// so the positional match against want is intentional, not incidental.
 			for i, w := range test.want {
 				assert.Equal(t, w.Severity, got[i].Severity)
 				assert.Equal(t, w.Path, got[i].Path)
