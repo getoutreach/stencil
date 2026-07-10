@@ -1,2 +1,0 @@
-error    arguments.bad.schema:4  invalid JSON schema: jsonschema file://manifest.yaml/arguments/bad compilation failed: external $ref not allowed in lint: file:///etc/hostname
-

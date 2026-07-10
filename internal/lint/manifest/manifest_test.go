@@ -6,7 +6,6 @@ package manifest_test
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -16,12 +15,6 @@ import (
 	lint "github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
 )
-
-// absSchemaURL matches the machine-specific absolute file:// URL that the JSON
-// schema compiler embeds in error messages (it absolutizes the manifest URL
-// against the current working directory). Normalizing it keeps snapshots
-// portable across checkouts and CI without losing the meaningful suffix.
-var absSchemaURL = regexp.MustCompile(`file://[^ ]*/manifest\.yaml`)
 
 func TestLoadValid(t *testing.T) {
 	res, readErr := lintmanifest.Load(strings.NewReader("name: testing\n"))
@@ -74,12 +67,23 @@ func validateString(in string) []lint.Finding {
 	return lintmanifest.Validate(res)
 }
 
+// sevColWidth is the fixed width of the severity column in rendered findings.
+// It is len("warning"), the widest of the three severity values; widen this if
+// a longer severity is ever added.
+const sevColWidth = 7
+
 // renderFindings formats findings one per line as aligned columns
 // "SEVERITY  PATH:LINE  MESSAGE", or the literal "(no findings)" when empty,
 // for stable, readable snapshotting.
+//
+// It is used only for findings whose messages are stencil-owned and stable.
+// Cases whose message is third-party text (JSON-schema compiler output) or a
+// Go-internal type name (strict-decode errors) are asserted by severity+path in
+// TestValidateExternalErrors instead, so a dependency bump or type rename does
+// not churn a golden file.
 func renderFindings(findings []lint.Finding) string {
 	if len(findings) == 0 {
-		return "(no findings)"
+		return "(no findings)\n"
 	}
 	// Compute the path:line column width so the message column aligns.
 	locs := make([]string, len(findings))
@@ -92,8 +96,7 @@ func renderFindings(findings []lint.Finding) string {
 	}
 	var b strings.Builder
 	for i, f := range findings {
-		msg := absSchemaURL.ReplaceAllString(f.Message, "file://manifest.yaml")
-		fmt.Fprintf(&b, "%-7s  %-*s  %s\n", f.Severity, locWidth, locs[i], msg)
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n", sevColWidth, f.Severity, locWidth, locs[i], f.Message)
 	}
 	return b.String()
 }
@@ -113,10 +116,6 @@ func TestValidate(t *testing.T) {
 				"arguments:\n  greeting:\n    schema:\n      type: string\n",
 		},
 		{
-			name: "unknown top-level key",
-			in:   "name: testing\nnme: oops\n",
-		},
-		{
 			name: "missing name",
 			in:   "type: templates\n",
 		},
@@ -127,18 +126,6 @@ func TestValidate(t *testing.T) {
 		{
 			name: "unknown type",
 			in:   "name: testing\ntype: templaes\n",
-		},
-		{
-			name: "invalid schema",
-			in:   "name: testing\narguments:\n  bad:\n    schema:\n      type: notarealtype\n",
-		},
-		{
-			name: "https $ref schema reports finding (no network)",
-			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: https://example.com/schema.json\n",
-		},
-		{
-			name: "file $ref schema reports finding (no filesystem read)",
-			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: file:///etc/hostname\n",
 		},
 		{
 			name: "invalid stencilVersion",
@@ -159,10 +146,6 @@ func TestValidate(t *testing.T) {
 		{
 			name: "errors and warnings combined",
 			in:   "name: testing\ntype: bogus\narguments:\n  x:\n    type: string\n",
-		},
-		{
-			name: "strict failure still yields field findings",
-			in:   "name: testing\ntype: templaes\nnme: oops\n",
 		},
 		{
 			name: "empty input",
@@ -195,6 +178,61 @@ func TestValidate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cupaloy.SnapshotT(t, renderFindings(validateString(test.in)))
+		})
+	}
+}
+
+// TestValidateExternalErrors covers cases whose finding messages are not
+// stencil-owned: JSON-schema compiler output and strict-decode errors carry
+// third-party wording, an internal schema pointer, or the Go type name
+// configuration.TemplateRepositoryManifest. Snapshotting those would couple the
+// goldens to a dependency's exact output, so these assert only severity+path —
+// the contract stencil actually owns — matching the pre-snapshot test.
+func TestValidateExternalErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []lint.Finding // severity+path only; message is third-party text
+	}{
+		{
+			name: "invalid schema",
+			in:   "name: testing\narguments:\n  bad:\n    schema:\n      type: notarealtype\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
+		},
+		{
+			name: "https $ref schema reports finding (no network)",
+			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: https://example.com/schema.json\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
+		},
+		{
+			name: "file $ref schema reports finding (no filesystem read)",
+			in:   "name: testing\narguments:\n  bad:\n    schema:\n      $ref: file:///etc/hostname\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "arguments.bad.schema"}},
+		},
+		{
+			name: "unknown top-level key",
+			in:   "name: testing\nnme: oops\n",
+			want: []lint.Finding{{Severity: lint.SeverityError, Path: "manifest.yaml"}},
+		},
+		{
+			name: "strict failure still yields field findings",
+			in:   "name: testing\ntype: templaes\nnme: oops\n",
+			want: []lint.Finding{
+				{Severity: lint.SeverityError, Path: "manifest.yaml"},
+				{Severity: lint.SeverityError, Path: "type"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := validateString(test.in)
+			assert.Equal(t, len(test.want), len(got),
+				"finding count mismatch; got %v", got)
+			for i, w := range test.want {
+				assert.Equal(t, w.Severity, got[i].Severity)
+				assert.Equal(t, w.Path, got[i].Path)
+			}
 		})
 	}
 }

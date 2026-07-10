@@ -1,4 +1,0 @@
-error    manifest.yaml:0  invalid manifest: yaml: unmarshal errors:
-  line 3: field nme not found in type configuration.TemplateRepositoryManifest
-error    type:2           unknown type "templaes" (valid: extension, templates)
-
