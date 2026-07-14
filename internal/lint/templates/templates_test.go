@@ -59,10 +59,23 @@ func TestLint(t *testing.T) {
 			in:   "## <<Stencil::Block(customMise)>>\n{{ file.Block \"customMise\" }}\n## <</Stencil::Block>>\n",
 		},
 		{
-			// Dynamic name: not matched by the block regexes (same limit as
-			// codegen.parseBlocks), so the block is invisible -> no findings.
-			name: "dynamic-name block is not recognized",
-			in:   "###Block({{ $block }})\n{{ file.Block $block }}\n###EndBlock({{ $block }})\n",
+			// Regression: a dynamic-name v2 block WITH file.Block must be clean.
+			// Previously the dynamic start was unmatched while the plain end tag
+			// matched, producing a false "bare end tag" (rule 3).
+			name: "dynamic-name v2 block with file.Block",
+			in: "      ## <<Stencil::Block({{ $blockName }})>>\n" +
+				"      {{ (file.Block $blockName) | trim }}\n" +
+				"      ## <</Stencil::Block>>\n",
+		},
+		{
+			// A dynamic-name v2 block still gets the presence check.
+			name: "dynamic-name v2 block missing file.Block",
+			in:   "## <<Stencil::Block({{ $b }})>>\nno file block here\n## <</Stencil::Block>>\n",
+		},
+		{
+			// Legacy dynamic block: start AND end both unmatched -> balanced, skipped.
+			name: "dynamic-name legacy block is not recognized",
+			in:   "###Block({{ $b }})\n{{ file.Block $b }}\n###EndBlock({{ $b }})\n",
 		},
 		{
 			name: "file.Block with trim marker",

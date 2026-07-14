@@ -24,6 +24,14 @@ import (
 // the argument is intentionally not inspected.
 var fileBlockCall = regexp.MustCompile(`\{\{-?\s*.*\bfile\.Block\b`)
 
+// v2StartAny matches a v2 Block START tag with ANY parenthesized name content,
+// including a dynamic template expression like ({{ $x }}) that the strict
+// codegen.V2BlockPattern rejects. It is a lint-only supplement so a dynamic-name
+// block still balances against its plain <</Stencil::Block>> end tag (avoiding a
+// false "bare end tag") and still gets the presence-based file.Block check. It
+// deliberately does NOT match end tags or EndBlock. The name is display-only.
+var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\(.*\))?>>`)
+
 // blockState tracks the currently open block during a scan.
 type blockState struct {
 	name      string
@@ -196,6 +204,14 @@ func classify(text string) token {
 		case codegen.EndStatement:
 			return token{end: true, legacy: true}
 		}
+	}
+
+	if m := v2StartAny.FindStringSubmatch(text); m != nil {
+		// A dynamic-name v2 Block start (strict V2BlockPattern rejected the
+		// {{...}} name). Recognize it as a start with a display-only name so it
+		// balances and gets the file.Block presence check; the name is never
+		// compared. m[1] is "(expr)" or "" — trim to the raw expression text.
+		return token{start: true, name: trimArgs(m[1])}
 	}
 	return token{}
 }
