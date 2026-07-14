@@ -32,6 +32,15 @@ var fileBlockCall = regexp.MustCompile(`\{\{-?\s*.*\bfile\.Block\b`)
 // deliberately does NOT match end tags or EndBlock. The name is display-only.
 var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\(.*\))?>>`)
 
+// v2EndAny matches a v2 Block END tag with ANY parenthesized content, including
+// a dynamic template expression like ({{ $x }}) that the strict
+// codegen.V2BlockPattern rejects. Lint-only supplement (mirrors v2StartAny) so a
+// dynamic-name block's close balances against its open instead of dangling. The
+// slash after << is required so it never matches an open tag. Note a bare
+// <</Stencil::Block>> (no parens) is already handled by V2BlockPattern, so this
+// only adds the dynamic/parenthesized-close case.
+var v2EndAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<</Stencil::Block(\(.*\))?>>`)
+
 // blockState tracks the currently open block during a scan.
 type blockState struct {
 	name      string
@@ -124,11 +133,19 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 						"preceded by its <<Stencil::Block(name)>> (or Block(name)) start.")
 			default:
 				if !cur.sawFile {
-					// rule 1: missing file.Block.
-					addf(f, name, cur.startLine, lint.SeverityError,
-						"block %q has no file.Block call; user edits inside this block are "+
-							"silently discarded on the next render. Add {{ file.Block %q }} "+
-							"inside the block.", cur.name, cur.name)
+					// rule 1: missing file.Block. For a dynamic name (a template
+					// expression like {{ $b }}), omit the "Add {{ file.Block %q }}"
+					// suffix since it would render nonsensical nested braces.
+					if strings.Contains(cur.name, "{{") {
+						addf(f, name, cur.startLine, lint.SeverityError,
+							"block %q has no file.Block call; user edits inside this block are "+
+								"silently discarded on the next render.", cur.name)
+					} else {
+						addf(f, name, cur.startLine, lint.SeverityError,
+							"block %q has no file.Block call; user edits inside this block are "+
+								"silently discarded on the next render. Add {{ file.Block %q }} "+
+								"inside the block.", cur.name, cur.name)
+					}
 				}
 				cur = nil
 			}
@@ -212,6 +229,12 @@ func classify(text string) token {
 		// balances and gets the file.Block presence check; the name is never
 		// compared. m[1] is "(expr)" or "" — trim to the raw expression text.
 		return token{start: true, name: trimArgs(m[1])}
+	}
+	if v2EndAny.MatchString(text) {
+		// A dynamic-name v2 Block end (strict V2BlockPattern rejected the
+		// {{...}} name). Recognize it as an end so a dynamic-name block's close
+		// balances against its open instead of dangling. Mirrors v2StartAny.
+		return token{end: true}
 	}
 	return token{}
 }

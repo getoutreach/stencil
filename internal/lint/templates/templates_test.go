@@ -73,6 +73,13 @@ func TestLint(t *testing.T) {
 			in:   "## <<Stencil::Block({{ $b }})>>\nno file block here\n## <</Stencil::Block>>\n",
 		},
 		{
+			// Regression: a v2 block opened AND closed with dynamic names must
+			// balance (no false "never closed"). Has file.Block -> clean.
+			name: "dynamic-name v2 block with dynamic close",
+			in: "## <<Stencil::Block({{ $b }})>>\n{{ file.Block $b }}\n" +
+				"## <</Stencil::Block({{ $b }})>>\n",
+		},
+		{
 			// Legacy dynamic block: start AND end both unmatched -> balanced, skipped.
 			name: "dynamic-name legacy block is not recognized",
 			in:   "###Block({{ $b }})\n{{ file.Block $b }}\n###EndBlock({{ $b }})\n",
