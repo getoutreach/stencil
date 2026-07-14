@@ -1,0 +1,3 @@
+error  t.tpl:3  expected no arguments to <</Stencil::Block>>
+error  t.tpl:1  block "x" is never closed. Stencil blocks must be balanced like XML tags: every <<Stencil::Block(x)>> needs a matching <</Stencil::Block>>.
+
