@@ -1,36 +1,28 @@
 ---
-title: stencil
-linktitle: stencil
-description: a smart templating engine for service development
+title: stencil lint templates
+linktitle: stencil lint templates
+description: Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.
 categories: [commands]
 menu:
   docs:
     parent: "commands"
 ---
 
-## stencil
+## stencil lint templates
 
 ```bash
 NAME:
-   stencil - A new cli application
+   stencil lint templates - Validate Stencil templates' block correctness without rendering
 
 USAGE:
-   stencil [global options] [command [command options]]
-
-VERSION:
-   v1.44.0
+   stencil lint templates [options] [files...]
 
 DESCRIPTION:
-   a smart templating engine for service development
+   Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.
 
-COMMANDS:
-   describe  
-   create    
-   docs      
-   module    
-   lint      Validate a Stencil module without resolving dependencies
-   updater   Commands for interacting with the built-in updater
-   help, h   Shows a list of commands or help for one command
+OPTIONS:
+   --warnings-as-errors  treat warnings as errors (fail on any finding)
+   --help, -h            show help
 
 GLOBAL OPTIONS:
    --concurrent-resolvers string, -c string  Number of concurrent resolvers to use when resolving modules (default: 5)
@@ -41,7 +33,5 @@ GLOBAL OPTIONS:
    --debug, -d                               Enables debug logging for version resolution, template render, and other useful information
    --skip-update                             Skips the updater check
    --force-update-check                      Force checking for an update
-   --help, -h                                show help
-   --version, -v                             print the version
 
 ```

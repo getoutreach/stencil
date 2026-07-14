@@ -22,6 +22,7 @@ DESCRIPTION:
 
 COMMANDS:
    module-manifest  Validate a module's manifest.yaml without resolving dependencies
+   templates        Validate Stencil templates' block correctness without rendering
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
