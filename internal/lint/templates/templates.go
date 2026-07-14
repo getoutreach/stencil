@@ -74,6 +74,16 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 			// v2 tag misuse (rule 5): report with the runtime wording, minus
 			// the "line N: " prefix (the line lives in Finding.Line).
 			addf(f, name, line, lint.SeverityError, "%s", misuse)
+			// A misuse tag is a malformed close attempt, so recover the block
+			// state (mirroring the end-tag handling) to avoid a contradictory
+			// rule-2 "never closed" cascade. The rule-5 error is the single
+			// actionable finding.
+			switch {
+			case pendingNested > 0:
+				pendingNested--
+			case cur != nil:
+				cur = nil
+			}
 		case start:
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
