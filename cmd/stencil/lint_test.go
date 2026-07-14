@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,12 +46,12 @@ func TestFailIfFindingsPolicy(t *testing.T) {
 	assert.NilError(t, failIfFindings(nil, true))
 	assert.NilError(t, failIfFindings(nil, false))
 	assert.Error(t, failIfFindings(warnOnly, true),
-		"manifest validation failed: 0 error(s), 1 warning(s)")
+		"lint failed: 0 error(s), 1 warning(s)")
 	assert.NilError(t, failIfFindings(warnOnly, false))
 	assert.Error(t, failIfFindings(errOnly, true),
-		"manifest validation failed: 1 error(s), 0 warning(s)")
+		"lint failed: 1 error(s), 0 warning(s)")
 	assert.Error(t, failIfFindings(errOnly, false),
-		"manifest validation failed: 1 error(s), 0 warning(s)")
+		"lint failed: 1 error(s), 0 warning(s)")
 }
 
 func TestFailIfFindingsInfoOnlyPasses(t *testing.T) {
@@ -328,4 +329,60 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
 			"expected the not-found finding to fail the run, got: %v", err)
 	})
+}
+
+func TestNewLintCommandHasTemplatesSubcommand(t *testing.T) {
+	cmd := NewLintCommand()
+	var hasTemplates bool
+	for _, sub := range cmd.Commands {
+		if sub.Name == "templates" {
+			hasTemplates = true
+			assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
+		}
+	}
+	assert.Assert(t, hasTemplates)
+}
+
+func TestTemplateRunnerFindsBadTemplate(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	// good: has file.Block; bad: block without file.Block.
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "good.tpl"), []byte(good), 0o600))
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "bad.tpl"), []byte(bad), 0o600))
+
+	findings, err := templateRunner(tdir)(discardLogger())
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Path, "bad.tpl"))
+}
+
+func TestTemplateRunnerEmptyDirIsClean(t *testing.T) {
+	findings, err := templateRunner(t.TempDir())(discardLogger())
+	assert.NilError(t, err) // no .tpl files -> nothing to lint
+	assert.Equal(t, 0, len(findings))
+}
+
+func TestRunLintTemplatesStdin(t *testing.T) {
+	// A bad template (block without file.Block) piped via c.Reader with '-'.
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	var out bytes.Buffer
+	cmd := NewLintCommand()
+	// Drive the templates subcommand directly with '-' and a piped reader.
+	var sub *cli.Command
+	for _, s := range cmd.Commands {
+		if s.Name == "templates" {
+			sub = s
+		}
+	}
+	assert.Assert(t, sub != nil)
+	sub.Reader = strings.NewReader(bad)
+	sub.Writer = &out
+	// warnings-as-errors default true; the rule-1 error must fail the run.
+	err := sub.Run(context.Background(), []string{"templates", "-"})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
 }

@@ -12,6 +12,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -19,6 +21,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
+	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
 )
 
 // NewLintCommand returns the `lint` command group: an aggregate `lint [dir]`
@@ -30,7 +33,7 @@ func NewLintCommand() *cli.Command {
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)",
 		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
-		Commands:    []*cli.Command{newLintModuleManifestCommand()},
+		Commands:    []*cli.Command{newLintModuleManifestCommand(), newLintTemplatesCommand()},
 		Action:      runLintAggregate,
 	}
 }
@@ -82,6 +85,157 @@ func newLintModuleManifestCommand() *cli.Command {
 	}
 }
 
+// newLintTemplatesCommand builds the `lint templates [files...]` subcommand.
+func newLintTemplatesCommand() *cli.Command {
+	return &cli.Command{
+		Name:        "templates",
+		Usage:       "Validate Stencil templates' block correctness without rendering",
+		ArgsUsage:   "[files...]",
+		Description: "Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.",
+		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Action:      runLintTemplates,
+	}
+}
+
+// runLintTemplates is the `stencil lint templates [files...]` action.
+func runLintTemplates(_ context.Context, c *cli.Command) error {
+	log := newLintLogger(c)
+
+	// stdin mode: a single '-' reads one template from stdin.
+	if c.Args().Len() == 1 && c.Args().First() == "-" {
+		if readerIsTTY(c.Reader) {
+			return errors.New("'-' expects piped input, not an interactive terminal")
+		}
+		findings, err := linttemplates.LintReader("<stdin>", c.Reader)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		logFindings(log, findings)
+		return failTemplates(log, findings, c.Bool("warnings-as-errors"))
+	}
+
+	// Resolve the set of template files to lint.
+	var files []string
+	if c.Args().Len() == 0 {
+		fs, err := collectTemplateFiles("templates")
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		files = fs
+	} else {
+		for _, arg := range c.Args().Slice() {
+			info, statErr := os.Stat(arg)
+			switch {
+			case statErr == nil && info.IsDir():
+				fs, err := collectTemplateFiles(arg)
+				if err != nil {
+					return errors.Wrap(err, "lint failed")
+				}
+				files = append(files, fs...)
+			default:
+				files = append(files, arg) // file (may be missing -> finding)
+			}
+		}
+	}
+
+	var all []lint.Finding
+	for _, path := range files {
+		findings, err := runTemplateFile(path)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		all = append(all, findings...)
+	}
+	logFindings(log, all)
+	return failTemplates(log, all, c.Bool("warnings-as-errors"))
+}
+
+// templateRunner returns a runner that lints every *.tpl under dir. A missing
+// or empty templates directory yields zero findings (nothing to lint).
+func templateRunner(dir string) runner {
+	return func(_ logrus.FieldLogger) ([]lint.Finding, error) {
+		files, err := collectTemplateFiles(dir)
+		if err != nil {
+			return nil, err
+		}
+		var all []lint.Finding
+		for _, path := range files {
+			findings, ferr := runTemplateFile(path)
+			if ferr != nil {
+				return nil, ferr
+			}
+			all = append(all, findings...)
+		}
+		return all, nil
+	}
+}
+
+// collectTemplateFiles returns every *.tpl file under dir (recursive), sorted
+// for deterministic output. A missing dir yields an empty slice (no error).
+func collectTemplateFiles(dir string) ([]string, error) {
+	info, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to stat %q", dir)
+	}
+	if !info.IsDir() {
+		// A file passed where a dir was expected: lint it directly if .tpl.
+		if strings.HasSuffix(dir, ".tpl") {
+			return []string{dir}, nil
+		}
+		return nil, nil
+	}
+	var files []string
+	walkErr := filepath.WalkDir(dir, func(path string, d os.DirEntry, e error) error {
+		if e != nil {
+			return e
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".tpl") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if walkErr != nil {
+		return nil, errors.Wrapf(walkErr, "failed to walk %q", dir)
+	}
+	sort.Strings(files)
+	return files, nil
+}
+
+// runTemplateFile lints a single template path. A missing file is reported as
+// an error finding (not an error), mirroring resolveManifestReader.
+func runTemplateFile(path string) ([]lint.Finding, error) {
+	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target.
+	if os.IsNotExist(err) {
+		return []lint.Finding{{
+			Severity: lint.SeverityError,
+			Path:     path,
+			Message:  fmt.Sprintf("template file not found: %s", path),
+		}}, nil
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open %q", path)
+	}
+	defer fh.Close()
+	return linttemplates.LintReader(path, fh)
+}
+
+// failTemplates applies the warnings-as-errors policy and logs a success line
+// when the templates pass.
+func failTemplates(log logrus.FieldLogger, findings []lint.Finding, warningsAsErrors bool) error {
+	if err := failIfFindings(findings, warningsAsErrors); err != nil {
+		return err
+	}
+	if _, warnings := lint.Counts(findings); warnings > 0 {
+		log.Infof("templates are valid (%d warning(s))", warnings)
+	} else {
+		log.Infof("templates are valid")
+	}
+	return nil
+}
+
 // runLintAggregate is the `stencil lint [dir]` action.
 func runLintAggregate(_ context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
@@ -118,7 +272,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 
 	runners := []runner{
 		manifestRunner(filepath.Join(dir, "manifest.yaml")),
-		// DT-4828 appends a template runner here.
+		templateRunner(filepath.Join(dir, "templates")),
 	}
 
 	var all []lint.Finding
@@ -395,7 +549,7 @@ func failIfFindings(findings []lint.Finding, warningsAsErrors bool) error {
 	if !fail {
 		return nil
 	}
-	return fmt.Errorf("manifest validation failed: %d error(s), %d warning(s)", errs, warns)
+	return fmt.Errorf("lint failed: %d error(s), %d warning(s)", errs, warns)
 }
 
 // stdinIsPipe reports whether stdin is a pipe or a regular-file redirect (i.e.
