@@ -67,13 +67,13 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 	for line := 1; sc.Scan(); line++ {
 		text := sc.Text()
 
-		start, end, name2, hasArgs, legacy, misuse := classify(text)
+		tok := classify(text)
 
 		switch {
-		case misuse != "":
+		case tok.misuse != "":
 			// v2 tag misuse (rule 5): report with the runtime wording, minus
 			// the "line N: " prefix (the line lives in Finding.Line).
-			addf(f, name, line, lint.SeverityError, "%s", misuse)
+			addf(f, name, line, lint.SeverityError, "%s", tok.misuse)
 			// A misuse tag is a malformed close attempt, so recover the block
 			// state (mirroring the end-tag handling) to avoid a contradictory
 			// rule-2 "never closed" cascade. The rule-5 error is the single
@@ -84,28 +84,27 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 			case cur != nil:
 				cur = nil
 			}
-		case start:
+		case tok.start:
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
 				// inner block's eventual end tag.
 				addf(f, name, line, lint.SeverityError,
 					"block %q opened inside block %q; blocks cannot be nested. "+
-						"Close %q with <</Stencil::Block>> first.", name2, cur.name, cur.name)
+						"Close %q with <</Stencil::Block>> first.", tok.name, cur.name, cur.name)
 				pendingNested++
 				continue
 			}
-			cur = &blockState{name: name2, startLine: line, legacy: legacy}
-			if legacy {
+			cur = &blockState{name: tok.name, startLine: line, legacy: tok.legacy}
+			if tok.legacy {
 				addf(f, name, line, lint.SeverityWarning,
 					"block %q uses deprecated block syntax; please migrate to "+
-						"<<Stencil::Block(%s)>> ... <</Stencil::Block>>.", name2, name2)
+						"<<Stencil::Block(%s)>> ... <</Stencil::Block>>.", tok.name, tok.name)
 			}
 			// A file.Block on the start line itself still counts.
 			if fileBlockCall.MatchString(text) {
 				cur.sawFile = true
 			}
-		case end:
-			_ = hasArgs // hasArgs only meaningful for misuse, handled above
+		case tok.end:
 			switch {
 			case pendingNested > 0:
 				pendingNested--
@@ -145,19 +144,26 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 	return nil
 }
 
-// classify inspects a single line and reports what block token it is, if any.
+// token describes what block construct a single line is, if any.
 //
-//   - start:   a block start tag (v2 <<Stencil::Block(name)>> or legacy Block(name))
-//   - end:     a block end tag (v2 <</Stencil::Block>> or legacy EndBlock(name))
-//   - name2:   the block name (start tags; always a literal, since the regexes
+//   - start:  a block start tag (v2 <<Stencil::Block(name)>> or legacy Block(name))
+//   - end:    a block end tag (v2 <</Stencil::Block>> or legacy EndBlock(name))
+//   - name:   the block name (start tags; always a literal, since the regexes
 //     only match [a-zA-Z0-9 _] — dynamic-name blocks are not matched at all)
-//   - hasArgs: whether an end tag carried an argument (v2 misuse signal)
-//   - legacy:  whether the tag used the deprecated ###Block/### syntax
-//   - misuse:  a non-empty rule-5 message (with no "line N:" prefix) when the
+//   - legacy: whether the tag used the deprecated ###Block/### syntax
+//   - misuse: a non-empty rule-5 message (with no "line N:" prefix) when the
 //     line is a malformed v2 tag; empty otherwise
-//
+type token struct {
+	start  bool
+	end    bool
+	name   string
+	legacy bool
+	misuse string
+}
+
+// classify inspects a single line and reports what block token it is, if any.
 // v2 is matched before legacy, mirroring codegen.parseBlocks.
-func classify(text string) (start, end bool, name2 string, hasArgs, legacy bool, misuse string) {
+func classify(text string) token {
 	if m := codegen.V2BlockPattern.FindStringSubmatch(text); len(m) == 5 {
 		// m[2]="/" for closing tag; m[3]=command; m[4]="(args)" or "".
 		closing := m[2] == "/"
@@ -166,22 +172,19 @@ func classify(text string) (start, end bool, name2 string, hasArgs, legacy bool,
 		switch {
 		case closing && cmd == codegen.EndStatement:
 			// <</Stencil::EndBlock>>
-			return false, false, "", false, false,
-				"Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead"
+			return token{misuse: "Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead"}
 		case closing:
 			if args != "" {
 				// <</Stencil::Block(name)>>
-				return false, false, "", true, false,
-					"expected no arguments to <</Stencil::Block>>"
+				return token{misuse: "expected no arguments to <</Stencil::Block>>"}
 			}
-			return false, true, "", false, false, ""
+			return token{end: true}
 		case cmd == codegen.EndStatement:
 			// <<Stencil::EndBlock>>
-			return false, false, "", false, false,
-				"<<Stencil::EndBlock>> should be <</Stencil::Block>>"
+			return token{misuse: "<<Stencil::EndBlock>> should be <</Stencil::Block>>"}
 		default:
 			// <<Stencil::Block(name)>>
-			return true, false, trimArgs(args), false, false, ""
+			return token{start: true, name: trimArgs(args)}
 		}
 	}
 
@@ -189,12 +192,12 @@ func classify(text string) (start, end bool, name2 string, hasArgs, legacy bool,
 		// m[2]=command; m[3]=name.
 		switch m[2] {
 		case "Block":
-			return true, false, m[3], false, true, ""
+			return token{start: true, name: m[3], legacy: true}
 		case codegen.EndStatement:
-			return false, true, "", false, true, ""
+			return token{end: true, legacy: true}
 		}
 	}
-	return false, false, "", false, false, ""
+	return token{}
 }
 
 // trimArgs turns a captured "(name)" into "name". An empty capture yields "".

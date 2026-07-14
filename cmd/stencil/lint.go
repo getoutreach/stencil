@@ -181,10 +181,8 @@ func collectTemplateFiles(dir string) ([]string, error) {
 		return nil, errors.Wrapf(err, "failed to stat %q", dir)
 	}
 	if !info.IsDir() {
-		// A file passed where a dir was expected: lint it directly if .tpl.
-		if strings.HasSuffix(dir, ".tpl") {
-			return []string{dir}, nil
-		}
+		// Callers only ever pass a templates directory (never a .tpl path), so
+		// a non-directory here is nothing to walk.
 		return nil, nil
 	}
 	var files []string
