@@ -18,7 +18,7 @@ USAGE:
    stencil [global options] [command [command options]]
 
 VERSION:
-   v1.44.0
+   v1.44.0-rc.2
 
 DESCRIPTION:
    a smart templating engine for service development
