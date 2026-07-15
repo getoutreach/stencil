@@ -25,6 +25,12 @@ import (
 // the argument is intentionally not inspected.
 var fileBlockCall = regexp.MustCompile(`\{\{-?\s*.*\bfile\.Block\b`)
 
+// fileBlockNameArg captures the literal name argument of a file.Block call
+// when it's written as a simple quoted string, e.g. file.Block "extraContexts".
+// A non-literal argument (a variable or expression) doesn't match and is
+// simply not attributed to any name.
+var fileBlockNameArg = regexp.MustCompile(`\bfile\.Block\b\s*\(?\s*"([^"]*)"`)
+
 // v2StartAny matches a v2 Block START tag with ANY parenthesized name content,
 // including a dynamic template expression like ({{ $x }}) that the strict
 // codegen.V2BlockPattern rejects. It is a lint-only supplement so a dynamic-name
@@ -89,11 +95,28 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
+	var lines []string
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
+	}
+	if err := sc.Err(); err != nil {
+		return err
+	}
+
+	// Templates sometimes hoist a block's raw contents into a variable via
+	// file.Block *before* the block's own <<Stencil::Block(name)>> start tag
+	// (e.g. to run it through fromYaml and deduplicate against builtin
+	// values), then render that variable inside the tags instead of calling
+	// file.Block there directly. Collecting every literally-named file.Block
+	// call across the whole file lets rule 1 recognize that pattern instead
+	// of only crediting calls that fall between a block's own start/end tags.
+	fileBlockNames := collectFileBlockNames(lines)
+
 	var cur *blockState
 	pendingNested := 0
 
-	for line := 1; sc.Scan(); line++ {
-		text := sc.Text()
+	for line := 1; line <= len(lines); line++ {
+		text := lines[line-1]
 
 		tok := classify(text)
 
@@ -109,7 +132,7 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 			// leftover nested credit cannot swallow a later legitimate end tag,
 			// and run the rule-1 file.Block check so a block closed by a misuse
 			// tag still reports silently-discarded user edits.
-			cur, pendingNested = closeBlock(f, name, cur, pendingNested)
+			cur, pendingNested = closeBlock(f, name, cur, pendingNested, fileBlockNames)
 		case tok.start:
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
@@ -142,7 +165,7 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 						"balanced like XML tags: a <</Stencil::Block>> (or EndBlock) must be "+
 						"preceded by its <<Stencil::Block(name)>> (or Block(name)) start.")
 			default:
-				cur, pendingNested = closeBlock(f, name, cur, pendingNested)
+				cur, pendingNested = closeBlock(f, name, cur, pendingNested, fileBlockNames)
 			}
 		}
 		// A file.Block anywhere inside the open block (including its start line)
@@ -151,9 +174,6 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 		if cur != nil && fileBlockCall.MatchString(text) {
 			cur.sawFile = true
 		}
-	}
-	if err := sc.Err(); err != nil {
-		return err
 	}
 
 	if cur != nil {
@@ -175,12 +195,19 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 // The pendingNested and cur guards below are load-bearing for the misuse caller
 // (tok.misuse), which calls closeBlock without pre-checking either; the tok.end
 // caller pre-checks both, so from that path the guards are defensive.
-func closeBlock(f *lint.Findings, name string, cur *blockState, pendingNested int) (openBlock *blockState, remainingNested int) {
+// fileBlockNames is the whole-file set of literally-named file.Block calls
+// (see collectFileBlockNames), consulted so a call hoisted above the block's
+// own start tag still satisfies rule 1.
+func closeBlock(f *lint.Findings, name string, cur *blockState, pendingNested int,
+	fileBlockNames map[string]bool) (openBlock *blockState, remainingNested int) {
 	if pendingNested > 0 {
 		return cur, pendingNested - 1
 	}
 	if cur == nil {
 		return nil, pendingNested
+	}
+	if !cur.sawFile && fileBlockNames[cur.name] {
+		cur.sawFile = true
 	}
 	if !cur.sawFile {
 		// rule 1: missing file.Block. For a dynamic name (a template expression
@@ -198,6 +225,19 @@ func closeBlock(f *lint.Findings, name string, cur *blockState, pendingNested in
 		}
 	}
 	return nil, pendingNested
+}
+
+// collectFileBlockNames scans every line of the template -- regardless of
+// whether a block is currently open -- for file.Block calls with a literal
+// string argument, and returns the set of block names referenced.
+func collectFileBlockNames(lines []string) map[string]bool {
+	names := make(map[string]bool)
+	for _, text := range lines {
+		if m := fileBlockNameArg.FindStringSubmatch(text); m != nil {
+			names[m[1]] = true
+		}
+	}
+	return names
 }
 
 // token describes what block construct a single line is, if any.

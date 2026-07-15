@@ -1,0 +1,2 @@
+error  t.tpl:2  block "foo" has no file.Block call; user edits inside this block are silently discarded on the next render. Add {{ file.Block "foo" }} inside the block.
+
