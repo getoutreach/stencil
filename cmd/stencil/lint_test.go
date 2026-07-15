@@ -523,3 +523,156 @@ func TestAggregateTemplatesOnlyModuleStillLintsTemplates(t *testing.T) {
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"),
 		"expected a lint failure, got: %v", err)
 }
+
+func TestNewLintCommandTemplatesHasFixFlag(t *testing.T) {
+	sub := findSubcommand(NewLintCommand(), "templates")
+	assert.Assert(t, sub != nil)
+	assert.Assert(t, flagPresent(sub.Flags, "fix"))
+}
+
+func TestRunLintTemplatesFixInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
+
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.NilError(t, err) // the only finding was the fixable legacy warning → exit 0
+
+	out, readErr := os.ReadFile(path)
+	assert.NilError(t, readErr)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(out))
+}
+
+// TestRunLintTemplatesFixLeavesUnfixable proves a legacy block missing
+// file.Block is still migrated to v2 syntax, but the rule-1 error (a
+// structural problem --fix never touches) survives re-lint and fails the run.
+func TestRunLintTemplatesFixLeavesUnfixable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	legacy := "###Block(x)\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
+
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.Assert(t, err != nil, "remaining rule-1 error must fail the run")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+
+	out, readErr := os.ReadFile(path)
+	assert.NilError(t, readErr)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n## <</Stencil::Block>>\n", string(out),
+		"the syntax fix should still have been applied and written")
+}
+
+func TestRunLintTemplatesFixNoOpDoesNotRewrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	clean := []byte("## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n")
+	assert.NilError(t, os.WriteFile(path, clean, 0o600))
+
+	info1, _ := os.Stat(path)
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.NilError(t, err)
+
+	out, _ := os.ReadFile(path)
+	assert.Equal(t, string(clean), string(out)) // unchanged bytes
+	info2, _ := os.Stat(path)
+	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
+}
+
+func TestRunLintTemplatesFixStdin(t *testing.T) {
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	var stdout bytes.Buffer
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Reader = strings.NewReader(legacy)
+	sub.Writer = &stdout
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", "-"})
+	assert.NilError(t, err)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", stdout.String())
+}
+
+// TestFixTemplateFileMissingFileFinding mirrors
+// TestRunTemplateFileMissingFileFinding for the --fix code path: a missing
+// file is a reported finding, not an I/O error.
+func TestFixTemplateFileMissingFileFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.tpl")
+	findings, err := fixTemplateFile(discardLogger(), path)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Message, "template file not found:"))
+}
+
+// TestRunLintAggregateFixCoversTemplates proves the unified aggregate --fix
+// fixes the manifest AND fixes+re-lints templates in one pass, combining
+// their findings for the exit-code policy.
+func TestRunLintAggregateFixCoversTemplates(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\nmodules:\n  - name: dep\n    prerelease: true\n"), 0o600))
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // both fixes applied, nothing unfixable remains → exit 0
+
+	manifestOut, _ := os.ReadFile(filepath.Join(dir, "manifest.yaml"))
+	assert.Assert(t, strings.Contains(string(manifestOut), "channel: rc"),
+		"aggregate --fix should still migrate the manifest, got:\n%s", string(manifestOut))
+
+	tplOut, _ := os.ReadFile(filepath.Join(tdir, "a.tpl"))
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(tplOut),
+		"aggregate --fix should migrate legacy template syntax")
+}
+
+// TestRunLintAggregateFixTemplatesOnlyModule proves aggregate --fix still
+// fixes templates when there is no manifest.yaml at all (missing manifest is
+// skipped, not an error, matching the non-fix aggregate path).
+func TestRunLintAggregateFixTemplatesOnlyModule(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err)
+
+	tplOut, _ := os.ReadFile(filepath.Join(tdir, "a.tpl"))
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(tplOut))
+}
+
+// TestRunLintAggregateFixTemplatesUnfixableFails proves the unified aggregate
+// --fix still fails when a template's structural error survives the fix, even
+// though the manifest fix on its own would have succeeded.
+func TestRunLintAggregateFixTemplatesUnfixableFails(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: m\n"), 0o600))
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	// Legacy syntax gets fixed, but the block still has no file.Block -> the
+	// rule-1 error survives re-lint.
+	legacy := "###Block(x)\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.Assert(t, err != nil, "the surviving rule-1 error must fail the aggregate --fix run")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}

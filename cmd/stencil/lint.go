@@ -28,13 +28,14 @@ import (
 const templatesDir = "templates"
 
 // NewLintCommand returns the `lint` command group: an aggregate `lint [dir]`
-// plus a `lint module-manifest [path]` subcommand. Validation is local-only.
+// plus `lint module-manifest [path]` and `lint templates [files...]`
+// subcommands. Validation is local-only.
 func NewLintCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "lint",
 		Usage:       "Validate a Stencil module without resolving dependencies",
 		ArgsUsage:   "[dir]",
-		Description: "Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)",
+		Description: "Validate a Stencil module's manifest and templates without resolving dependencies",
 		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Commands:    []*cli.Command{newLintModuleManifestCommand(), newLintTemplatesCommand()},
 		Action:      runLintAggregate,
@@ -51,13 +52,14 @@ func warningsAsErrorsFlag() cli.Flag {
 	}
 }
 
-// fixFlag is declared on both the lint group and the module-manifest
-// subcommand, since urfave/cli/v3 does not inherit parent flags. It is opt-in.
+// fixFlag is declared on the lint group and both the module-manifest and
+// templates subcommands, since urfave/cli/v3 does not inherit parent flags.
+// It is opt-in.
 func fixFlag() cli.Flag {
 	return &cli.BoolFlag{
 		Name: "fix",
-		Usage: "automatically fix safe deprecations in place, re-encoding the " +
-			"manifest at 2-space indent when a fix is applied (re-lints after fixing)",
+		Usage: "automatically fix safe deprecations in place (a manifest is " +
+			"re-encoded at 2-space indent when fixed; re-lints after fixing)",
 		Value: false,
 	}
 }
@@ -72,8 +74,7 @@ func newLintLogger(c *cli.Command) *logrus.Logger {
 }
 
 // runner lints one input and returns its findings. A non-nil error is an I/O
-// failure (not a lint finding). DT-4828 adds a template runner alongside the
-// manifest runner.
+// failure (not a lint finding).
 type runner func(log logrus.FieldLogger) ([]lint.Finding, error)
 
 // newLintModuleManifestCommand builds the `lint module-manifest [path]` subcommand.
@@ -95,7 +96,7 @@ func newLintTemplatesCommand() *cli.Command {
 		Usage:       "Validate Stencil templates' block correctness without rendering",
 		ArgsUsage:   "[files...]",
 		Description: "Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
 		Action:      runLintTemplates,
 	}
 }
@@ -103,11 +104,31 @@ func newLintTemplatesCommand() *cli.Command {
 // runLintTemplates is the `stencil lint templates [files...]` action.
 func runLintTemplates(_ context.Context, c *cli.Command) error {
 	log := newLintLogger(c)
+	fix := c.Bool("fix")
 
 	// stdin mode: a single '-' reads one template from stdin.
 	if c.Args().Len() == 1 && c.Args().First() == "-" {
 		if readerIsTTY(c.Reader) {
 			return errors.New("'-' expects piped input, not an interactive terminal")
+		}
+		if fix {
+			raw, err := io.ReadAll(c.Reader)
+			if err != nil {
+				return errors.Wrap(err, "failed to read stdin")
+			}
+			// Fixed template goes to stdout; diagnostics go to the logger
+			// (stderr), mirroring `lint module-manifest - --fix`.
+			fixed, applied := linttemplates.FixBytes("<stdin>", raw)
+			if _, werr := c.Writer.Write(fixed); werr != nil {
+				return errors.Wrap(werr, "failed to write fixed template")
+			}
+			logAppliedTemplates(log, applied)
+			findings, err := linttemplates.LintReader("<stdin>", bytes.NewReader(fixed))
+			if err != nil {
+				return errors.Wrap(err, "lint failed")
+			}
+			logFindings(log, findings)
+			return failTemplates(log, findings, c.Bool("warnings-as-errors"))
 		}
 		log.WithField("path", "<stdin>").Debug("linting template")
 		findings, err := linttemplates.LintReader("<stdin>", c.Reader)
@@ -150,7 +171,14 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 	// args can be interleaved with dir-collected files above; sort the merged
 	// slice for deterministic output.
 	sort.Strings(files)
-	all, err := lintTemplateFiles(log, files)
+
+	var all []lint.Finding
+	var err error
+	if fix {
+		all, err = fixTemplateFiles(log, files)
+	} else {
+		all, err = lintTemplateFiles(log, files)
+	}
 	if err != nil {
 		return errors.Wrap(err, "lint failed")
 	}
@@ -170,6 +198,61 @@ func lintTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, 
 		all = append(all, findings...)
 	}
 	return all, nil
+}
+
+// fixTemplateFiles fixes each path in files in place (writing only when bytes
+// change; see writeFixedFile) and returns the concatenated findings from
+// re-linting the (possibly fixed) content. A non-nil error is an I/O failure.
+func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, error) {
+	var all []lint.Finding
+	for _, path := range files {
+		findings, err := fixTemplateFile(log, path)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, findings...)
+	}
+	return all, nil
+}
+
+// fixTemplateFile migrates legacy block syntax in the template at path to v2
+// syntax, writes it back in place only when bytes changed, and returns the
+// findings from re-linting the fixed content. A missing/unreadable file is
+// reported as a finding (not an error), mirroring runTemplateFile.
+func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
+	log.WithField("path", path).Debug("fixing template")
+	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target.
+	if os.IsNotExist(err) {
+		return []lint.Finding{{
+			Severity: lint.SeverityError,
+			Path:     path,
+			Message:  fmt.Sprintf("template file not found: %s", path),
+		}}, nil
+	}
+	if err != nil {
+		return []lint.Finding{{
+			Severity: lint.SeverityError,
+			Path:     path,
+			Message:  fmt.Sprintf("failed to open template %s: %v", path, err),
+		}}, nil
+	}
+
+	fixed, applied := linttemplates.FixBytes(path, raw)
+	if writeErr := writeFixedFile(path)(fixed); writeErr != nil {
+		return nil, errors.Wrapf(writeErr, "failed to write fixed template %q", path)
+	}
+	logAppliedTemplates(log, applied)
+
+	return linttemplates.LintReader(path, bytes.NewReader(fixed))
+}
+
+// logAppliedTemplates logs one info line per template-syntax fix the fixer
+// applied. Mirrors logApplied, additionally attaching the source line since
+// (unlike manifest.Applied) linttemplates.Applied carries one.
+func logAppliedTemplates(log logrus.FieldLogger, applied []linttemplates.Applied) {
+	for _, a := range applied {
+		log.WithField("path", a.Path).WithField("line", a.Line).Infof("fixed: %s", a.Message)
+	}
 }
 
 // templateRunner returns a runner that lints every *.tpl under dir. A missing
@@ -268,30 +351,39 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	log := newLintLogger(c)
 
 	if c.Bool("fix") {
-		// Aggregate --fix covers the manifest only (templates: future DT-4828).
+		var all []lint.Finding
+
 		fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
-		if finding != nil {
-			// Missing manifest: nothing to fix. Aggregate lint treats a missing
-			// manifest as "nothing to lint" (a module may be templates-only), so do
-			// not fail.
-			//
-			// NOTE: Intentional divergence — `lint --fix dir` lints NO templates,
-			// unlike `lint dir`. Template rule-1/rule-3 errors caught by the
-			// non-fix run are skipped here. Template fixing in aggregate --fix is
-			// deferred to a follow-up (DT-4828). Do not add template linting to
-			// the --fix path without also implementing template fixing.
-			return nil
+		if finding == nil {
+			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+			if readErr != nil {
+				return errors.Wrapf(readErr, "failed to read %q", fixPath)
+			}
+			findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath))
+			if fixErr != nil {
+				return errors.Wrap(fixErr, "lint failed")
+			}
+			all = append(all, findings...)
 		}
-		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
-		if readErr != nil {
-			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		// A missing manifest is skipped, not fixed: aggregate lint treats it as
+		// "nothing to lint" (a module may be templates-only), matching the
+		// non-fix aggregate path and manifestRunner.
+
+		files, err := collectTemplateFiles(log, filepath.Join(dir, templatesDir))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
 		}
-		// NOTE: Even with a manifest present, --fix returns here and never lints
-		// templates (see divergence note above). Deferred to a follow-up (DT-4828).
-		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
+		findings, err := fixTemplateFiles(log, files)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		all = append(all, findings...)
+
+		logFindings(log, all)
+		return failIfFindings(all, c.Bool("warnings-as-errors"))
 	}
 
 	if info, statErr := os.Stat(dir); statErr == nil && !info.IsDir() {
@@ -548,28 +640,35 @@ func writeFixedFile(path string) func([]byte) error {
 // normal lint runs so the decode error is reported.
 func fixAndRelint(c *cli.Command, log logrus.FieldLogger, name string, raw []byte,
 	writeFixed func([]byte) error) error {
-	fixed, applied, ok := lintmanifest.FixBytes(raw)
-	if !ok {
-		// Unparseable: fall back to a normal lint of the original bytes.
-		findings, err := runManifestReader(log, name, bytes.NewReader(raw))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		logFindings(log, findings)
-		return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
-	}
-
-	if err := writeFixed(fixed); err != nil {
-		return errors.Wrap(err, "failed to write fixed manifest")
-	}
-	logApplied(log, applied)
-
-	findings, err := runManifestReader(log, name, bytes.NewReader(fixed))
+	findings, err := fixManifestBytes(log, name, raw, writeFixed)
 	if err != nil {
 		return errors.Wrap(err, "lint failed")
 	}
 	logFindings(log, findings)
 	return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
+}
+
+// fixManifestBytes applies safe deprecation fixes to raw, writes the fixed
+// bytes via writeFixed (in-place for a file, or to stdout for '-'), logs each
+// applied fix, and returns the findings from re-linting the fixed content
+// (unlogged and policy-undecided, so callers can aggregate them with other
+// targets' findings before logging/deciding once). If raw cannot be parsed as
+// YAML, fixing is skipped and the original bytes are linted instead, so the
+// decode error surfaces as a normal finding.
+func fixManifestBytes(log logrus.FieldLogger, name string, raw []byte,
+	writeFixed func([]byte) error) ([]lint.Finding, error) {
+	fixed, applied, ok := lintmanifest.FixBytes(raw)
+	if !ok {
+		// Unparseable: fall back to a normal lint of the original bytes.
+		return runManifestReader(log, name, bytes.NewReader(raw))
+	}
+
+	if err := writeFixed(fixed); err != nil {
+		return nil, errors.Wrap(err, "failed to write fixed manifest")
+	}
+	logApplied(log, applied)
+
+	return runManifestReader(log, name, bytes.NewReader(fixed))
 }
 
 // failLint applies the warnings-as-errors policy and, on success, logs a
