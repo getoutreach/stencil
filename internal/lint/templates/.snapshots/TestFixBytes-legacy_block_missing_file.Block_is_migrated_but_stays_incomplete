@@ -1,0 +1,7 @@
+--- fixed ---
+## <<Stencil::Block(x)>>
+## <</Stencil::Block>>
+--- applied ---
+t.tpl:1  migrated deprecated block syntax to <<Stencil::Block(x)>>
+t.tpl:2  migrated deprecated block syntax to <</Stencil::Block>>
+

@@ -1,0 +1,7 @@
+--- fixed ---
+## <<Stencil::Block(customMise)>>
+{{ file.Block "customMise" }}
+## <</Stencil::Block>>
+--- applied ---
+(no fixes applied)
+

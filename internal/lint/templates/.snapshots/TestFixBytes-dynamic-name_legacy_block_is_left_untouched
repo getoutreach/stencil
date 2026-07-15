@@ -1,0 +1,7 @@
+--- fixed ---
+###Block({{ $b }})
+{{ file.Block $b }}
+###EndBlock({{ $b }})
+--- applied ---
+(no fixes applied)
+

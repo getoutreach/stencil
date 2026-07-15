@@ -1,0 +1,10 @@
+--- fixed ---
+<!-- <<Stencil::Block(overview)>> -->
+
+hello, world!
+
+<!-- <</Stencil::Block>> -->
+--- applied ---
+t.tpl:1  migrated deprecated block syntax to <<Stencil::Block(overview)>>
+t.tpl:5  migrated deprecated block syntax to <</Stencil::Block>>
+
