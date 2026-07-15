@@ -27,7 +27,10 @@ const (
 type Finding struct {
 	// Severity is error or warning.
 	Severity Severity
-	// Path is the dotted location of the problem, e.g. "arguments.foo.schema".
+	// Path locates the problem. The manifest linter stores a dotted document
+	// location (e.g. "arguments.foo.schema"); the templates linter stores the
+	// template file path. In both cases Line, when non-zero, is the 1-based
+	// source line.
 	Path string
 	// Message is a human-readable description of the problem.
 	Message string

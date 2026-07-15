@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/getoutreach/stencil/internal/codegen"
@@ -30,7 +31,7 @@ var fileBlockCall = regexp.MustCompile(`\{\{-?\s*.*\bfile\.Block\b`)
 // block still balances against its plain <</Stencil::Block>> end tag (avoiding a
 // false "bare end tag") and still gets the presence-based file.Block check. It
 // deliberately does NOT match end tags or EndBlock. The name is display-only.
-var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\(.*\))?>>`)
+var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\([^>]*\))?>>`)
 
 // v2EndAny matches a v2 Block END tag with ANY parenthesized content, including
 // a dynamic template expression like ({{ $x }}) that the strict
@@ -39,7 +40,7 @@ var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\(
 // slash after << is required so it never matches an open tag. Note a bare
 // <</Stencil::Block>> (no parens) is already handled by V2BlockPattern, so this
 // only adds the dynamic/parenthesized-close case.
-var v2EndAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<</Stencil::Block(\(.*\))?>>`)
+var v2EndAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<</Stencil::Block(\([^>]*\))?>>`)
 
 // blockState tracks the currently open block during a scan.
 type blockState struct {
@@ -47,6 +48,7 @@ type blockState struct {
 	startLine int
 	sawFile   bool
 	legacy    bool
+	dynamic   bool
 }
 
 // addf appends a finding at the given source line. Findings carry their line in
@@ -68,7 +70,16 @@ func LintReader(name string, r io.Reader) ([]lint.Finding, error) {
 	if err := scan(name, r, &f); err != nil {
 		return nil, err
 	}
-	return f.Items(), nil
+	items := f.Items()
+	// Findings are appended in detection order, which can place a
+	// rule-1/rule-2 finding (emitted at the block's startLine) after a
+	// later-line misuse error. Stable-sort by Line so output is monotonic by
+	// source line, matching the manifest linter. Same-line findings keep
+	// detection order.
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].Line < items[j].Line
+	})
+	return items, nil
 }
 
 // scan walks the template line by line and appends findings. A single open
@@ -94,13 +105,11 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 			// A misuse tag is a malformed close attempt, so recover the block
 			// state (mirroring the end-tag handling) to avoid a contradictory
 			// rule-2 "never closed" cascade. The rule-5 error is the single
-			// actionable finding.
-			switch {
-			case pendingNested > 0:
-				pendingNested--
-			case cur != nil:
-				cur = nil
-			}
+			// actionable finding. Recover the innermost pending scope first so a
+			// leftover nested credit cannot swallow a later legitimate end tag,
+			// and run the rule-1 file.Block check so a block closed by a misuse
+			// tag still reports silently-discarded user edits.
+			cur, pendingNested = closeBlock(f, name, cur, pendingNested)
 		case tok.start:
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
@@ -111,15 +120,16 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 				pendingNested++
 				continue
 			}
-			cur = &blockState{name: tok.name, startLine: line, legacy: tok.legacy}
+			cur = &blockState{name: tok.name, startLine: line, legacy: tok.legacy, dynamic: tok.dynamic}
 			if tok.legacy {
+				// NOTE (DT-4828): intentionally a warning. With warnings-as-errors
+				// defaulting true on the aggregate path, a manifest+templates module
+				// using deprecated-but-valid legacy blocks will now exit non-zero.
+				// This is the deliberate deprecation signal; do not downgrade
+				// severity or gate it.
 				addf(f, name, line, lint.SeverityWarning,
 					"block %q uses deprecated block syntax; please migrate to "+
 						"<<Stencil::Block(%s)>> ... <</Stencil::Block>>.", tok.name, tok.name)
-			}
-			// A file.Block on the start line itself still counts.
-			if fileBlockCall.MatchString(text) {
-				cur.sawFile = true
 			}
 		case tok.end:
 			switch {
@@ -132,27 +142,14 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 						"balanced like XML tags: a <</Stencil::Block>> (or EndBlock) must be "+
 						"preceded by its <<Stencil::Block(name)>> (or Block(name)) start.")
 			default:
-				if !cur.sawFile {
-					// rule 1: missing file.Block. For a dynamic name (a template
-					// expression like {{ $b }}), omit the "Add {{ file.Block %q }}"
-					// suffix since it would render nonsensical nested braces.
-					if strings.Contains(cur.name, "{{") {
-						addf(f, name, cur.startLine, lint.SeverityError,
-							"block %q has no file.Block call; user edits inside this block are "+
-								"silently discarded on the next render.", cur.name)
-					} else {
-						addf(f, name, cur.startLine, lint.SeverityError,
-							"block %q has no file.Block call; user edits inside this block are "+
-								"silently discarded on the next render. Add {{ file.Block %q }} "+
-								"inside the block.", cur.name, cur.name)
-					}
-				}
-				cur = nil
+				cur, pendingNested = closeBlock(f, name, cur, pendingNested)
 			}
-		default:
-			if cur != nil && fileBlockCall.MatchString(text) {
-				cur.sawFile = true
-			}
+		}
+		// A file.Block anywhere inside the open block (including its start line)
+		// marks the block as satisfying rule 1. Run once after the switch so the
+		// check is not duplicated across the start and default arms.
+		if cur != nil && fileBlockCall.MatchString(text) {
+			cur.sawFile = true
 		}
 	}
 	if err := sc.Err(); err != nil {
@@ -169,26 +166,66 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 	return nil
 }
 
+// closeBlock recovers the innermost open scope after a real end tag or a misuse
+// tag. It decrements a pending nested credit first (matching the tok.end path);
+// only when no nested credit is outstanding does it close cur, emitting the
+// rule-1 "no file.Block" finding first so malformed closes still report
+// silently-discarded user edits. It returns the updated open block and pending
+// nested credit.
+// The pendingNested and cur guards below are load-bearing for the misuse caller
+// (tok.misuse), which calls closeBlock without pre-checking either; the tok.end
+// caller pre-checks both, so from that path the guards are defensive.
+func closeBlock(f *lint.Findings, name string, cur *blockState, pendingNested int) (openBlock *blockState, remainingNested int) {
+	if pendingNested > 0 {
+		return cur, pendingNested - 1
+	}
+	if cur == nil {
+		return nil, pendingNested
+	}
+	if !cur.sawFile {
+		// rule 1: missing file.Block. For a dynamic name (a template expression
+		// like {{ $b }}), omit the "Add {{ file.Block %q }}" suffix since it
+		// would render nonsensical nested braces.
+		if cur.dynamic {
+			addf(f, name, cur.startLine, lint.SeverityError,
+				"block %q has no file.Block call; user edits inside this block are "+
+					"silently discarded on the next render.", cur.name)
+		} else {
+			addf(f, name, cur.startLine, lint.SeverityError,
+				"block %q has no file.Block call; user edits inside this block are "+
+					"silently discarded on the next render. Add {{ file.Block %q }} "+
+					"inside the block.", cur.name, cur.name)
+		}
+	}
+	return nil, pendingNested
+}
+
 // token describes what block construct a single line is, if any.
 //
 //   - start:  a block start tag (v2 <<Stencil::Block(name)>> or legacy Block(name))
 //   - end:    a block end tag (v2 <</Stencil::Block>> or legacy EndBlock(name))
-//   - name:   the block name (start tags; always a literal, since the regexes
-//     only match [a-zA-Z0-9 _] — dynamic-name blocks are not matched at all)
+//   - name:   the block name for start tags. For a strict-pattern match it is a
+//     literal (the regexes only capture [a-zA-Z0-9 _]); for a dynamic-name v2
+//     block matched via v2StartAny it holds the raw template expression (e.g.
+//     "{{ $x }}"). It is display-only and never compared.
 //   - legacy: whether the tag used the deprecated ###Block/### syntax
 //   - misuse: a non-empty rule-5 message (with no "line N:" prefix) when the
 //     line is a malformed v2 tag; empty otherwise
 type token struct {
-	start  bool
-	end    bool
-	name   string
-	legacy bool
-	misuse string
+	start   bool
+	end     bool
+	name    string
+	legacy  bool
+	misuse  string
+	dynamic bool
 }
 
 // classify inspects a single line and reports what block token it is, if any.
 // v2 is matched before legacy, mirroring codegen.parseBlocks.
 func classify(text string) token {
+	// len == 5: codegen.V2BlockPattern has 4 capture groups (m[0] is the full
+	// match). If codegen adds/removes a group this guard silently falls through
+	// to the fallbacks below — keep in sync with codegen.V2BlockPattern.
 	if m := codegen.V2BlockPattern.FindStringSubmatch(text); len(m) == 5 {
 		// m[2]="/" for closing tag; m[3]=command; m[4]="(args)" or "".
 		closing := m[2] == "/"
@@ -197,22 +234,24 @@ func classify(text string) token {
 		switch {
 		case closing && cmd == codegen.EndStatement:
 			// <</Stencil::EndBlock>>
-			return token{misuse: "Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead"}
+			return token{misuse: codegen.MsgEndBlockClosingTag}
 		case closing:
 			if args != "" {
 				// <</Stencil::Block(name)>>
-				return token{misuse: "expected no arguments to <</Stencil::Block>>"}
+				return token{misuse: codegen.MsgClosingTagArgs}
 			}
 			return token{end: true}
 		case cmd == codegen.EndStatement:
 			// <<Stencil::EndBlock>>
-			return token{misuse: "<<Stencil::EndBlock>> should be <</Stencil::Block>>"}
+			return token{misuse: codegen.MsgEndBlockOpenTag}
 		default:
 			// <<Stencil::Block(name)>>
 			return token{start: true, name: trimArgs(args)}
 		}
 	}
 
+	// len == 4: codegen.BlockPattern has 3 capture groups. Keep in sync with
+	// codegen.BlockPattern.
 	if m := codegen.BlockPattern.FindStringSubmatch(text); len(m) == 4 {
 		// m[2]=command; m[3]=name.
 		switch m[2] {
@@ -228,7 +267,7 @@ func classify(text string) token {
 		// {{...}} name). Recognize it as a start with a display-only name so it
 		// balances and gets the file.Block presence check; the name is never
 		// compared. m[1] is "(expr)" or "" — trim to the raw expression text.
-		return token{start: true, name: trimArgs(m[1])}
+		return token{start: true, name: trimArgs(m[1]), dynamic: true}
 	}
 	if v2EndAny.MatchString(text) {
 		// A dynamic-name v2 Block end (strict V2BlockPattern rejected the

@@ -17,12 +17,26 @@ import (
 // EndStatement is a constant for the end of a statement
 const EndStatement = "EndBlock"
 
+// Block-misuse messages, shared with the templates linter so runtime and lint
+// wording never diverge. Callers that report a line prefix it with "line N: ".
+const (
+	// MsgEndBlockClosingTag is emitted for <</Stencil::EndBlock>>.
+	MsgEndBlockClosingTag = "Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead"
+	// MsgClosingTagArgs is emitted for a closing tag carrying arguments.
+	MsgClosingTagArgs = "expected no arguments to <</Stencil::Block>>"
+	// MsgEndBlockOpenTag is emitted for <<Stencil::EndBlock>>.
+	MsgEndBlockOpenTag = "<<Stencil::EndBlock>> should be <</Stencil::Block>>"
+)
+
 // BlockPattern is the regex used for parsing block commands.
 // For unit testing of this regex and explanation, see https://regex101.com/r/nFgOz0/1
+// Capture groups: 1=comment prefix, 2=command, 3=name.
 var BlockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-zA-Z0-9 ]+)\)`)
 
 // V2BlockPattern is the new regex for parsing blocks
 // For unit testing of this regex and explanation, see https://regex101.com/r/eJZ7R2/1
+// Capture groups: 1=comment prefix, 2="/" if closing, 3=command, 4="(args)" or "".
+// internal/lint/templates.classify depends on these indices.
 var V2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 _]+\))?>>`)
 
 // parseBlocks reads the blocks from an existing file
@@ -52,14 +66,14 @@ func parseBlocks(filePath string) (map[string]string, error) {
 				cmd := v2Matches[3]
 				if v2Matches[2] == "/" {
 					if cmd == EndStatement {
-						return nil, fmt.Errorf("line %d: Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead", i+1)
+						return nil, fmt.Errorf("line %d: %s", i+1, MsgEndBlockClosingTag)
 					}
 
 					// If there is a /, it's a closing tag and we should
 					// translate it to a closing block command
 					cmd = EndStatement
 					if v2Matches[4] != "" {
-						return nil, fmt.Errorf("line %d: expected no arguments to <</Stencil::Block>>", i+1)
+						return nil, fmt.Errorf("line %d: %s", i+1, MsgClosingTagArgs)
 					}
 
 					v2Matches[4] = fmt.Sprintf("(%s)", curBlockName)
@@ -68,7 +82,7 @@ func parseBlocks(filePath string) (map[string]string, error) {
 					// we should error. This is because we don't want to
 					// allow users to use the old EndBlock command
 					// without a closing tag
-					return nil, errors.Errorf("line %d: <<Stencil::EndBlock>> should be <</Stencil::Block>>", i+1)
+					return nil, errors.Errorf("line %d: %s", i+1, MsgEndBlockOpenTag)
 				}
 
 				// fake the old matches format so we can reuse the same code

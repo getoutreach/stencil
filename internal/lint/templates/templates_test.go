@@ -132,6 +132,32 @@ func TestLint(t *testing.T) {
 			in: "## <<Stencil::Block(a)>>\nno file block\n## <</Stencil::Block>>\n" +
 				"## <</Stencil::Block>>\n",
 		},
+		{
+			// Doubly-malformed: an illegal nested start then a misuse tag. The
+			// misuse consumes the outstanding nested credit (innermost scope
+			// first), leaving the outer block "a" open so it later dangles as
+			// rule 2 ("block never closed").
+			name: "misuse consumes nested credit; outer block still dangles",
+			in: "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n" +
+				"## <<Stencil::Block(b)>>\n## <</Stencil::EndBlock>>\n",
+		},
+		{
+			// Regression guard: outer start, illegal nested start, misuse, then two
+			// real end tags. The misuse must recover the innermost scope (the
+			// nested credit) first; the SECOND end tag must be flagged as a bare
+			// end tag (rule 3), proving the leftover credit did not swallow it.
+			name: "misuse recovers innermost scope; trailing end tag is bare",
+			in: "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n" +
+				"## <<Stencil::Block(b)>>\n## <</Stencil::EndBlock>>\n" +
+				"## <</Stencil::Block>>\n## <</Stencil::Block>>\n",
+		},
+		{
+			// Regression guard: a block missing file.Block, closed by a misuse
+			// tag, must still emit rule 1 (silently-discarded edits) plus rule 5.
+			name: "rule-1 finding survives a misuse close",
+			in: "## <<Stencil::Block(a)>>\nno file block\n" +
+				"## <</Stencil::EndBlock>>\n",
+		},
 	}
 
 	for _, test := range tests {

@@ -1,0 +1,4 @@
+error  t.tpl:3  block "b" opened inside block "a"; blocks cannot be nested. Close "a" with <</Stencil::Block>> first.
+error  t.tpl:4  Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead
+error  t.tpl:6  found a block end tag with no matching start. Stencil blocks must be balanced like XML tags: a <</Stencil::Block>> (or EndBlock) must be preceded by its <<Stencil::Block(name)>> (or Block(name)) start.
+

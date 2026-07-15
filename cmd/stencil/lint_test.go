@@ -183,6 +183,16 @@ func TestNewLintCommandShape(t *testing.T) {
 	}
 }
 
+// findSubcommand returns the named subcommand of cmd, or nil if not present.
+func findSubcommand(cmd *cli.Command, name string) *cli.Command {
+	for _, sub := range cmd.Commands {
+		if sub.Name == name {
+			return sub
+		}
+	}
+	return nil
+}
+
 func flagPresent(flags []cli.Flag, name string) bool {
 	for _, fl := range flags {
 		for _, n := range fl.Names() {
@@ -330,14 +340,9 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 
 func TestNewLintCommandHasTemplatesSubcommand(t *testing.T) {
 	cmd := NewLintCommand()
-	var hasTemplates bool
-	for _, sub := range cmd.Commands {
-		if sub.Name == "templates" {
-			hasTemplates = true
-			assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
-		}
-	}
-	assert.Assert(t, hasTemplates)
+	sub := findSubcommand(cmd, "templates")
+	assert.Assert(t, sub != nil)
+	assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
 }
 
 func TestTemplateRunnerFindsBadTemplate(t *testing.T) {
@@ -450,12 +455,7 @@ func TestRunLintTemplatesStdin(t *testing.T) {
 	var out bytes.Buffer
 	cmd := NewLintCommand()
 	// Drive the templates subcommand directly with '-' and a piped reader.
-	var sub *cli.Command
-	for _, s := range cmd.Commands {
-		if s.Name == "templates" {
-			sub = s
-		}
-	}
+	sub := findSubcommand(cmd, "templates")
 	assert.Assert(t, sub != nil)
 	sub.Reader = strings.NewReader(bad)
 	sub.Writer = &out
@@ -463,6 +463,33 @@ func TestRunLintTemplatesStdin(t *testing.T) {
 	err := sub.Run(context.Background(), []string{"templates", "-"})
 	assert.Assert(t, err != nil)
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunLintTemplatesExplicitFileArg proves an explicit .tpl path arg is linted
+// and produces normal findings (a rule-1 error for a block missing file.Block).
+func TestRunLintTemplatesExplicitFileArg(t *testing.T) {
+	dir := t.TempDir()
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "bad.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(bad), 0o600))
+
+	cmd := NewLintCommand()
+	cmd.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", path})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunTemplateFileMissingFileFinding proves a missing file arg yields a
+// "template file not found:" finding (not an error).
+func TestRunTemplateFileMissingFileFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.tpl")
+	findings, err := runTemplateFile(discardLogger(), path)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Message, "template file not found:"),
+		"expected not-found finding, got: %s", findings[0].Message)
 }
 
 // TestAggregateTemplatesOnlyModulePasses proves a templates-only module (valid
