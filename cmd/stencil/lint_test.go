@@ -363,6 +363,48 @@ func TestTemplateRunnerEmptyDirIsClean(t *testing.T) {
 	assert.Equal(t, 0, len(findings))
 }
 
+func TestRunTemplateFileLogsDebug(t *testing.T) {
+	dir := t.TempDir()
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "a.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	_, err := runTemplateFile(log, path)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "linting template"),
+		"expected debug log line, got: %s", out)
+	assert.Assert(t, strings.Contains(out, path),
+		"expected the template path in the log, got: %s", out)
+	assert.Assert(t, strings.Contains(out, "level=debug"),
+		"expected debug level, got: %s", out)
+}
+
+func TestRunTemplateFileDebugSuppressedAtInfoLevel(t *testing.T) {
+	dir := t.TempDir()
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "a.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	_, err := runTemplateFile(log, path)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, !strings.Contains(out, "linting template"),
+		"debug line must be suppressed at info level, got: %s", out)
+}
+
 func TestRunLintTemplatesStdin(t *testing.T) {
 	// A bad template (block without file.Block) piped via c.Reader with '-'.
 	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"

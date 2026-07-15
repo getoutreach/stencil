@@ -106,6 +106,7 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 		if readerIsTTY(c.Reader) {
 			return errors.New("'-' expects piped input, not an interactive terminal")
 		}
+		log.WithField("path", "<stdin>").Debug("linting template")
 		findings, err := linttemplates.LintReader("<stdin>", c.Reader)
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
@@ -140,7 +141,7 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 
 	var all []lint.Finding
 	for _, path := range files {
-		findings, err := runTemplateFile(path)
+		findings, err := runTemplateFile(log, path)
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -153,14 +154,14 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 // templateRunner returns a runner that lints every *.tpl under dir. A missing
 // or empty templates directory yields zero findings (nothing to lint).
 func templateRunner(dir string) runner {
-	return func(_ logrus.FieldLogger) ([]lint.Finding, error) {
+	return func(log logrus.FieldLogger) ([]lint.Finding, error) {
 		files, err := collectTemplateFiles(dir)
 		if err != nil {
 			return nil, err
 		}
 		var all []lint.Finding
 		for _, path := range files {
-			findings, ferr := runTemplateFile(path)
+			findings, ferr := runTemplateFile(log, path)
 			if ferr != nil {
 				return nil, ferr
 			}
@@ -204,7 +205,8 @@ func collectTemplateFiles(dir string) ([]string, error) {
 
 // runTemplateFile lints a single template path. A missing file is reported as
 // an error finding (not an error), mirroring resolveManifestReader.
-func runTemplateFile(path string) ([]lint.Finding, error) {
+func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
+	log.WithField("path", path).Debug("linting template")
 	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target.
 	if os.IsNotExist(err) {
 		return []lint.Finding{{
