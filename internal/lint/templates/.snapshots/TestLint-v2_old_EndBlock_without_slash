@@ -1,0 +1,2 @@
+error  t.tpl:3  <<Stencil::EndBlock>> should be <</Stencil::Block>>
+

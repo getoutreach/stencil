@@ -1,0 +1,3 @@
+warning  t.tpl:1  block "x" uses deprecated block syntax; please migrate to <<Stencil::Block(x)>> ... <</Stencil::Block>>.
+error    t.tpl:1  block "x" has no file.Block call; user edits inside this block are silently discarded on the next render. Add {{ file.Block "x" }} inside the block.
+

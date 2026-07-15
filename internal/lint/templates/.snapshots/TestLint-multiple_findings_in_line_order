@@ -1,0 +1,3 @@
+error  t.tpl:1  block "a" has no file.Block call; user edits inside this block are silently discarded on the next render. Add {{ file.Block "a" }} inside the block.
+error  t.tpl:4  found a block end tag with no matching start. Stencil blocks must be balanced like XML tags: a <</Stencil::Block>> (or EndBlock) must be preceded by its <<Stencil::Block(name)>> (or Block(name)) start.
+

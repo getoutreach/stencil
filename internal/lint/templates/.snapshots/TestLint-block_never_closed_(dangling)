@@ -1,0 +1,2 @@
+error  t.tpl:1  block "foo" is never closed. Stencil blocks must be balanced like XML tags: every <<Stencil::Block(foo)>> needs a matching <</Stencil::Block>>.
+

@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -45,12 +46,12 @@ func TestFailIfFindingsPolicy(t *testing.T) {
 	assert.NilError(t, failIfFindings(nil, true))
 	assert.NilError(t, failIfFindings(nil, false))
 	assert.Error(t, failIfFindings(warnOnly, true),
-		"manifest validation failed: 0 error(s), 1 warning(s)")
+		"lint failed: 0 error(s), 1 warning(s)")
 	assert.NilError(t, failIfFindings(warnOnly, false))
 	assert.Error(t, failIfFindings(errOnly, true),
-		"manifest validation failed: 1 error(s), 0 warning(s)")
+		"lint failed: 1 error(s), 0 warning(s)")
 	assert.Error(t, failIfFindings(errOnly, false),
-		"manifest validation failed: 1 error(s), 0 warning(s)")
+		"lint failed: 1 error(s), 0 warning(s)")
 }
 
 func TestFailIfFindingsInfoOnlyPasses(t *testing.T) {
@@ -149,11 +150,10 @@ func TestManifestRunnerValid(t *testing.T) {
 	assert.Equal(t, 0, len(findings))
 }
 
-func TestManifestRunnerMissingFileIsFinding(t *testing.T) {
+func TestManifestRunnerMissingManifestSkipped(t *testing.T) {
 	findings, err := manifestRunner(filepath.Join(t.TempDir(), "manifest.yaml"))(discardLogger())
-	assert.NilError(t, err) // missing file is a finding, not an error
-	assert.Assert(t, len(findings) == 1)
-	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.NilError(t, err) // a missing manifest is skipped, not an error
+	assert.Equal(t, 0, len(findings), "aggregate lint skips a missing manifest (module may be templates-only)")
 }
 
 func TestNewLintCommandShape(t *testing.T) {
@@ -181,6 +181,16 @@ func TestNewLintCommandShape(t *testing.T) {
 			assert.Assert(t, flagPresent(sub.Flags, "fix"))
 		}
 	}
+}
+
+// findSubcommand returns the named subcommand of cmd, or nil if not present.
+func findSubcommand(cmd *cli.Command, name string) *cli.Command {
+	for _, sub := range cmd.Commands {
+		if sub.Name == name {
+			return sub
+		}
+	}
+	return nil
 }
 
 func flagPresent(flags []cli.Flag, name string) bool {
@@ -305,11 +315,11 @@ func TestRunLintAggregateFixInPlace(t *testing.T) {
 	assert.Assert(t, !strings.Contains(string(out), "prerelease:"))
 }
 
-// TestRunLintFixMissingManifest pins Fix 4: a --fix run whose target manifest
-// does not exist reports the "manifest file not found" finding (via the shared
-// resolveManifestPath) and fails, on both the module-manifest and aggregate
-// paths — matching the non-fix path's not-found handling rather than crashing
-// or silently succeeding.
+// TestRunLintFixMissingManifest pins the --fix not-found handling. The explicit
+// module-manifest --fix path reports the "manifest file not found" finding (via
+// the shared resolveManifestPath) and fails, since the user asked for a
+// manifest. The aggregate --fix path instead SKIPS a missing manifest and exits
+// cleanly, because a module may be templates-only.
 func TestRunLintFixMissingManifest(t *testing.T) {
 	t.Run("module-manifest", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "nope.yaml")
@@ -324,8 +334,192 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 		root := NewLintCommand()
 		root.Writer = io.Discard
 		err := root.Run(t.Context(), []string{"lint", "--fix", dir})
-		assert.Assert(t, err != nil, "missing manifest must fail")
-		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
-			"expected the not-found finding to fail the run, got: %v", err)
+		assert.NilError(t, err) // aggregate --fix skips a missing manifest
 	})
+}
+
+func TestNewLintCommandHasTemplatesSubcommand(t *testing.T) {
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	assert.Assert(t, sub != nil)
+	assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
+}
+
+func TestTemplateRunnerFindsBadTemplate(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	// good: has file.Block; bad: block without file.Block.
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "good.tpl"), []byte(good), 0o600))
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "bad.tpl"), []byte(bad), 0o600))
+
+	findings, err := templateRunner(tdir)(discardLogger())
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Path, "bad.tpl"))
+}
+
+func TestTemplateRunnerEmptyDirIsClean(t *testing.T) {
+	findings, err := templateRunner(t.TempDir())(discardLogger())
+	assert.NilError(t, err) // no .tpl files -> nothing to lint
+	assert.Equal(t, 0, len(findings))
+}
+
+func TestRunTemplateFileLogsDebug(t *testing.T) {
+	dir := t.TempDir()
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "a.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	_, err := runTemplateFile(log, path)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "linting template"),
+		"expected debug log line, got: %s", out)
+	assert.Assert(t, strings.Contains(out, path),
+		"expected the template path in the log, got: %s", out)
+	assert.Assert(t, strings.Contains(out, "level=debug"),
+		"expected debug level, got: %s", out)
+}
+
+func TestRunTemplateFileDebugSuppressedAtInfoLevel(t *testing.T) {
+	dir := t.TempDir()
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "a.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.InfoLevel)
+
+	_, err := runTemplateFile(log, path)
+	assert.NilError(t, err)
+
+	out := buf.String()
+	assert.Assert(t, !strings.Contains(out, "linting template"),
+		"debug line must be suppressed at info level, got: %s", out)
+}
+
+func TestCollectTemplateFilesLogsDiscoveryCount(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(good), 0o600))
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "b.tpl"), []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	files, err := collectTemplateFiles(log, tdir)
+	assert.NilError(t, err)
+	assert.Equal(t, len(files), 2)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "discovered 2 template(s)"),
+		"expected discovery count log line, got: %s", out)
+	assert.Assert(t, strings.Contains(out, "level=debug"),
+		"expected debug level, got: %s", out)
+}
+
+func TestCollectTemplateFilesLogsMissingDir(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	files, err := collectTemplateFiles(log, filepath.Join(t.TempDir(), "nope"))
+	assert.NilError(t, err)
+	assert.Assert(t, files == nil, "expected nil files, got: %v", files)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "no templates directory"),
+		"expected missing-dir log line, got: %s", out)
+}
+
+func TestRunLintTemplatesStdin(t *testing.T) {
+	// A bad template (block without file.Block) piped via c.Reader with '-'.
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	var out bytes.Buffer
+	cmd := NewLintCommand()
+	// Drive the templates subcommand directly with '-' and a piped reader.
+	sub := findSubcommand(cmd, "templates")
+	assert.Assert(t, sub != nil)
+	sub.Reader = strings.NewReader(bad)
+	sub.Writer = &out
+	// warnings-as-errors default true; the rule-1 error must fail the run.
+	err := sub.Run(context.Background(), []string{"templates", "-"})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunLintTemplatesExplicitFileArg proves an explicit .tpl path arg is linted
+// and produces normal findings (a rule-1 error for a block missing file.Block).
+func TestRunLintTemplatesExplicitFileArg(t *testing.T) {
+	dir := t.TempDir()
+	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"
+	path := filepath.Join(dir, "bad.tpl")
+	assert.NilError(t, os.WriteFile(path, []byte(bad), 0o600))
+
+	cmd := NewLintCommand()
+	cmd.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", path})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunTemplateFileMissingFileFinding proves a missing file arg yields a
+// "template file not found:" finding (not an error).
+func TestRunTemplateFileMissingFileFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.tpl")
+	findings, err := runTemplateFile(discardLogger(), path)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Message, "template file not found:"),
+		"expected not-found finding, got: %s", findings[0].Message)
+}
+
+// TestAggregateTemplatesOnlyModulePasses proves a templates-only module (valid
+// templates, no manifest.yaml) lints cleanly through the real aggregate action.
+func TestAggregateTemplatesOnlyModulePasses(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(good), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.NilError(t, err) // no manifest is fine; valid templates pass → exit 0
+}
+
+// TestAggregateTemplatesOnlyModuleStillLintsTemplates proves templates are still
+// validated even when the module has no manifest: an invalid template fails.
+func TestAggregateTemplatesOnlyModuleStillLintsTemplates(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	bad := "## <<Stencil::Block(x)>>\nno file block\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(bad), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.Assert(t, err != nil, "invalid template must fail even without a manifest")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"),
+		"expected a lint failure, got: %v", err)
 }

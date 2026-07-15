@@ -1,0 +1,2 @@
+warning  t.tpl:1  block "x" uses deprecated block syntax; please migrate to <<Stencil::Block(x)>> ... <</Stencil::Block>>.
+

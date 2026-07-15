@@ -1,0 +1,2 @@
+error  t.tpl:3  Stencil::EndBlock with a <</, should use <</Stencil::Block>> instead
+

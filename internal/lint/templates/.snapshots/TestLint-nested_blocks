@@ -1,0 +1,2 @@
+error  t.tpl:3  block "b" opened inside block "a"; blocks cannot be nested. Close "a" with <</Stencil::Block>> first.
+

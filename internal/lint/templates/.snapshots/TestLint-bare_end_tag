@@ -1,0 +1,2 @@
+error  t.tpl:1  found a block end tag with no matching start. Stencil blocks must be balanced like XML tags: a <</Stencil::Block>> (or EndBlock) must be preceded by its <<Stencil::Block(name)>> (or Block(name)) start.
+
