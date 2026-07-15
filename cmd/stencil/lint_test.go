@@ -150,11 +150,10 @@ func TestManifestRunnerValid(t *testing.T) {
 	assert.Equal(t, 0, len(findings))
 }
 
-func TestManifestRunnerMissingFileIsFinding(t *testing.T) {
+func TestManifestRunnerMissingManifestSkipped(t *testing.T) {
 	findings, err := manifestRunner(filepath.Join(t.TempDir(), "manifest.yaml"))(discardLogger())
-	assert.NilError(t, err) // missing file is a finding, not an error
-	assert.Assert(t, len(findings) == 1)
-	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.NilError(t, err) // a missing manifest is skipped, not an error
+	assert.Equal(t, 0, len(findings), "aggregate lint skips a missing manifest (module may be templates-only)")
 }
 
 func TestNewLintCommandShape(t *testing.T) {
@@ -306,11 +305,11 @@ func TestRunLintAggregateFixInPlace(t *testing.T) {
 	assert.Assert(t, !strings.Contains(string(out), "prerelease:"))
 }
 
-// TestRunLintFixMissingManifest pins Fix 4: a --fix run whose target manifest
-// does not exist reports the "manifest file not found" finding (via the shared
-// resolveManifestPath) and fails, on both the module-manifest and aggregate
-// paths — matching the non-fix path's not-found handling rather than crashing
-// or silently succeeding.
+// TestRunLintFixMissingManifest pins the --fix not-found handling. The explicit
+// module-manifest --fix path reports the "manifest file not found" finding (via
+// the shared resolveManifestPath) and fails, since the user asked for a
+// manifest. The aggregate --fix path instead SKIPS a missing manifest and exits
+// cleanly, because a module may be templates-only.
 func TestRunLintFixMissingManifest(t *testing.T) {
 	t.Run("module-manifest", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "nope.yaml")
@@ -325,9 +324,7 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 		root := NewLintCommand()
 		root.Writer = io.Discard
 		err := root.Run(t.Context(), []string{"lint", "--fix", dir})
-		assert.Assert(t, err != nil, "missing manifest must fail")
-		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
-			"expected the not-found finding to fail the run, got: %v", err)
+		assert.NilError(t, err) // aggregate --fix skips a missing manifest
 	})
 }
 
@@ -385,4 +382,36 @@ func TestRunLintTemplatesStdin(t *testing.T) {
 	err := sub.Run(context.Background(), []string{"templates", "-"})
 	assert.Assert(t, err != nil)
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestAggregateTemplatesOnlyModulePasses proves a templates-only module (valid
+// templates, no manifest.yaml) lints cleanly through the real aggregate action.
+func TestAggregateTemplatesOnlyModulePasses(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(good), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.NilError(t, err) // no manifest is fine; valid templates pass → exit 0
+}
+
+// TestAggregateTemplatesOnlyModuleStillLintsTemplates proves templates are still
+// validated even when the module has no manifest: an invalid template fails.
+func TestAggregateTemplatesOnlyModuleStillLintsTemplates(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	bad := "## <<Stencil::Block(x)>>\nno file block\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(bad), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.Assert(t, err != nil, "invalid template must fail even without a manifest")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"),
+		"expected a lint failure, got: %v", err)
 }

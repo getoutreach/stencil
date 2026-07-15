@@ -250,8 +250,10 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 			return errors.Wrap(err, "lint failed")
 		}
 		if finding != nil {
-			logFindings(log, []lint.Finding{*finding})
-			return failIfFindings([]lint.Finding{*finding}, c.Bool("warnings-as-errors"))
+			// Missing manifest: nothing to fix. Aggregate lint treats a missing
+			// manifest as "nothing to lint" (a module may be templates-only), so do
+			// not fail. Template fixing in aggregate --fix is a future addition.
+			return nil
 		}
 		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
 		if readErr != nil {
@@ -362,7 +364,12 @@ func manifestRunner(path string) runner {
 			return nil, err
 		}
 		if finding != nil {
-			return []lint.Finding{*finding}, nil
+			// Aggregate lint: a missing manifest is not an error (a module may be
+			// templates-only). resolveManifestReader only returns a finding for the
+			// not-found case, so skip it here. `stencil lint module-manifest` still
+			// reports the missing manifest because it calls resolveManifestReader
+			// directly, not this runner.
+			return nil, nil
 		}
 		if closer != nil {
 			defer closer.Close()
