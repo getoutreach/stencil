@@ -20,11 +20,11 @@
 <meta property="og:description" content="Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_lint/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8346852721968085235.png"><meta property="article:section" content="commands">
-<meta property="article:modified_time" content="2026-06-30T09:39:00-07:00">
+<meta property="article:modified_time" content="2026-07-15T08:16:04-07:00">
 <meta itemprop=name content="stencil lint">
 <meta itemprop=description content="Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)">
-<meta itemprop=dateModified content="2026-06-30T09:39:00-07:00">
-<meta itemprop=wordCount content="78"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=dateModified content="2026-07-15T08:16:04-07:00">
+<meta itemprop=wordCount content="86"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8346852721968085235.png">
 <meta name=twitter:title content="stencil lint">
@@ -85,6 +85,7 @@ Validate a Stencil module&rsquo;s manifest without resolving dependencies (templ
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>COMMANDS:
 </span></span></span><span class=line><span class=cl><span class=s1>   module-manifest  Validate a module&#39;</span>s manifest.yaml without resolving dependencies
+</span></span><span class=line><span class=cl>   templates        Validate Stencil templates<span class=err>&#39;</span> block correctness without rendering
 </span></span><span class=line><span class=cl>
 </span></span><span class=line><span class=cl>OPTIONS:
 </span></span><span class=line><span class=cl>   --warnings-as-errors  treat warnings as errors <span class=o>(</span>fail on any finding<span class=o>)</span>
@@ -277,6 +278,10 @@ stencil lint
 stencil lint module-manifest
 </a>
 </li><li class="f6 fw4">
+<a href=/stencil/commands/stencil_lint_templates/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+stencil lint templates
+</a>
+</li><li class="f6 fw4">
 <a href=/stencil/commands/stencil_module/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil module
 </a>
@@ -328,7 +333,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: June 30, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/d9dcadd5f8b833302d126c43728043e80adec8e1>feat(lint): add `stencil lint module-manifest --fix` (#490) (d9dcadd)</a>
+Last updated: July 15, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/04e6ac0094d98b0d4e910778b77293c562a34834>feat(lint): add `stencil lint templates` block validation (#497) (04e6ac0)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_lint.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
