@@ -405,6 +405,45 @@ func TestRunTemplateFileDebugSuppressedAtInfoLevel(t *testing.T) {
 		"debug line must be suppressed at info level, got: %s", out)
 }
 
+func TestCollectTemplateFilesLogsDiscoveryCount(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	good := "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(good), 0o600))
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "b.tpl"), []byte(good), 0o600))
+
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	files, err := collectTemplateFiles(log, tdir)
+	assert.NilError(t, err)
+	assert.Equal(t, len(files), 2)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "discovered 2 template(s)"),
+		"expected discovery count log line, got: %s", out)
+	assert.Assert(t, strings.Contains(out, "level=debug"),
+		"expected debug level, got: %s", out)
+}
+
+func TestCollectTemplateFilesLogsMissingDir(t *testing.T) {
+	var buf bytes.Buffer
+	log := logrus.New()
+	log.SetOutput(&buf)
+	log.SetLevel(logrus.DebugLevel)
+
+	files, err := collectTemplateFiles(log, filepath.Join(t.TempDir(), "nope"))
+	assert.NilError(t, err)
+	assert.Assert(t, files == nil, "expected nil files, got: %v", files)
+
+	out := buf.String()
+	assert.Assert(t, strings.Contains(out, "no templates directory"),
+		"expected missing-dir log line, got: %s", out)
+}
+
 func TestRunLintTemplatesStdin(t *testing.T) {
 	// A bad template (block without file.Block) piped via c.Reader with '-'.
 	bad := "## <<Stencil::Block(y)>>\nnope\n## <</Stencil::Block>>\n"

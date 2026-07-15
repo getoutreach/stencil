@@ -118,7 +118,7 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 	// Resolve the set of template files to lint.
 	var files []string
 	if c.Args().Len() == 0 {
-		fs, err := collectTemplateFiles("templates")
+		fs, err := collectTemplateFiles(log, "templates")
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -128,7 +128,7 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 			info, statErr := os.Stat(arg)
 			switch {
 			case statErr == nil && info.IsDir():
-				fs, err := collectTemplateFiles(arg)
+				fs, err := collectTemplateFiles(log, arg)
 				if err != nil {
 					return errors.Wrap(err, "lint failed")
 				}
@@ -155,7 +155,7 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 // or empty templates directory yields zero findings (nothing to lint).
 func templateRunner(dir string) runner {
 	return func(log logrus.FieldLogger) ([]lint.Finding, error) {
-		files, err := collectTemplateFiles(dir)
+		files, err := collectTemplateFiles(log, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -173,9 +173,10 @@ func templateRunner(dir string) runner {
 
 // collectTemplateFiles returns every *.tpl file under dir (recursive), sorted
 // for deterministic output. A missing dir yields an empty slice (no error).
-func collectTemplateFiles(dir string) ([]string, error) {
+func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) {
 	info, err := os.Stat(dir)
 	if os.IsNotExist(err) {
+		log.WithField("dir", dir).Debug("no templates directory; nothing to lint")
 		return nil, nil
 	}
 	if err != nil {
@@ -184,6 +185,7 @@ func collectTemplateFiles(dir string) ([]string, error) {
 	if !info.IsDir() {
 		// Callers only ever pass a templates directory (never a .tpl path), so
 		// a non-directory here is nothing to walk.
+		log.WithField("dir", dir).Debug("template path is not a directory; nothing to lint")
 		return nil, nil
 	}
 	var files []string
@@ -200,6 +202,7 @@ func collectTemplateFiles(dir string) ([]string, error) {
 		return nil, errors.Wrapf(walkErr, "failed to walk %q", dir)
 	}
 	sort.Strings(files)
+	log.WithField("dir", dir).Debugf("discovered %d template(s)", len(files))
 	return files, nil
 }
 
