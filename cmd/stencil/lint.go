@@ -220,18 +220,10 @@ func runTemplateFile(path string) ([]lint.Finding, error) {
 	return linttemplates.LintReader(path, fh)
 }
 
-// failTemplates applies the warnings-as-errors policy and logs a success line
-// when the templates pass.
+// failTemplates applies the warnings-as-errors policy and logs the templates
+// success line. Thin wrapper over failLint.
 func failTemplates(log logrus.FieldLogger, findings []lint.Finding, warningsAsErrors bool) error {
-	if err := failIfFindings(findings, warningsAsErrors); err != nil {
-		return err
-	}
-	if _, warnings := lint.Counts(findings); warnings > 0 {
-		log.Infof("templates are valid (%d warning(s))", warnings)
-	} else {
-		log.Infof("templates are valid")
-	}
-	return nil
+	return failLint(log, "templates are", findings, warningsAsErrors)
 }
 
 // runLintAggregate is the `stencil lint [dir]` action.
@@ -470,18 +462,10 @@ func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 	}
 }
 
-// failManifest applies the warnings-as-errors policy and logs the success line
-// when the manifest passes. name is the manifest identifier for the success log.
+// failManifest applies the warnings-as-errors policy and logs the manifest
+// success line. name is the manifest identifier. Thin wrapper over failLint.
 func failManifest(log logrus.FieldLogger, name string, findings []lint.Finding, warningsAsErrors bool) error {
-	if err := failIfFindings(findings, warningsAsErrors); err != nil {
-		return err
-	}
-	if _, warnings := lint.Counts(findings); warnings > 0 {
-		log.Infof("manifest %q is valid (%d warning(s))", name, warnings)
-	} else {
-		log.Infof("manifest %q is valid", name)
-	}
-	return nil
+	return failLint(log, fmt.Sprintf("manifest %q is", name), findings, warningsAsErrors)
 }
 
 // logApplied logs one info line per fix the fixer applied.
@@ -537,6 +521,23 @@ func fixAndRelint(c *cli.Command, log logrus.FieldLogger, name string, raw []byt
 	}
 	logFindings(log, findings)
 	return failManifest(log, name, findings, c.Bool("warnings-as-errors"))
+}
+
+// failLint applies the warnings-as-errors policy and, on success, logs a
+// "<subject> valid" line ("<subject> valid (N warning(s))" when there are
+// warnings). subject is a phrase with no trailing punctuation, e.g.
+// `fmt.Sprintf("manifest %q is", name)` or "templates are". Shared by the
+// per-target fail* wrappers.
+func failLint(log logrus.FieldLogger, subject string, findings []lint.Finding, warningsAsErrors bool) error {
+	if err := failIfFindings(findings, warningsAsErrors); err != nil {
+		return err
+	}
+	if _, warnings := lint.Counts(findings); warnings > 0 {
+		log.Infof("%s valid (%d warning(s))", subject, warnings)
+	} else {
+		log.Infof("%s valid", subject)
+	}
+	return nil
 }
 
 // failIfFindings returns a summary error when the findings fail the policy:
