@@ -234,7 +234,7 @@ func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, e
 func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("fixing template")
-	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
+	raw, err := os.ReadFile(path) // path was cleaned above.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -330,7 +330,7 @@ func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) 
 func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("linting template")
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
+	fh, err := os.Open(path) // path was cleaned above.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -383,7 +383,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 			return errors.Wrap(err, "lint failed")
 		}
 		if finding == nil {
-			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: path is a user-provided lint target, cleaned via resolveManifestPath.
+			raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
 			if readErr != nil {
 				return errors.Wrapf(readErr, "failed to read %q", fixPath)
 			}
@@ -476,7 +476,7 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 			return failManifest(log, fixPath, []lint.Finding{*finding},
 				c.Bool("warnings-as-errors"))
 		}
-		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: path is a user-provided lint target, cleaned via resolveManifestPath.
+		raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
 		if readErr != nil {
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
@@ -574,7 +574,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
 	}
 
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
+	fh, err := os.Open(path) // path was cleaned above.
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
@@ -662,7 +662,7 @@ func writeFixedFile(path string, original []byte) func([]byte) error {
 		if info, statErr := os.Stat(path); statErr == nil {
 			mode = info.Mode().Perm()
 		}
-		return os.WriteFile(path, fixed, mode) //nolint:gosec // Why: path is a user-provided lint target, cleaned above.
+		return os.WriteFile(path, fixed, mode) // path was cleaned above.
 	}
 }
 
