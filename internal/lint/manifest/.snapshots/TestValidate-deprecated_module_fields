@@ -1,3 +1,3 @@
-warning  modules.github.com/getoutreach/stencil-base.url:4         module field 'url' is deprecated; use 'name'
-warning  modules.github.com/getoutreach/stencil-base.prerelease:5  module field 'prerelease' is deprecated; use 'channel: rc'
+warning  modules.github.com/getoutreach/stencil-base.url:4         module field 'url' is deprecated; replace it with 'name' set to the module's import path, then remove 'url' (not migrated automatically by --fix)
+warning  modules.github.com/getoutreach/stencil-base.prerelease:5  module field 'prerelease' is deprecated; use 'channel: rc' instead (run 'stencil lint --fix' to migrate it automatically)
 

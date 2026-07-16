@@ -1,2 +1,2 @@
-error  manifest.yaml:0  manifest is empty
+error  manifest.yaml:0  manifest is empty; add at least a 'name' field (e.g. 'name: github.com/getoutreach/stencil-base')
 

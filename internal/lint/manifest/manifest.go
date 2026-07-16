@@ -100,9 +100,11 @@ func Validate(res *LoadResult) []lint.Finding {
 	// Check 1: strict decode succeeded.
 	if strictErr != nil {
 		if errors.Is(strictErr, io.EOF) {
-			f.Errorf("manifest.yaml", "manifest is empty")
+			f.Errorf("manifest.yaml", "manifest is empty; add at least a 'name' field "+
+				"(e.g. 'name: github.com/getoutreach/stencil-base')")
 		} else {
-			f.Errorf("manifest.yaml", "invalid manifest: %v", strictErr)
+			f.Errorf("manifest.yaml", "invalid manifest: %v; check the YAML syntax and "+
+				"field types near this location", strictErr)
 		}
 	}
 
@@ -138,7 +140,8 @@ func checkName(f *lint.Findings, mf *configuration.TemplateRepositoryManifest, s
 		if strictErr != nil && strings.Contains(strictErr.Error(), "name") {
 			return
 		}
-		f.Errorf("name", "name is required")
+		f.Errorf("name", "name is required; add a 'name' field set to the module's "+
+			"import path (e.g. 'name: github.com/getoutreach/stencil-base')")
 	}
 }
 
@@ -157,7 +160,8 @@ func checkStencilVersion(f *lint.Findings, mf *configuration.TemplateRepositoryM
 		return
 	}
 	if _, err := semver.NewConstraint(mf.StencilVersion); err != nil {
-		f.Errorf("stencilVersion", "invalid stencilVersion constraint: %v", err)
+		f.Errorf("stencilVersion", "invalid stencilVersion constraint: %v; "+
+			"use a valid semver constraint (e.g. '>=1.0.0')", err)
 	}
 }
 
@@ -185,15 +189,18 @@ func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManife
 			}
 		}
 		if arg.Required && arg.Default != nil {
-			f.Errorf("arguments."+name, "required argument must not set a default")
+			f.Errorf("arguments."+name, "required argument must not set a default; "+
+				"remove 'required: true' or remove 'default'")
 		}
 		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
 		if arg.Type != "" {
-			f.Warnf("arguments."+name+".type", "argument field 'type' is deprecated; use 'schema'")
+			f.Warnf("arguments."+name+".type", "argument field 'type' is deprecated; use 'schema.type' "+
+				"instead (run 'stencil lint --fix' to migrate it automatically)")
 		}
 		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
 		if len(arg.Values) > 0 {
-			f.Warnf("arguments."+name+".values", "argument field 'values' is deprecated; use 'schema'")
+			f.Warnf("arguments."+name+".values", "argument field 'values' is deprecated; use 'schema.enum' "+
+				"instead (run 'stencil lint --fix' to migrate it automatically)")
 		}
 		if arg.Deprecated != "" {
 			f.Infof("arguments."+name, "argument %q is deprecated: %s", name, arg.Deprecated)
@@ -207,11 +214,13 @@ func checkModules(f *lint.Findings, mf *configuration.TemplateRepositoryManifest
 		path := modulePath(m, i)
 		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
 		if m.URL != "" {
-			f.Warnf(path+".url", "module field 'url' is deprecated; use 'name'")
+			f.Warnf(path+".url", "module field 'url' is deprecated; replace it with 'name' set to the "+
+				"module's import path, then remove 'url' (not migrated automatically by --fix)")
 		}
 		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
 		if m.Prerelease {
-			f.Warnf(path+".prerelease", "module field 'prerelease' is deprecated; use 'channel: rc'")
+			f.Warnf(path+".prerelease", "module field 'prerelease' is deprecated; use 'channel: rc' "+
+				"instead (run 'stencil lint --fix' to migrate it automatically)")
 		}
 	}
 }

@@ -1,2 +1,2 @@
-error  arguments.x:3  required argument must not set a default
+error  arguments.x:3  required argument must not set a default; remove 'required: true' or remove 'default'
 
