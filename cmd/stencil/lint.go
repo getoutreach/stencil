@@ -6,12 +6,14 @@
 // gosec G304 note: every os.Open/os.ReadFile/os.WriteFile call in this file
 // takes a path that is either a CLI argument the invoking user typed directly,
 // or derived from one (e.g. joining a user-named directory with
-// "manifest.yaml"). stencil lint's whole purpose is to read/write files the
-// local user already has filesystem access to -- the same trust model as
-// `cat`/`grep`/`eslint <path>`. There is no privilege or trust boundary here
-// for a path to cross (the invoking user and the process share the same
-// filesystem permissions), so path canonicalization/allow-listing would not
-// add real protection; each call site is marked #nosec G304 on that basis.
+// "manifest.yaml"). Each path-accepting function runs it through
+// filepath.Clean before using it, resolving any "." or ".." elements
+// lexically. This is not a security boundary -- stencil lint's whole purpose
+// is to read/write files the local user already has filesystem access to,
+// the same trust model as `cat`/`grep`/`eslint <path>`, so there is no
+// privilege boundary here for a path to cross, and Clean does not (and is not
+// meant to) prevent the user from naming a path outside any particular
+// directory. It normalizes the path representation before use.
 
 package main
 
@@ -230,8 +232,9 @@ func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, e
 // findings from re-linting the fixed content. A missing/unreadable file is
 // reported as a finding (not an error), mirroring runTemplateFile.
 func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
+	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("fixing template")
-	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
+	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -325,8 +328,9 @@ func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) 
 // runTemplateFile lints a single template path. A missing file is reported as
 // an error finding (not an error), mirroring resolveManifestReader.
 func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
+	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("linting template")
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
+	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -379,7 +383,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 			return errors.Wrap(err, "lint failed")
 		}
 		if finding == nil {
-			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target; #nosec G304 for the same reason.
+			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: path is a user-provided lint target, cleaned via resolveManifestPath.
 			if readErr != nil {
 				return errors.Wrapf(readErr, "failed to read %q", fixPath)
 			}
@@ -472,7 +476,7 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 			return failManifest(log, fixPath, []lint.Finding{*finding},
 				c.Bool("warnings-as-errors"))
 		}
-		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target; #nosec G304 for the same reason.
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: path is a user-provided lint target, cleaned via resolveManifestPath.
 		if readErr != nil {
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
@@ -528,6 +532,7 @@ func manifestRunner(path string) runner {
 // file not found" finding (not an error), mirroring resolveManifestReader so the
 // --fix and non-fix paths agree on target location and absence reporting.
 func resolveManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+	path = filepath.Clean(path)
 	info, statErr := os.Stat(path)
 	if statErr == nil && info.IsDir() {
 		path = filepath.Join(path, "manifest.yaml")
@@ -551,6 +556,7 @@ func resolveManifestPath(path string) (resolved string, finding *lint.Finding, e
 // finding (not an error). The returned io.Closer (when non-nil) must be closed
 // by the caller. A non-nil error is an unexpected I/O failure.
 func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err == nil && info.IsDir() {
 		// A directory: lint its manifest.yaml (mirrors `lint [dir]`).
@@ -568,7 +574,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
 	}
 
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
+	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; cleaned above.
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
@@ -647,6 +653,7 @@ func logFixed(log logrus.FieldLogger, path, message string, fields logrus.Fields
 // path between the caller's read and this write). The existing file mode is
 // preserved.
 func writeFixedFile(path string, original []byte) func([]byte) error {
+	path = filepath.Clean(path)
 	return func(fixed []byte) error {
 		if bytes.Equal(original, fixed) {
 			return nil // no change: leave the file untouched
@@ -655,7 +662,7 @@ func writeFixedFile(path string, original []byte) func([]byte) error {
 		if info, statErr := os.Stat(path); statErr == nil {
 			mode = info.Mode().Perm()
 		}
-		return os.WriteFile(path, fixed, mode)
+		return os.WriteFile(path, fixed, mode) //nolint:gosec // Why: path is a user-provided lint target, cleaned above.
 	}
 }
 

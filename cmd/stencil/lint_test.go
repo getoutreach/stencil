@@ -164,6 +164,47 @@ func TestResolveManifestReaderDirAppendsManifest(t *testing.T) {
 	assert.Assert(t, strings.Contains(string(b), "name: testing"))
 }
 
+// TestResolveManifestReaderCleansRedundantPathSegments pins that a path with
+// redundant "." / ".." segments (as gosec/Wiz-style path-validation scanners
+// look for evidence of, ahead of a file read) still resolves correctly:
+// filepath.Clean normalizes the representation before resolveManifestReader's
+// os.Stat/os.Open calls, though it does not (and is not meant to) restrict
+// which file gets opened.
+func TestResolveManifestReaderCleansRedundantPathSegments(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
+
+	// filepath.Join cleans its result internally, so building the redundant
+	// "sub/../." segments this way (rather than via Join) keeps the input
+	// genuinely uncleaned, exercising resolveManifestReader's own Clean call.
+	messy := dir + "/sub/../manifest.yaml"
+	r, closer, finding, err := resolveManifestReader(messy)
+	assert.NilError(t, err)
+	assert.Assert(t, finding == nil)
+	assert.Assert(t, r != nil)
+	if closer != nil {
+		defer closer.Close()
+	}
+	b, _ := io.ReadAll(r)
+	assert.Assert(t, strings.Contains(string(b), "name: testing"))
+}
+
+// TestResolveManifestPathCleansRedundantPathSegments mirrors
+// TestResolveManifestReaderCleansRedundantPathSegments for resolveManifestPath,
+// which feeds the --fix code paths.
+func TestResolveManifestPathCleansRedundantPathSegments(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
+
+	// Not built via filepath.Join, which would clean it before
+	// resolveManifestPath ever saw it (see the sibling test above).
+	messy := dir + "/sub/.."
+	resolved, finding, err := resolveManifestPath(messy)
+	assert.NilError(t, err)
+	assert.Assert(t, finding == nil)
+	assert.Equal(t, filepath.Join(dir, "manifest.yaml"), resolved)
+}
+
 func TestManifestRunnerValid(t *testing.T) {
 	dir := t.TempDir()
 	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
