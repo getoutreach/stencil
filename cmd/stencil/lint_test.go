@@ -26,6 +26,28 @@ func discardLogger() *logrus.Logger {
 	return l
 }
 
+// captureStderr redirects the process's os.Stderr for the duration of run and
+// returns everything written to it. The lint command actions build their own
+// logrus.Logger via newLintLogger, which defaults to os.Stderr and isn't
+// otherwise injectable from a test driving the command through
+// (*cli.Command).Run, so this is the only way to assert on their log output
+// end to end.
+func captureStderr(t *testing.T, run func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	assert.NilError(t, err)
+	orig := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	run()
+
+	assert.NilError(t, w.Close())
+	out, err := io.ReadAll(r)
+	assert.NilError(t, err)
+	return string(out)
+}
+
 func TestRunManifestReaderValid(t *testing.T) {
 	findings, err := runManifestReader(discardLogger(), "<test>", strings.NewReader("name: testing\n"))
 	assert.NilError(t, err)
@@ -283,6 +305,54 @@ func TestRunLintModuleManifestFixNoOpDoesNotRewrite(t *testing.T) {
 	assert.Equal(t, string(clean), string(out)) // unchanged bytes
 	info2, _ := os.Stat(path)
 	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
+}
+
+// TestWriteFixedFileComparesAgainstPassedBytesNotDisk proves writeFixedFile's
+// no-op check uses the original bytes passed in by the caller, not a fresh
+// read of path, by pointing original at content that differs from what's
+// actually on disk: since fixed matches original (not the on-disk content),
+// the write must be skipped even though a re-read would have seen a
+// difference.
+func TestWriteFixedFileComparesAgainstPassedBytesNotDisk(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	onDisk := []byte("on-disk content")
+	original := []byte("stale in-memory content")
+	assert.NilError(t, os.WriteFile(path, onDisk, 0o600))
+
+	info1, err := os.Stat(path)
+	assert.NilError(t, err)
+	err = writeFixedFile(path, original)(original) // fixed == original: a no-op by the caller's view
+	assert.NilError(t, err)
+
+	out, err := os.ReadFile(path)
+	assert.NilError(t, err)
+	assert.Equal(t, string(onDisk), string(out), "on-disk content must be untouched by a caller-side no-op")
+	info2, err := os.Stat(path)
+	assert.NilError(t, err)
+	assert.Equal(t, info1.ModTime(), info2.ModTime())
+}
+
+// TestWriteFixedFileDoesNotReReadPath proves writeFixedFile no longer needs
+// path to still exist with its original content once original has been
+// captured: deleting the file between the caller's read and the write must
+// not prevent the write (mode falls back to the 0644 default, matching the
+// existing missing-file behavior of the mode lookup).
+func TestWriteFixedFileDoesNotReReadPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	original := []byte("original")
+	assert.NilError(t, os.WriteFile(path, original, 0o600))
+
+	assert.NilError(t, os.Remove(path)) // simulate a concurrent delete
+
+	fixed := []byte("fixed")
+	err := writeFixedFile(path, original)(fixed)
+	assert.NilError(t, err)
+
+	out, err := os.ReadFile(path)
+	assert.NilError(t, err)
+	assert.Equal(t, string(fixed), string(out))
 }
 
 func TestRunLintModuleManifestFixStdin(t *testing.T) {
@@ -655,6 +725,51 @@ func TestRunLintAggregateFixTemplatesOnlyModule(t *testing.T) {
 
 	tplOut, _ := os.ReadFile(filepath.Join(tdir, "a.tpl"))
 	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(tplOut))
+}
+
+// TestRunLintAggregateFixLogsSuccessLine pins that a clean aggregate --fix
+// run prints a success confirmation line, matching what the pre-unification
+// aggregate --fix (which delegated straight to the manifest subcommand's
+// fixAndRelint/failManifest) used to print, and what `lint module-manifest
+// --fix`/`lint templates --fix` still print today. Regression: the initial
+// unification replaced this with a bare failIfFindings, which is silent on
+// success.
+func TestRunLintAggregateFixLogsSuccessLine(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\nmodules:\n  - name: dep\n    prerelease: true\n"), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	var err error
+	out := captureStderr(t, func() {
+		err = root.Run(context.Background(), []string{"lint", "--fix", dir})
+	})
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(out, "is valid"),
+		"expected a success confirmation line, got:\n%s", out)
+}
+
+// TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding proves `lint --fix
+// <non-directory>` gives the same clean "is not a directory" finding the
+// non-fix aggregate path gives for the identical input, instead of a raw,
+// path-leaking stat error from resolveManifestPath trying to join
+// "manifest.yaml" onto a file path.
+func TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "notadir.txt")
+	assert.NilError(t, os.WriteFile(path, []byte("hello"), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	var err error
+	out := captureStderr(t, func() {
+		err = root.Run(context.Background(), []string{"lint", "--fix", path})
+	})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(out, "is not a directory; stencil lint expects a module directory"),
+		"expected the friendly not-a-directory finding, got:\n%s", out)
+	assert.Assert(t, !strings.Contains(out, "failed to stat"),
+		"must not leak the raw resolveManifestPath stat error, got:\n%s", out)
 }
 
 // TestRunLintAggregateFixTemplatesUnfixableFails proves the unified aggregate

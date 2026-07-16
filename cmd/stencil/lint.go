@@ -222,23 +222,12 @@ func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, e
 func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	log.WithField("path", path).Debug("fixing template")
 	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target.
-	if os.IsNotExist(err) {
-		return []lint.Finding{{
-			Severity: lint.SeverityError,
-			Path:     path,
-			Message:  fmt.Sprintf("template file not found: %s", path),
-		}}, nil
-	}
 	if err != nil {
-		return []lint.Finding{{
-			Severity: lint.SeverityError,
-			Path:     path,
-			Message:  fmt.Sprintf("failed to open template %s: %v", path, err),
-		}}, nil
+		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
 
 	fixed, applied := linttemplates.FixBytes(path, raw)
-	if writeErr := writeFixedFile(path)(fixed); writeErr != nil {
+	if writeErr := writeFixedFile(path, raw)(fixed); writeErr != nil {
 		return nil, errors.Wrapf(writeErr, "failed to write fixed template %q", path)
 	}
 	logAppliedTemplates(log, applied)
@@ -246,12 +235,31 @@ func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error
 	return linttemplates.LintReader(path, bytes.NewReader(fixed))
 }
 
+// templateOpenErrorFinding builds the "not found"/"failed to open" finding
+// for a template path that couldn't be read, shared by runTemplateFile and
+// fixTemplateFile so their wording for the same class of failure can never
+// diverge.
+func templateOpenErrorFinding(path string, err error) lint.Finding {
+	if os.IsNotExist(err) {
+		return lint.Finding{
+			Severity: lint.SeverityError,
+			Path:     path,
+			Message:  fmt.Sprintf("template file not found: %s", path),
+		}
+	}
+	return lint.Finding{
+		Severity: lint.SeverityError,
+		Path:     path,
+		Message:  fmt.Sprintf("failed to open template %s: %v", path, err),
+	}
+}
+
 // logAppliedTemplates logs one info line per template-syntax fix the fixer
-// applied. Mirrors logApplied, additionally attaching the source line since
-// (unlike manifest.Applied) linttemplates.Applied carries one.
+// applied, additionally attaching the source line since (unlike
+// manifest.Applied) linttemplates.Applied carries one.
 func logAppliedTemplates(log logrus.FieldLogger, applied []linttemplates.Applied) {
 	for _, a := range applied {
-		log.WithField("path", a.Path).WithField("line", a.Line).Infof("fixed: %s", a.Message)
+		logFixed(log, a.Path, a.Message, logrus.Fields{"line": a.Line})
 	}
 }
 
@@ -309,19 +317,8 @@ func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) 
 func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	log.WithField("path", path).Debug("linting template")
 	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target.
-	if os.IsNotExist(err) {
-		return []lint.Finding{{
-			Severity: lint.SeverityError,
-			Path:     path,
-			Message:  fmt.Sprintf("template file not found: %s", path),
-		}}, nil
-	}
 	if err != nil {
-		return []lint.Finding{{
-			Severity: lint.SeverityError,
-			Path:     path,
-			Message:  fmt.Sprintf("failed to open template %s: %v", path, err),
-		}}, nil
+		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
 	defer fh.Close()
 	return linttemplates.LintReader(path, fh)
@@ -350,6 +347,20 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 
 	log := newLintLogger(c)
 
+	// Checked before the --fix branch too, so a non-directory path gets the
+	// same friendly finding either way, instead of --fix falling through to a
+	// raw "failed to stat ...manifest.yaml: not a directory" error from
+	// resolveManifestPath.
+	if info, statErr := os.Stat(dir); statErr == nil && !info.IsDir() {
+		finding := lint.Finding{
+			Severity: lint.SeverityError,
+			Path:     dir,
+			Message:  fmt.Sprintf("%q is not a directory; stencil lint expects a module directory", dir),
+		}
+		logFindings(log, []lint.Finding{finding})
+		return failIfFindings([]lint.Finding{finding}, c.Bool("warnings-as-errors"))
+	}
+
 	if c.Bool("fix") {
 		var all []lint.Finding
 
@@ -362,7 +373,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 			if readErr != nil {
 				return errors.Wrapf(readErr, "failed to read %q", fixPath)
 			}
-			findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath))
+			findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath, raw))
 			if fixErr != nil {
 				return errors.Wrap(fixErr, "lint failed")
 			}
@@ -383,17 +394,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 		all = append(all, findings...)
 
 		logFindings(log, all)
-		return failIfFindings(all, c.Bool("warnings-as-errors"))
-	}
-
-	if info, statErr := os.Stat(dir); statErr == nil && !info.IsDir() {
-		finding := lint.Finding{
-			Severity: lint.SeverityError,
-			Path:     dir,
-			Message:  fmt.Sprintf("%q is not a directory; stencil lint expects a module directory", dir),
-		}
-		logFindings(log, []lint.Finding{finding})
-		return failIfFindings([]lint.Finding{finding}, c.Bool("warnings-as-errors"))
+		return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
 	}
 
 	runners := []runner{
@@ -465,7 +466,7 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 		if readErr != nil {
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
-		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath))
+		return fixAndRelint(c, log, fixPath, raw, writeFixedFile(fixPath, raw))
 	}
 
 	r, closer, finding, err := resolveManifestReader(path)
@@ -612,17 +613,32 @@ func failManifest(log logrus.FieldLogger, name string, findings []lint.Finding, 
 // logApplied logs one info line per fix the fixer applied.
 func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
 	for _, a := range applied {
-		log.WithField("path", a.Path).Infof("fixed: %s", a.Message)
+		logFixed(log, a.Path, a.Message, nil)
 	}
 }
 
+// logFixed logs one info line for a single applied fix, in the shared
+// "fixed: <message>" format every fixer uses. fields attaches any additional
+// structured context beyond "path" (e.g. templates' source line); pass nil
+// for none.
+func logFixed(log logrus.FieldLogger, path, message string, fields logrus.Fields) {
+	entry := log.WithField("path", path)
+	if len(fields) > 0 {
+		entry = entry.WithFields(fields)
+	}
+	entry.Infof("fixed: %s", message)
+}
+
 // writeFixedFile returns a writer that overwrites path with the fixed bytes,
-// but only when they differ from the current contents (so a no-op fix does not
-// dirty the file or bump its mtime). The existing file mode is preserved.
-func writeFixedFile(path string) func([]byte) error {
+// but only when they differ from original -- the bytes the caller already
+// read from path before fixing -- so a no-op fix does not dirty the file or
+// bump its mtime, and path is not read from disk a second time (avoiding a
+// second I/O round trip, and a TOCTOU window against a concurrent writer to
+// path between the caller's read and this write). The existing file mode is
+// preserved.
+func writeFixedFile(path string, original []byte) func([]byte) error {
 	return func(fixed []byte) error {
-		current, err := os.ReadFile(path) //nolint:gosec // Why: user-provided lint target.
-		if err == nil && bytes.Equal(current, fixed) {
+		if bytes.Equal(original, fixed) {
 			return nil // no change: leave the file untouched
 		}
 		mode := os.FileMode(0o644)
