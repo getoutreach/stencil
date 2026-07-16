@@ -2,6 +2,16 @@
 
 // Description: This file contains the stencil lint command, which statically
 // validates a Stencil module without resolving dependencies.
+//
+// gosec G304 note: every os.Open/os.ReadFile/os.WriteFile call in this file
+// takes a path that is either a CLI argument the invoking user typed directly,
+// or derived from one (e.g. joining a user-named directory with
+// "manifest.yaml"). stencil lint's whole purpose is to read/write files the
+// local user already has filesystem access to -- the same trust model as
+// `cat`/`grep`/`eslint <path>`. There is no privilege or trust boundary here
+// for a path to cross (the invoking user and the process share the same
+// filesystem permissions), so path canonicalization/allow-listing would not
+// add real protection; each call site is marked #nosec G304 on that basis.
 
 package main
 
@@ -221,7 +231,7 @@ func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, e
 // reported as a finding (not an error), mirroring runTemplateFile.
 func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	log.WithField("path", path).Debug("fixing template")
-	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target.
+	raw, err := os.ReadFile(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -316,7 +326,7 @@ func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) 
 // an error finding (not an error), mirroring resolveManifestReader.
 func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	log.WithField("path", path).Debug("linting template")
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target.
+	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -369,7 +379,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 			return errors.Wrap(err, "lint failed")
 		}
 		if finding == nil {
-			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+			raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target; #nosec G304 for the same reason.
 			if readErr != nil {
 				return errors.Wrapf(readErr, "failed to read %q", fixPath)
 			}
@@ -462,7 +472,7 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 			return failManifest(log, fixPath, []lint.Finding{*finding},
 				c.Bool("warnings-as-errors"))
 		}
-		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target.
+		raw, readErr := os.ReadFile(fixPath) //nolint:gosec // Why: user-provided lint target; #nosec G304 for the same reason.
 		if readErr != nil {
 			return errors.Wrapf(readErr, "failed to read %q", fixPath)
 		}
@@ -558,7 +568,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
 	}
 
-	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target.
+	fh, err := os.Open(path) //nolint:gosec // Why: path is a user-provided lint target; #nosec G304 for the same reason.
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
