@@ -14,6 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// StartStatement is a constant for the start of a statement.
+const StartStatement = "Block"
+
 // EndStatement is a constant for the end of a statement
 const EndStatement = "EndBlock"
 
@@ -104,7 +107,7 @@ func parseBlocks(filePath string) (map[string]string, error) {
 			isCommand = true
 
 			switch cmd {
-			case "Block":
+			case StartStatement:
 				blockName := matches[3]
 				if curBlockName != "" {
 					return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i+1)

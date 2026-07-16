@@ -61,7 +61,7 @@ func matchLegacyTag(line string) (tag legacyTag, ok bool) {
 		return legacyTag{}, false
 	}
 	command := line[idx[4]:idx[5]]
-	if command != "Block" && command != codegen.EndStatement {
+	if command != codegen.StartStatement && command != codegen.EndStatement {
 		// Every other command word is inert to codegen/classify too.
 		return legacyTag{}, false
 	}
@@ -120,7 +120,7 @@ func fixLine(line string, hasOpen bool, openName string) (fixed, message string)
 	}
 
 	switch tag.command {
-	case "Block":
+	case codegen.StartStatement:
 		return tag.indent + v2Prefix + " <<Stencil::Block(" + tag.name + ")>>" + tag.suffix,
 			fmt.Sprintf("migrated deprecated block syntax to <<Stencil::Block(%s)>>", tag.name)
 	case codegen.EndStatement:

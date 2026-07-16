@@ -255,7 +255,7 @@ func classify(text string) token {
 	if m := codegen.BlockPattern.FindStringSubmatch(text); len(m) == 4 {
 		// m[2]=command; m[3]=name.
 		switch m[2] {
-		case "Block":
+		case codegen.StartStatement:
 			return token{start: true, name: m[3], legacy: true}
 		case codegen.EndStatement:
 			return token{end: true, legacy: true}
