@@ -165,11 +165,8 @@ func TestResolveManifestReaderDirAppendsManifest(t *testing.T) {
 }
 
 // TestResolveManifestReaderCleansRedundantPathSegments pins that a path with
-// redundant "." / ".." segments (as gosec/Wiz-style path-validation scanners
-// look for evidence of, ahead of a file read) still resolves correctly:
-// filepath.Clean normalizes the representation before resolveManifestReader's
-// os.Stat/os.Open calls, though it does not (and is not meant to) restrict
-// which file gets opened.
+// redundant "." / ".." segments still resolves, since resolveManifestReader
+// runs it through filepath.Clean before use.
 func TestResolveManifestReaderCleansRedundantPathSegments(t *testing.T) {
 	dir := t.TempDir()
 	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
@@ -348,12 +345,10 @@ func TestRunLintModuleManifestFixNoOpDoesNotRewrite(t *testing.T) {
 	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
 }
 
-// TestWriteFixedFileComparesAgainstPassedBytesNotDisk proves writeFixedFile's
-// no-op check uses the original bytes passed in by the caller, not a fresh
-// read of path, by pointing original at content that differs from what's
-// actually on disk: since fixed matches original (not the on-disk content),
-// the write must be skipped even though a re-read would have seen a
-// difference.
+// TestWriteFixedFileComparesAgainstPassedBytesNotDisk proves the no-op check
+// compares against the original bytes the caller passed in, not a fresh read
+// of path: original deliberately differs from the on-disk content, so a
+// re-read would have seen a change that the passed-in bytes don't.
 func TestWriteFixedFileComparesAgainstPassedBytesNotDisk(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f.txt")
@@ -769,12 +764,8 @@ func TestRunLintAggregateFixTemplatesOnlyModule(t *testing.T) {
 }
 
 // TestRunLintAggregateFixLogsSuccessLine pins that a clean aggregate --fix
-// run prints a success confirmation line, matching what the pre-unification
-// aggregate --fix (which delegated straight to the manifest subcommand's
-// fixAndRelint/failManifest) used to print, and what `lint module-manifest
-// --fix`/`lint templates --fix` still print today. Regression: the initial
-// unification replaced this with a bare failIfFindings, which is silent on
-// success.
+// run prints a success confirmation line, matching `lint module-manifest
+// --fix`/`lint templates --fix`.
 func TestRunLintAggregateFixLogsSuccessLine(t *testing.T) {
 	dir := t.TempDir()
 	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
@@ -792,10 +783,8 @@ func TestRunLintAggregateFixLogsSuccessLine(t *testing.T) {
 }
 
 // TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding proves `lint --fix
-// <non-directory>` gives the same clean "is not a directory" finding the
-// non-fix aggregate path gives for the identical input, instead of a raw,
-// path-leaking stat error from resolveManifestPath trying to join
-// "manifest.yaml" onto a file path.
+// <non-directory>` gives the same "is not a directory" finding the non-fix
+// path gives, instead of a raw stat error from resolveManifestPath.
 func TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "notadir.txt")
 	assert.NilError(t, os.WriteFile(path, []byte("hello"), 0o600))

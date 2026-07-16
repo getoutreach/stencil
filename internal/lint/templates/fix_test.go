@@ -100,22 +100,14 @@ func TestFixBytes(t *testing.T) {
 			in:   "###EndBlock(x)\n",
 		},
 		{
-			// A genuine name mismatch (###Block(a) ... ###EndBlock(b)) is
-			// rejected by codegen's runtime parser at render time -- the only
-			// place in the system that ever catches it, since neither the
-			// static linter nor v2 close-tag syntax itself compares names.
-			// The start is still migrated (its own name is never at risk),
-			// but the mismatched EndBlock is left in legacy form so
-			// parseBlocks keeps catching the mismatch on the next render.
+			// See fixLine's doc comment: codegen's runtime parser rejects this
+			// mismatch at render time; migrating it would erase the only signal
+			// that catches it.
 			name: "mismatched legacy EndBlock name is left unmigrated to preserve the render-time error",
 			in:   "###Block(a)\n{{ file.Block \"a\" }}\n###EndBlock(b)\n",
 		},
 		{
-			// The same protection applies when the open block was started
-			// with v2 syntax (already correct, untouched) and only the
-			// EndBlock is legacy with a mismatched name: migrating it would
-			// still erase the one signal that catches the mismatch at
-			// render time.
+			// Same protection when the open block was already v2 syntax.
 			name: "mismatched legacy EndBlock after a v2 start is left unmigrated",
 			in:   "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n###EndBlock(b)\n",
 		},
@@ -165,14 +157,9 @@ func TestFixBytesNameMismatchPreservesLegacyEndBlockVerbatim(t *testing.T) {
 	assert.Equal(t, 1, len(applied))
 	assert.Assert(t, strings.Contains(applied[0].Message, "<<Stencil::Block(a)>>"))
 
-	// LintReader itself reports nothing new here either way: scan() (see
-	// templates.go) never compared EndBlock names before this fix and still
-	// doesn't after it -- it only cares whether *some* block is open, not
-	// whether the name matches. The value of leaving this EndBlock unmigrated
-	// is specifically for codegen's runtime parser (blocks.go's parseBlocks),
-	// a render-time code path LintReader never exercises; see
-	// internal/codegen.TestWrongEndBlockAfterV2Start, which pins that
-	// parseBlocks still rejects this exact fixed-output shape.
+	// LintReader reports nothing here either way -- scan() never compared
+	// EndBlock names -- the protection is for codegen's runtime parser, see
+	// internal/codegen.TestWrongEndBlockAfterV2Start.
 	findings, err := linttemplates.LintReader("t.tpl", strings.NewReader(string(fixed)))
 	assert.NilError(t, err)
 	assert.Equal(t, 0, len(findings))

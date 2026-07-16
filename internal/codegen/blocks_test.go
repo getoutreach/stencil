@@ -44,12 +44,9 @@ func TestWrongEndBlock(t *testing.T) {
 }
 
 // TestWrongEndBlockAfterV2Start pins that parseBlocks rejects a mismatched
-// legacy EndBlock name even when the matching Block start already uses v2
-// syntax -- the exact shape internal/lint/templates.FixBytes produces for a
-// legacy pair with mismatched names (it migrates the start, which is never at
-// risk, but deliberately leaves a mismatched EndBlock in legacy form so this
-// render-time check keeps firing rather than being silently defeated by
-// migrating the EndBlock to v2's nameless close tag).
+// legacy EndBlock name even when the Block start is already v2 syntax -- the
+// shape internal/lint/templates.FixBytes produces for a mismatched pair,
+// which it deliberately leaves the EndBlock unmigrated to keep triggering.
 func TestWrongEndBlockAfterV2Start(t *testing.T) {
 	_, err := parseBlocks("testdata/wrongendblock-v2start-test.txt")
 	assert.Error(t, err,

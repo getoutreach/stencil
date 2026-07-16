@@ -3,17 +3,11 @@
 // Description: This file contains the stencil lint command, which statically
 // validates a Stencil module without resolving dependencies.
 //
-// gosec G304 note: every os.Open/os.ReadFile/os.WriteFile call in this file
-// takes a path that is either a CLI argument the invoking user typed directly,
-// or derived from one (e.g. joining a user-named directory with
-// "manifest.yaml"). Each path-accepting function runs it through
-// filepath.Clean before using it, resolving any "." or ".." elements
-// lexically. This is not a security boundary -- stencil lint's whole purpose
-// is to read/write files the local user already has filesystem access to,
-// the same trust model as `cat`/`grep`/`eslint <path>`, so there is no
-// privilege boundary here for a path to cross, and Clean does not (and is not
-// meant to) prevent the user from naming a path outside any particular
-// directory. It normalizes the path representation before use.
+// Every file path here is a CLI argument the user typed, or derived from one.
+// Each path-accepting function runs it through filepath.Clean before use, but
+// that's normalization, not a security boundary: there's no privilege
+// boundary for a path to cross in a local CLI tool operating on paths the
+// invoking user already has filesystem access to.
 
 package main
 
@@ -217,9 +211,8 @@ func lintTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, 
 	return all, nil
 }
 
-// fixTemplateFiles fixes each path in files in place (writing only when bytes
-// change; see writeFixedFile) and returns the concatenated findings from
-// re-linting the (possibly fixed) content. A non-nil error is an I/O failure.
+// fixTemplateFiles fixes each path in files (see fixTemplateFile) and returns
+// the concatenated findings. A non-nil error is an I/O failure.
 func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, error) {
 	var all []lint.Finding
 	for _, path := range files {
@@ -272,9 +265,9 @@ func templateOpenErrorFinding(path string, err error) lint.Finding {
 	}
 }
 
-// logAppliedTemplates logs one info line per template-syntax fix the fixer
-// applied, additionally attaching the source line since (unlike
-// manifest.Applied) linttemplates.Applied carries one.
+// logAppliedTemplates logs one info line per template-syntax fix, including
+// the source line (linttemplates.Applied carries one; manifest.Applied does
+// not).
 func logAppliedTemplates(log logrus.FieldLogger, applied []linttemplates.Applied) {
 	for _, a := range applied {
 		logFixed(log, a.Path, a.Message, logrus.Fields{"line": a.Line})
@@ -652,11 +645,8 @@ func logFixed(log logrus.FieldLogger, path, message string, fields logrus.Fields
 
 // writeFixedFile returns a writer that overwrites path with the fixed bytes,
 // but only when they differ from original -- the bytes the caller already
-// read from path before fixing -- so a no-op fix does not dirty the file or
-// bump its mtime, and path is not read from disk a second time (avoiding a
-// second I/O round trip, and a TOCTOU window against a concurrent writer to
-// path between the caller's read and this write). The existing file mode is
-// preserved.
+// read from path -- so a no-op fix doesn't dirty the file, bump its mtime, or
+// re-read path from disk. The existing file mode is preserved.
 func writeFixedFile(path string, original []byte) func([]byte) error {
 	path = filepath.Clean(path)
 	return func(fixed []byte) error {
