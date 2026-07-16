@@ -1,0 +1,7 @@
+--- fixed ---
+## <<Stencil::Block(a)>>
+{{ file.Block "a" }}
+###EndBlock(b)
+--- applied ---
+(no fixes applied)
+

@@ -10,7 +10,8 @@ package templates
 import (
 	"bytes"
 	"fmt"
-	"regexp"
+
+	"github.com/getoutreach/stencil/internal/codegen"
 )
 
 // Applied records one fix the fixer made to a template, for logging. Path is
@@ -22,67 +23,114 @@ type Applied struct {
 	Message string
 }
 
-// legacyLinePattern matches a legacy Block/EndBlock start or end tag with a
-// literal name: the same construct classify (see templates.go) recognizes via
-// codegen.BlockPattern and flags with the rule-6 deprecation warning. Capture
-// groups: 1=leading indent, 2=comment prefix, 3=command (Block or EndBlock),
-// 4=name. The command alternation is restricted to these two literals
-// (instead of codegen.BlockPattern's broader `[a-zA-Z ]+`) so this regex is
-// scoped to exactly what classify treats as a block token; every other
-// command word classify silently ignores, so there is nothing to fix there.
-var legacyLinePattern = regexp.MustCompile(`^(\s*)(///|###|<!---)\s*(Block|EndBlock)\(([a-zA-Z0-9 ]+)\)`)
-
-// legacyToV2Prefix maps each legacy comment prefix to its v2 counterpart.
-// V2BlockPattern allows at most one space between the prefix and "<<", so
-// fixLine always emits exactly one, regardless of the legacy line's spacing.
+// legacyToV2Prefix maps each of codegen.BlockPattern's legacy comment
+// prefixes to its v2 (codegen.V2BlockPattern) counterpart. V2BlockPattern
+// allows at most one space between the prefix and "<<", so fixLine always
+// emits exactly one, regardless of the legacy line's spacing.
+//
+// A prefix codegen.BlockPattern matches but this map doesn't cover (only
+// possible if BlockPattern's prefix alternation is ever extended without
+// updating this map) is left unfixed by matchLegacyTag's caller rather than
+// guessing, so that case fails safe -- no fix applied -- instead of silently
+// emitting a tag with no comment prefix at all.
 var legacyToV2Prefix = map[string]string{
 	"###":   "##",
 	"///":   "//",
 	"<!---": "<!--",
 }
 
+// legacyTag holds the parts of a line matched as a legacy Block or EndBlock
+// tag with a literal name.
+type legacyTag struct {
+	indent, prefix, command, name, suffix string
+}
+
+// matchLegacyTag reports whether line is a legacy Block/EndBlock tag, using
+// codegen.BlockPattern directly -- the same shared regex classify() (see
+// templates.go) and codegen's runtime parser (blocks.go) use -- rather than a
+// second, independently-typed-out copy, so this fixer can never recognize a
+// tag the linter doesn't (or vice versa) if BlockPattern is ever changed. ok
+// is false when line isn't a recognized Block/EndBlock command, including a
+// dynamic-name block (e.g. ###Block({{ $b }})): BlockPattern's name class
+// ([a-zA-Z0-9 ]+) cannot match a template expression at all, so classify
+// never recognizes these as blocks either (no rule-6 warning is ever emitted
+// for them, and in practice this construct exists only in test data).
+func matchLegacyTag(line string) (tag legacyTag, ok bool) {
+	idx := codegen.BlockPattern.FindStringSubmatchIndex(line)
+	if idx == nil {
+		return legacyTag{}, false
+	}
+	command := line[idx[4]:idx[5]]
+	if command != "Block" && command != codegen.EndStatement {
+		// Every other command word is inert to codegen/classify too.
+		return legacyTag{}, false
+	}
+	return legacyTag{
+		indent:  line[idx[0]:idx[2]],
+		prefix:  line[idx[2]:idx[3]],
+		command: command,
+		name:    line[idx[6]:idx[7]],
+		suffix:  line[idx[1]:],
+	}, true
+}
+
 // fixLine rewrites a single legacy Block/EndBlock declaration line (with no
-// trailing line terminator) to v2 syntax. message is empty when the line does
-// not match (fixed then equals line unchanged). Everything before the tag
-// (leading indentation) and after it (e.g. a trailing "-->" closing an HTML
-// comment) is preserved verbatim; only the recognized tag itself is rewritten.
+// trailing line terminator) to v2 syntax. hasOpen/openName describe the block
+// open immediately before this line (as tracked by FixBytes); they are
+// consulted only for an EndBlock tag, to decide whether dropping its name is
+// safe. message is empty when the line is left unchanged.
 //
-// It deliberately does not attempt to migrate:
-//   - a dynamic-name legacy block (e.g. ###Block({{ $b }})): codegen.BlockPattern
-//     cannot match a template expression as a name, so classify never
-//     recognizes these as blocks at all (no rule-6 warning is ever emitted for
-//     them), and in practice this construct exists only in test data.
+// Preserves indentation and everything after the tag (e.g. a trailing "-->"
+// closing an HTML comment) verbatim; only the recognized tag is rewritten.
+//
+// It deliberately does not migrate:
+//   - a dynamic-name legacy block: see matchLegacyTag.
 //   - v2 tag misuse (rule 5, e.g. <<Stencil::EndBlock>>) or anything already
 //     in v2 syntax: only the legacy-to-v2 migration is safe to automate.
+//   - a legacy prefix with no entry in legacyToV2Prefix: fails safe (see
+//     legacyToV2Prefix's doc comment).
+//   - an EndBlock(name) whose name does not match the name of the block open
+//     at this point (hasOpen/openName). codegen's runtime parser
+//     (blocks.go's parseBlocks) rejects exactly this mismatch at render time
+//     ("invalid EndBlock, found EndBlock with name ... while inside of block
+//     with name ...") -- the only place in the system that ever catches this
+//     authoring bug, since neither this linter's own scan() nor v2 syntax
+//     itself (whose close tag carries no name) ever compares names. Migrating
+//     a mismatched EndBlock to the nameless v2 form would permanently erase
+//     that one remaining signal. A bare EndBlock (hasOpen false) has nothing
+//     to compare against and is always safe to migrate: parseBlocks' "not
+//     inside of a block" check depends only on there being no open block,
+//     never on the dropped name.
 //
-// A legacy tag that is part of an already-broken structure (a bare EndBlock,
-// or a Block opened while another is still open) is still rewritten: this is
-// a pure per-line syntax migration keyed only on pattern match, not on
-// block-pairing state. The structural error itself is unaffected by the
-// rewrite and is still reported (in v2 terms) when the fixed bytes are
+// A legacy tag that is part of an otherwise-broken structure (a bare
+// EndBlock, or a Block opened while another is still open) is still
+// rewritten when the above safety checks pass: this is a per-line syntax
+// migration keyed on pattern match and (for EndBlock) name safety, not on
+// full block-pairing correctness. Structural errors are unaffected by the
+// rewrite and are still reported (in v2 terms) when the fixed bytes are
 // re-linted.
-func fixLine(line string) (fixed, message string) {
-	idx := legacyLinePattern.FindStringSubmatchIndex(line)
-	if idx == nil {
+func fixLine(line string, hasOpen bool, openName string) (fixed, message string) {
+	tag, ok := matchLegacyTag(line)
+	if !ok {
 		return line, ""
 	}
-	indent := line[idx[2]:idx[3]]
-	prefix := line[idx[4]:idx[5]]
-	command := line[idx[6]:idx[7]]
-	name := line[idx[8]:idx[9]]
-	suffix := line[idx[1]:]
+	v2Prefix, ok := legacyToV2Prefix[tag.prefix]
+	if !ok {
+		return line, ""
+	}
 
-	v2Prefix := legacyToV2Prefix[prefix]
-
-	switch command {
+	switch tag.command {
 	case "Block":
-		return indent + v2Prefix + " <<Stencil::Block(" + name + ")>>" + suffix,
-			fmt.Sprintf("migrated deprecated block syntax to <<Stencil::Block(%s)>>", name)
-	case "EndBlock":
-		return indent + v2Prefix + " <</Stencil::Block>>" + suffix,
+		return tag.indent + v2Prefix + " <<Stencil::Block(" + tag.name + ")>>" + tag.suffix,
+			fmt.Sprintf("migrated deprecated block syntax to <<Stencil::Block(%s)>>", tag.name)
+	case codegen.EndStatement:
+		if hasOpen && tag.name != openName {
+			return line, ""
+		}
+		return tag.indent + v2Prefix + " <</Stencil::Block>>" + tag.suffix,
 			"migrated deprecated block syntax to <</Stencil::Block>>"
 	default:
-		// Unreachable: legacyLinePattern only matches these two commands.
+		// Unreachable: matchLegacyTag only returns ok for these two commands.
 		return line, ""
 	}
 }
@@ -122,14 +170,37 @@ func splitTerminator(chunk []byte) (content, term []byte) {
 // no-op fix never reformats a file that is already clean or already v2. name
 // identifies the template in the returned Applied entries' Path field.
 //
-// Every other line — and everything on a rewritten line outside the matched
-// tag — is preserved byte for byte, including each line's original line-ending
-// style (LF, CRLF, or no trailing terminator on the final line).
+// Every other line -- and everything on a rewritten line outside the matched
+// tag -- is preserved byte for byte, including each line's original
+// line-ending style (LF, CRLF, or no trailing terminator on the final line).
+//
+// While scanning, FixBytes tracks which block (if any) is open using the same
+// classify() the linter's own scan() uses (see templates.go), so this view of
+// "what's open" -- consulted by fixLine to decide whether an EndBlock's name
+// is safe to drop -- never diverges from the linter's. Unlike scan(), this
+// tracking does not model illegal nesting (a single open name/flag pair is
+// overwritten by a nested start, matching scan()'s "blocks cannot legally
+// nest" simplification but not its nested-credit recovery): that additional
+// fidelity is not needed here, because a file with illegal nesting is already
+// rejected unconditionally by codegen's runtime parser for reasons unrelated
+// to any name match, before it would ever reach a name comparison.
 func FixBytes(name string, raw []byte) (fixed []byte, applied []Applied) {
 	var out bytes.Buffer
+	var hasOpen bool
+	var openName string
 	for i, chunk := range splitKeepEnds(raw) {
 		content, term := splitTerminator(chunk)
-		newContent, message := fixLine(string(content))
+		text := string(content)
+
+		newContent, message := fixLine(text, hasOpen, openName)
+
+		switch tok := classify(text); {
+		case tok.start:
+			hasOpen, openName = true, tok.name
+		case tok.end, tok.misuse != "":
+			hasOpen, openName = false, ""
+		}
+
 		if message == "" {
 			out.Write(chunk)
 			continue

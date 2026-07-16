@@ -1,0 +1,8 @@
+--- fixed ---
+## <<Stencil::Block(a)>>
+{{ file.Block "a" }}
+## <</Stencil::Block>>
+--- applied ---
+t.tpl:1  migrated deprecated block syntax to <<Stencil::Block(a)>>
+t.tpl:3  migrated deprecated block syntax to <</Stencil::Block>>
+
