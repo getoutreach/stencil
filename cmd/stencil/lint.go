@@ -39,6 +39,11 @@ import (
 // templatesDir is the conventional subdirectory holding a module's *.tpl files.
 const templatesDir = "templates"
 
+// stdinName is the placeholder name/path used for stdin ('-') input across
+// both the manifest and templates lint/fix paths, so a finding, log line, or
+// Applied entry sourced from stdin always reads the same way.
+const stdinName = "<stdin>"
+
 // NewLintCommand returns the `lint` command group: an aggregate `lint [dir]`
 // plus `lint module-manifest [path]` and `lint templates [files...]`
 // subcommands. Validation is local-only.
@@ -130,20 +135,20 @@ func runLintTemplates(_ context.Context, c *cli.Command) error {
 			}
 			// Fixed template goes to stdout; diagnostics go to the logger
 			// (stderr), mirroring `lint module-manifest - --fix`.
-			fixed, applied := linttemplates.FixBytes("<stdin>", raw)
+			fixed, applied := linttemplates.FixBytes(stdinName, raw)
 			if _, werr := c.Writer.Write(fixed); werr != nil {
 				return errors.Wrap(werr, "failed to write fixed template")
 			}
 			logAppliedTemplates(log, applied)
-			findings, err := linttemplates.LintReader("<stdin>", bytes.NewReader(fixed))
+			findings, err := linttemplates.LintReader(stdinName, bytes.NewReader(fixed))
 			if err != nil {
 				return errors.Wrap(err, "lint failed")
 			}
 			logFindings(log, findings)
 			return failTemplates(log, findings, c.Bool("warnings-as-errors"))
 		}
-		log.WithField("path", "<stdin>").Debug("linting template")
-		findings, err := linttemplates.LintReader("<stdin>", c.Reader)
+		log.WithField("path", stdinName).Debug("linting template")
+		findings, err := linttemplates.LintReader(stdinName, c.Reader)
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -234,7 +239,7 @@ func fixTemplateFiles(log logrus.FieldLogger, files []string) ([]lint.Finding, e
 func fixTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("fixing template")
-	raw, err := os.ReadFile(path) // path was cleaned above.
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -330,7 +335,7 @@ func collectTemplateFiles(log logrus.FieldLogger, dir string) ([]string, error) 
 func runTemplateFile(log logrus.FieldLogger, path string) ([]lint.Finding, error) {
 	path = filepath.Clean(path)
 	log.WithField("path", path).Debug("linting template")
-	fh, err := os.Open(path) // path was cleaned above.
+	fh, err := os.Open(path)
 	if err != nil {
 		return []lint.Finding{templateOpenErrorFinding(path, err)}, nil
 	}
@@ -447,17 +452,17 @@ func runLintModuleManifest(_ context.Context, c *cli.Command) error {
 		}
 		if c.Bool("fix") {
 			// Fixed YAML goes to stdout; diagnostics go to the logger (stderr).
-			return fixAndRelint(c, log, "<stdin>", raw, func(fixed []byte) error {
+			return fixAndRelint(c, log, stdinName, raw, func(fixed []byte) error {
 				_, werr := c.Writer.Write(fixed)
 				return werr
 			})
 		}
-		findings, err := runManifestReader(log, "<stdin>", bytes.NewReader(raw))
+		findings, err := runManifestReader(log, stdinName, bytes.NewReader(raw))
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
 		logFindings(log, findings)
-		return failManifest(log, "<stdin>", findings, c.Bool("warnings-as-errors"))
+		return failManifest(log, stdinName, findings, c.Bool("warnings-as-errors"))
 	}
 
 	path := "./manifest.yaml"
@@ -574,7 +579,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
 	}
 
-	fh, err := os.Open(path) // path was cleaned above.
+	fh, err := os.Open(path)
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
@@ -662,7 +667,7 @@ func writeFixedFile(path string, original []byte) func([]byte) error {
 		if info, statErr := os.Stat(path); statErr == nil {
 			mode = info.Mode().Perm()
 		}
-		return os.WriteFile(path, fixed, mode) // path was cleaned above.
+		return os.WriteFile(path, fixed, mode)
 	}
 }
 
