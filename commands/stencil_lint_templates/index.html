@@ -20,11 +20,11 @@
 <meta property="og:description" content="Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_lint_templates/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_12403093110864290149.png"><meta property="article:section" content="commands">
-<meta property="article:modified_time" content="2026-07-15T08:16:04-07:00">
+<meta property="article:modified_time" content="2026-07-17T04:49:34-07:00">
 <meta itemprop=name content="stencil lint templates">
 <meta itemprop=description content="Validate template files (defaults to ./templates/**/*.tpl). Use '-' to read a single template from stdin.">
-<meta itemprop=dateModified content="2026-07-15T08:16:04-07:00">
-<meta itemprop=wordCount content="124"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=dateModified content="2026-07-17T04:49:34-07:00">
+<meta itemprop=wordCount content="143"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_12403093110864290149.png">
 <meta name=twitter:title content="stencil lint templates">
@@ -85,6 +85,7 @@ Validate template files (defaults to ./templates/**/*.tpl). Use &lsquo;-&rsquo; 
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>OPTIONS:
 </span></span></span><span class=line><span class=cl><span class=s1>   --warnings-as-errors  treat warnings as errors (fail on any finding)
+</span></span></span><span class=line><span class=cl><span class=s1>   --fix                 automatically fix safe deprecations in place (a manifest is re-encoded at 2-space indent when fixed; re-lints after fixing)
 </span></span></span><span class=line><span class=cl><span class=s1>   --help, -h            show help
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>GLOBAL OPTIONS:
@@ -338,7 +339,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: July 15, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/04e6ac0094d98b0d4e910778b77293c562a34834>feat(lint): add `stencil lint templates` block validation (#497) (04e6ac0)</a>
+Last updated: July 17, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/28ff426b34c0fdac6d3e42e7b7607cada083332f>feat(lint): add `stencil lint templates --fix` and unify aggregate `--fix` (#499) (28ff426)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_lint_templates.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
