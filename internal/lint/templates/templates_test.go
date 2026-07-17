@@ -89,6 +89,27 @@ func TestLint(t *testing.T) {
 			in:   "## <<Stencil::Block(x)>>\n{{- file.Block \"x\" }}\n## <</Stencil::Block>>\n",
 		},
 		{
+			// Regression (stencil-circleci's extraContexts block): a template
+			// may hoist a block's raw contents into a variable via file.Block
+			// *before* the block's own start tag (e.g. to run it through
+			// fromYaml and dedupe against builtin values), then render that
+			// variable inside the tags instead of calling file.Block there
+			// directly. That must not be flagged as missing file.Block.
+			name: "file.Block hoisted before block start tag",
+			in: "{{- $userContexts := (file.Block \"extraContexts\" | fromYaml) }}\n" +
+				"## <<Stencil::Block(extraContexts)>>\n" +
+				"{{ $userContexts | toYaml | indent 2 }}\n" +
+				"## <</Stencil::Block>>\n",
+		},
+		{
+			// Regression guard: a file.Block call for a DIFFERENT block name
+			// must not satisfy this block's rule 1 just by appearing
+			// somewhere else in the file.
+			name: "file.Block for a different block name does not count",
+			in: "{{ file.Block \"other\" }}\n" +
+				"## <<Stencil::Block(foo)>>\nhardcoded, no file.Block\n## <</Stencil::Block>>\n",
+		},
+		{
 			name: "block missing file.Block",
 			in:   "## <<Stencil::Block(foo)>>\nhardcoded, no file.Block\n## <</Stencil::Block>>\n",
 		},
