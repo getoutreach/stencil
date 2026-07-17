@@ -150,9 +150,15 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 				// using deprecated-but-valid legacy blocks will now exit non-zero.
 				// This is the deliberate deprecation signal; do not downgrade
 				// severity or gate it.
+				//
+				// This is always mechanically fixable: classify() only sets
+				// tok.legacy for a literal (non-dynamic) name, which is exactly what
+				// fix.go's FixBytes migrates, so the --fix pointer below never
+				// overpromises.
 				addf(f, name, line, lint.SeverityWarning,
 					"block %q uses deprecated block syntax; please migrate to "+
-						"<<Stencil::Block(%s)>> ... <</Stencil::Block>>.", tok.name, tok.name)
+						"<<Stencil::Block(%s)>> ... <</Stencil::Block>> "+
+						"(run 'stencil lint templates --fix' to migrate it automatically).", tok.name, tok.name)
 			}
 		case tok.end:
 			switch {
