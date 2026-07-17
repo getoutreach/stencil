@@ -26,6 +26,28 @@ func discardLogger() *logrus.Logger {
 	return l
 }
 
+// captureStderr redirects the process's os.Stderr for the duration of run and
+// returns everything written to it. The lint command actions build their own
+// logrus.Logger via newLintLogger, which defaults to os.Stderr and isn't
+// otherwise injectable from a test driving the command through
+// (*cli.Command).Run, so this is the only way to assert on their log output
+// end to end.
+func captureStderr(t *testing.T, run func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	assert.NilError(t, err)
+	orig := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	run()
+
+	assert.NilError(t, w.Close())
+	out, err := io.ReadAll(r)
+	assert.NilError(t, err)
+	return string(out)
+}
+
 func TestRunManifestReaderValid(t *testing.T) {
 	findings, err := runManifestReader(discardLogger(), "<test>", strings.NewReader("name: testing\n"))
 	assert.NilError(t, err)
@@ -140,6 +162,44 @@ func TestResolveManifestReaderDirAppendsManifest(t *testing.T) {
 	}
 	b, _ := io.ReadAll(r)
 	assert.Assert(t, strings.Contains(string(b), "name: testing"))
+}
+
+// TestResolveManifestReaderCleansRedundantPathSegments pins that a path with
+// redundant "." / ".." segments still resolves, since resolveManifestReader
+// runs it through filepath.Clean before use.
+func TestResolveManifestReaderCleansRedundantPathSegments(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
+
+	// filepath.Join cleans its result internally, so building the redundant
+	// "sub/../." segments this way (rather than via Join) keeps the input
+	// genuinely uncleaned, exercising resolveManifestReader's own Clean call.
+	messy := dir + "/sub/../manifest.yaml"
+	r, closer, finding, err := resolveManifestReader(messy)
+	assert.NilError(t, err)
+	assert.Assert(t, finding == nil)
+	assert.Assert(t, r != nil)
+	if closer != nil {
+		defer closer.Close()
+	}
+	b, _ := io.ReadAll(r)
+	assert.Assert(t, strings.Contains(string(b), "name: testing"))
+}
+
+// TestResolveManifestPathCleansRedundantPathSegments mirrors
+// TestResolveManifestReaderCleansRedundantPathSegments for resolveManifestPath,
+// which feeds the --fix code paths.
+func TestResolveManifestPathCleansRedundantPathSegments(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: testing\n"), 0o600))
+
+	// Not built via filepath.Join, which would clean it before
+	// resolveManifestPath ever saw it (see the sibling test above).
+	messy := dir + "/sub/.."
+	resolved, finding, err := resolveManifestPath(messy)
+	assert.NilError(t, err)
+	assert.Assert(t, finding == nil)
+	assert.Equal(t, filepath.Join(dir, "manifest.yaml"), resolved)
 }
 
 func TestManifestRunnerValid(t *testing.T) {
@@ -283,6 +343,52 @@ func TestRunLintModuleManifestFixNoOpDoesNotRewrite(t *testing.T) {
 	assert.Equal(t, string(clean), string(out)) // unchanged bytes
 	info2, _ := os.Stat(path)
 	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
+}
+
+// TestWriteFixedFileComparesAgainstPassedBytesNotDisk proves the no-op check
+// compares against the original bytes the caller passed in, not a fresh read
+// of path: original deliberately differs from the on-disk content, so a
+// re-read would have seen a change that the passed-in bytes don't.
+func TestWriteFixedFileComparesAgainstPassedBytesNotDisk(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	onDisk := []byte("on-disk content")
+	original := []byte("stale in-memory content")
+	assert.NilError(t, os.WriteFile(path, onDisk, 0o600))
+
+	info1, err := os.Stat(path)
+	assert.NilError(t, err)
+	err = writeFixedFile(path, original)(original) // fixed == original: a no-op by the caller's view
+	assert.NilError(t, err)
+
+	out, err := os.ReadFile(path)
+	assert.NilError(t, err)
+	assert.Equal(t, string(onDisk), string(out), "on-disk content must be untouched by a caller-side no-op")
+	info2, err := os.Stat(path)
+	assert.NilError(t, err)
+	assert.Equal(t, info1.ModTime(), info2.ModTime())
+}
+
+// TestWriteFixedFileDoesNotReReadPath proves writeFixedFile no longer needs
+// path to still exist with its original content once original has been
+// captured: deleting the file between the caller's read and the write must
+// not prevent the write (mode falls back to the 0644 default, matching the
+// existing missing-file behavior of the mode lookup).
+func TestWriteFixedFileDoesNotReReadPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f.txt")
+	original := []byte("original")
+	assert.NilError(t, os.WriteFile(path, original, 0o600))
+
+	assert.NilError(t, os.Remove(path)) // simulate a concurrent delete
+
+	fixed := []byte("fixed")
+	err := writeFixedFile(path, original)(fixed)
+	assert.NilError(t, err)
+
+	out, err := os.ReadFile(path)
+	assert.NilError(t, err)
+	assert.Equal(t, string(fixed), string(out))
 }
 
 func TestRunLintModuleManifestFixStdin(t *testing.T) {
@@ -522,4 +628,196 @@ func TestAggregateTemplatesOnlyModuleStillLintsTemplates(t *testing.T) {
 	assert.Assert(t, err != nil, "invalid template must fail even without a manifest")
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"),
 		"expected a lint failure, got: %v", err)
+}
+
+func TestNewLintCommandTemplatesHasFixFlag(t *testing.T) {
+	sub := findSubcommand(NewLintCommand(), "templates")
+	assert.Assert(t, sub != nil)
+	assert.Assert(t, flagPresent(sub.Flags, "fix"))
+}
+
+func TestRunLintTemplatesFixInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
+
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.NilError(t, err) // the only finding was the fixable legacy warning → exit 0
+
+	out, readErr := os.ReadFile(path)
+	assert.NilError(t, readErr)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(out))
+}
+
+// TestRunLintTemplatesFixLeavesUnfixable proves a legacy block missing
+// file.Block is still migrated to v2 syntax, but the rule-1 error (a
+// structural problem --fix never touches) survives re-lint and fails the run.
+func TestRunLintTemplatesFixLeavesUnfixable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	legacy := "###Block(x)\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
+
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.Assert(t, err != nil, "remaining rule-1 error must fail the run")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+
+	out, readErr := os.ReadFile(path)
+	assert.NilError(t, readErr)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n## <</Stencil::Block>>\n", string(out),
+		"the syntax fix should still have been applied and written")
+}
+
+func TestRunLintTemplatesFixNoOpDoesNotRewrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a.tpl")
+	clean := []byte("## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n")
+	assert.NilError(t, os.WriteFile(path, clean, 0o600))
+
+	info1, _ := os.Stat(path)
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Writer = io.Discard
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
+	assert.NilError(t, err)
+
+	out, _ := os.ReadFile(path)
+	assert.Equal(t, string(clean), string(out)) // unchanged bytes
+	info2, _ := os.Stat(path)
+	assert.Equal(t, info1.ModTime(), info2.ModTime()) // not rewritten
+}
+
+func TestRunLintTemplatesFixStdin(t *testing.T) {
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	var stdout bytes.Buffer
+	cmd := NewLintCommand()
+	sub := findSubcommand(cmd, "templates")
+	sub.Reader = strings.NewReader(legacy)
+	sub.Writer = &stdout
+	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", "-"})
+	assert.NilError(t, err)
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", stdout.String())
+}
+
+// TestFixTemplateFileMissingFileFinding mirrors
+// TestRunTemplateFileMissingFileFinding for the --fix code path: a missing
+// file is a reported finding, not an I/O error.
+func TestFixTemplateFileMissingFileFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.tpl")
+	findings, err := fixTemplateFile(discardLogger(), path)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Assert(t, strings.Contains(findings[0].Message, "template file not found:"))
+}
+
+// TestRunLintAggregateFixCoversTemplates proves the unified aggregate --fix
+// fixes the manifest AND fixes+re-lints templates in one pass, combining
+// their findings for the exit-code policy.
+func TestRunLintAggregateFixCoversTemplates(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\nmodules:\n  - name: dep\n    prerelease: true\n"), 0o600))
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // both fixes applied, nothing unfixable remains → exit 0
+
+	manifestOut, _ := os.ReadFile(filepath.Join(dir, "manifest.yaml"))
+	assert.Assert(t, strings.Contains(string(manifestOut), "channel: rc"),
+		"aggregate --fix should still migrate the manifest, got:\n%s", string(manifestOut))
+
+	tplOut, _ := os.ReadFile(filepath.Join(tdir, "a.tpl"))
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(tplOut),
+		"aggregate --fix should migrate legacy template syntax")
+}
+
+// TestRunLintAggregateFixTemplatesOnlyModule proves aggregate --fix still
+// fixes templates when there is no manifest.yaml at all (missing manifest is
+// skipped, not an error, matching the non-fix aggregate path).
+func TestRunLintAggregateFixTemplatesOnlyModule(t *testing.T) {
+	dir := t.TempDir()
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err)
+
+	tplOut, _ := os.ReadFile(filepath.Join(tdir, "a.tpl"))
+	assert.Equal(t, "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n", string(tplOut))
+}
+
+// TestRunLintAggregateFixLogsSuccessLine pins that a clean aggregate --fix
+// run prints a success confirmation line, matching `lint module-manifest
+// --fix`/`lint templates --fix`.
+func TestRunLintAggregateFixLogsSuccessLine(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\nmodules:\n  - name: dep\n    prerelease: true\n"), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	var err error
+	out := captureStderr(t, func() {
+		err = root.Run(context.Background(), []string{"lint", "--fix", dir})
+	})
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(out, "is valid"),
+		"expected a success confirmation line, got:\n%s", out)
+}
+
+// TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding proves `lint --fix
+// <non-directory>` gives the same "is not a directory" finding the non-fix
+// path gives, instead of a raw stat error from resolveManifestPath.
+func TestRunLintAggregateFixNonDirectoryYieldsFriendlyFinding(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "notadir.txt")
+	assert.NilError(t, os.WriteFile(path, []byte("hello"), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	var err error
+	out := captureStderr(t, func() {
+		err = root.Run(context.Background(), []string{"lint", "--fix", path})
+	})
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(out, "is not a directory; stencil lint expects a module directory"),
+		"expected the friendly not-a-directory finding, got:\n%s", out)
+	assert.Assert(t, !strings.Contains(out, "failed to stat"),
+		"must not leak the raw resolveManifestPath stat error, got:\n%s", out)
+}
+
+// TestRunLintAggregateFixTemplatesUnfixableFails proves the unified aggregate
+// --fix still fails when a template's structural error survives the fix, even
+// though the manifest fix on its own would have succeeded.
+func TestRunLintAggregateFixTemplatesUnfixableFails(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte("name: m\n"), 0o600))
+	tdir := filepath.Join(dir, "templates")
+	assert.NilError(t, os.MkdirAll(tdir, 0o750))
+	// Legacy syntax gets fixed, but the block still has no file.Block -> the
+	// rule-1 error survives re-lint.
+	legacy := "###Block(x)\n###EndBlock(x)\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(tdir, "a.tpl"), []byte(legacy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.Assert(t, err != nil, "the surviving rule-1 error must fail the aggregate --fix run")
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
 }

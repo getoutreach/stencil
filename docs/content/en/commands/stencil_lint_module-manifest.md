@@ -22,7 +22,7 @@ DESCRIPTION:
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
-   --fix                 automatically fix safe deprecations in place, re-encoding the manifest at 2-space indent when a fix is applied (re-lints after fixing)
+   --fix                 automatically fix safe deprecations in place (a manifest is re-encoded at 2-space indent when fixed; re-lints after fixing)
    --help, -h            show help
 
 GLOBAL OPTIONS:

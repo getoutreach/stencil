@@ -1,0 +1,7 @@
+--- fixed ---
+## <<Stencil::Block(a)>>
+{{ file.Block "a" }}
+###EndBlock(b)
+--- applied ---
+t.tpl:1  migrated deprecated block syntax to <<Stencil::Block(a)>>
+

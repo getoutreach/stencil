@@ -1,7 +1,7 @@
 ---
 title: stencil lint
 linktitle: stencil lint
-description: Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)
+description: Validate a Stencil module's manifest and templates without resolving dependencies
 categories: [commands]
 menu:
   docs:
@@ -18,7 +18,7 @@ USAGE:
    stencil lint [command [command options]] [dir]
 
 DESCRIPTION:
-   Validate a Stencil module's manifest without resolving dependencies (template linting follows in DT-4828)
+   Validate a Stencil module's manifest and templates without resolving dependencies
 
 COMMANDS:
    module-manifest  Validate a module's manifest.yaml without resolving dependencies
@@ -26,7 +26,7 @@ COMMANDS:
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
-   --fix                 automatically fix safe deprecations in place, re-encoding the manifest at 2-space indent when a fix is applied (re-lints after fixing)
+   --fix                 automatically fix safe deprecations in place (a manifest is re-encoded at 2-space indent when fixed; re-lints after fixing)
    --help, -h            show help
 
 ```
