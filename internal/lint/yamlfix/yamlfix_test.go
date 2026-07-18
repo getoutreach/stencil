@@ -42,6 +42,7 @@ func TestRemoveKeyInPlace(t *testing.T) {
 func TestRemoveKeyMissing(t *testing.T) {
 	m := mappingFrom(t, "a: 1\n")
 	assert.Assert(t, yamlfix.RemoveKey(m, "nope") == nil)
+	assert.Equal(t, 0, yamlfix.FindKey(m, "a"))
 }
 
 func TestEnsureMappingExisting(t *testing.T) {

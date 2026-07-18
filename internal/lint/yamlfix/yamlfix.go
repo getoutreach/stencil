@@ -1,11 +1,12 @@
 // Copyright 2026 Outreach Corporation. Licensed under the Apache License 2.0.
 
 // Description: Shared, generic yaml.Node DOM primitives used by the Stencil
-// lint fixers and line resolvers. These are domain-agnostic mapping/alias
-// helpers; manifest- or project-specific logic lives in its own package.
+// manifest lint fixers and line resolvers. These are domain-agnostic
+// mapping/alias helpers; manifest- or project-specific logic lives in its own
+// package.
 
 // Package yamlfix provides generic yaml.Node DOM primitives shared by the
-// Stencil lint packages (manifest and project-manifest fixers, line resolvers).
+// Stencil manifest lint fixers and line resolvers.
 package yamlfix
 
 import "go.yaml.in/yaml/v3"
