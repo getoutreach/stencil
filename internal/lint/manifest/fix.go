@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/getoutreach/stencil/internal/lint/yamlfix"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -19,69 +20,6 @@ import (
 type Applied struct {
 	Path    string
 	Message string
-}
-
-// findKey returns the index in m.Content of the key node named key, or -1.
-// m must be a MappingNode (Content is a flat [key, value, key, value, ...]).
-// This is the package's single even-index key walk; mappingChild builds on it.
-func findKey(m *yaml.Node, key string) int {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			return i
-		}
-	}
-	return -1
-}
-
-// removeKey deletes the key/value pair named key from mapping m in place and
-// returns the removed value node, or nil if key was absent. Surviving pairs
-// keep their relative order.
-func removeKey(m *yaml.Node, key string) *yaml.Node {
-	i := findKey(m, key)
-	if i < 0 {
-		return nil
-	}
-	val := m.Content[i+1]
-	m.Content = append(m.Content[:i], m.Content[i+2:]...)
-	return val
-}
-
-// ensureMapping returns the existing child mapping stored under key in m, or
-// appends a new empty MappingNode under key and returns it.
-func ensureMapping(m *yaml.Node, key string) *yaml.Node {
-	if i := findKey(m, key); i >= 0 {
-		return m.Content[i+1]
-	}
-	k := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}
-	v := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	m.Content = append(m.Content, k, v)
-	return v
-}
-
-// setIfAbsent appends key: val to mapping m only when key is absent. It returns
-// true when it added the pair. The val node is used as-is (its Style and
-// comments are preserved).
-func setIfAbsent(m *yaml.Node, key string, val *yaml.Node) bool {
-	if findKey(m, key) >= 0 {
-		return false
-	}
-	k := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key}
-	m.Content = append(m.Content, k, val)
-	return true
-}
-
-// carryKeyComments copies the head and foot comments from src (the original
-// key node being migrated away) onto the key node named key in mapping m.
-// yaml.v3 stores a mapping entry's head/foot comments on its KEY node, so when
-// a migration synthesizes a new key it must carry these over or they are lost.
-// The line comment is preserved separately via the reused value node.
-func carryKeyComments(m *yaml.Node, key string, src *yaml.Node) {
-	i := findKey(m, key)
-	if i < 0 {
-		return
-	}
-	m.Content[i].HeadComment = src.HeadComment
-	m.Content[i].FootComment = src.FootComment
 }
 
 // scalarsEqual reports whether a and b are both scalar nodes with equal values.
@@ -121,10 +59,10 @@ func consolidateSchemaSiblings(arg, schema *yaml.Node, argName string, applied *
 		}
 	}
 	for _, key := range siblings {
-		srcKey := arg.Content[findKey(arg, key)]
-		val := removeKey(arg, key)
-		if setIfAbsent(schema, key, val) {
-			carryKeyComments(schema, key, srcKey)
+		srcKey := arg.Content[yamlfix.FindKey(arg, key)]
+		val := yamlfix.RemoveKey(arg, key)
+		if yamlfix.SetIfAbsent(schema, key, val) {
+			yamlfix.CarryKeyComments(schema, key, srcKey)
 			*applied = append(*applied, Applied{
 				Path:    "arguments." + argName + "." + key,
 				Message: "migrated schema keyword '" + key + "' into 'schema'",
@@ -138,7 +76,7 @@ func consolidateSchemaSiblings(arg, schema *yaml.Node, argName string, applied *
 // existing differing schema.type, and reuses the original value node (keeping
 // its comment and style).
 func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
-	i := findKey(arg, "type")
+	i := yamlfix.FindKey(arg, "type")
 	if i < 0 {
 		return
 	}
@@ -146,14 +84,14 @@ func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
 	if typeVal.Kind != yaml.ScalarNode {
 		return // non-scalar: leave for the linter
 	}
-	schema := ensureMapping(arg, "schema")
-	if si := findKey(schema, "type"); si >= 0 {
+	schema := yamlfix.EnsureMapping(arg, "schema")
+	if si := yamlfix.FindKey(schema, "type"); si >= 0 {
 		existing := schema.Content[si+1]
 		if !scalarsEqual(existing, typeVal) {
 			return // ambiguous: differing schema.type wins, change nothing
 		}
 		// Redundant: schema.type already equals the deprecated type.
-		removeKey(arg, "type")
+		yamlfix.RemoveKey(arg, "type")
 		*applied = append(*applied, Applied{
 			Path:    "arguments." + argName + ".type",
 			Message: "removed redundant 'type' (already set in schema.type)",
@@ -161,9 +99,9 @@ func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
 		return
 	}
 	srcKey := arg.Content[i] // capture before removeKey (i still valid here)
-	removeKey(arg, "type")
-	setIfAbsent(schema, "type", typeVal)
-	carryKeyComments(schema, "type", srcKey)
+	yamlfix.RemoveKey(arg, "type")
+	yamlfix.SetIfAbsent(schema, "type", typeVal)
+	yamlfix.CarryKeyComments(schema, "type", srcKey)
 	*applied = append(*applied, Applied{
 		Path:    "arguments." + argName + ".type",
 		Message: "migrated 'type' into 'schema.type'",
@@ -177,7 +115,7 @@ func fixArgType(argName string, arg *yaml.Node, applied *[]Applied) {
 // `schema.enum: [...]`. Same conservative rules as fixArgType; the sequence
 // node is reused verbatim so its flow/block style is preserved.
 func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
-	i := findKey(arg, "values")
+	i := yamlfix.FindKey(arg, "values")
 	if i < 0 {
 		return
 	}
@@ -185,10 +123,10 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 	if valuesVal.Kind != yaml.SequenceNode {
 		return
 	}
-	schema := ensureMapping(arg, "schema")
-	if findKey(schema, "enum") >= 0 {
+	schema := yamlfix.EnsureMapping(arg, "schema")
+	if yamlfix.FindKey(schema, "enum") >= 0 {
 		// schema.enum already present: drop the deprecated values, keep schema.
-		removeKey(arg, "values")
+		yamlfix.RemoveKey(arg, "values")
 		*applied = append(*applied, Applied{
 			Path:    "arguments." + argName + ".values",
 			Message: "removed redundant 'values' (schema.enum already set)",
@@ -196,9 +134,9 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 		return
 	}
 	srcKey := arg.Content[i] // capture before removeKey
-	removeKey(arg, "values")
-	setIfAbsent(schema, "enum", valuesVal)
-	carryKeyComments(schema, "enum", srcKey)
+	yamlfix.RemoveKey(arg, "values")
+	yamlfix.SetIfAbsent(schema, "enum", valuesVal)
+	yamlfix.CarryKeyComments(schema, "enum", srcKey)
 	*applied = append(*applied, Applied{
 		Path:    "arguments." + argName + ".values",
 		Message: "migrated 'values' into 'schema.enum'",
@@ -210,7 +148,7 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 // `channel` is preserved and `prerelease` is just dropped; a false value is
 // simply removed as a redundant default.
 func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
-	i := findKey(mod, "prerelease")
+	i := yamlfix.FindKey(mod, "prerelease")
 	if i < 0 {
 		return
 	}
@@ -221,10 +159,10 @@ func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
 	switch val.Value {
 	case "true":
 		srcKey := mod.Content[i] // capture before removeKey
-		removeKey(mod, "prerelease")
-		if setIfAbsent(mod, "channel",
+		yamlfix.RemoveKey(mod, "prerelease")
+		if yamlfix.SetIfAbsent(mod, "channel",
 			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rc"}) {
-			carryKeyComments(mod, "channel", srcKey)
+			yamlfix.CarryKeyComments(mod, "channel", srcKey)
 			*applied = append(*applied, Applied{
 				Path:    modPath + ".prerelease",
 				Message: "migrated 'prerelease: true' to 'channel: rc'",
@@ -236,7 +174,7 @@ func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
 			})
 		}
 	case "false":
-		removeKey(mod, "prerelease")
+		yamlfix.RemoveKey(mod, "prerelease")
 		*applied = append(*applied, Applied{
 			Path:    modPath + ".prerelease",
 			Message: "removed redundant 'prerelease: false'",
@@ -268,7 +206,7 @@ func Fix(doc *yaml.Node) []Applied {
 // fixArguments applies argument migrations in sorted key order, skipping
 // arguments that set from: (whose other fields are ignored at render time).
 func fixArguments(root *yaml.Node, applied *[]Applied) {
-	ai := findKey(root, "arguments")
+	ai := yamlfix.FindKey(root, "arguments")
 	if ai < 0 {
 		return
 	}
@@ -285,11 +223,11 @@ func fixArguments(root *yaml.Node, applied *[]Applied) {
 	sort.Strings(names)
 
 	for _, name := range names {
-		arg := deref(args.Content[findKey(args, name)+1])
+		arg := yamlfix.Deref(args.Content[yamlfix.FindKey(args, name)+1])
 		if arg.Kind != yaml.MappingNode {
 			continue
 		}
-		if findKey(arg, "from") >= 0 {
+		if yamlfix.FindKey(arg, "from") >= 0 {
 			continue // from: arguments are skipped, matching checkArguments
 		}
 		fixArgType(name, arg, applied)
@@ -299,7 +237,7 @@ func fixArguments(root *yaml.Node, applied *[]Applied) {
 
 // fixModules applies module migrations in slice order.
 func fixModules(root *yaml.Node, applied *[]Applied) {
-	mi := findKey(root, "modules")
+	mi := yamlfix.FindKey(root, "modules")
 	if mi < 0 {
 		return
 	}
@@ -308,7 +246,7 @@ func fixModules(root *yaml.Node, applied *[]Applied) {
 		return
 	}
 	for i, raw := range modules.Content {
-		mod := deref(raw)
+		mod := yamlfix.Deref(raw)
 		if mod.Kind != yaml.MappingNode {
 			continue
 		}
@@ -320,7 +258,7 @@ func fixModules(root *yaml.Node, applied *[]Applied) {
 // delegating to the checker's shared moduleIDPath formatter.
 func moduleFixPath(mod *yaml.Node, i int) string {
 	name := ""
-	if ni := findKey(mod, "name"); ni >= 0 {
+	if ni := yamlfix.FindKey(mod, "name"); ni >= 0 {
 		name = mod.Content[ni+1].Value
 	}
 	return moduleIDPath(name, i)

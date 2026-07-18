@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/getoutreach/stencil/internal/lint/yamlfix"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -27,12 +28,12 @@ func resolvePath(root *yaml.Node, path string) int {
 	if root == nil || path == "" {
 		return 0
 	}
-	top := deref(root)
+	top := yamlfix.Deref(root)
 	if top != nil && top.Kind == yaml.DocumentNode {
 		if len(top.Content) == 0 {
 			return 0
 		}
-		top = deref(top.Content[0])
+		top = yamlfix.Deref(top.Content[0])
 	}
 	if top == nil || top.Kind != yaml.MappingNode {
 		return 0
@@ -58,7 +59,7 @@ func resolvePath(root *yaml.Node, path string) int {
 			return 0
 		}
 		lastKeyLine = keyNode.Line
-		cur = deref(valNode)
+		cur = yamlfix.Deref(valNode)
 	}
 	return lastKeyLine
 }
@@ -76,7 +77,7 @@ var argumentFields = []string{"type", "values", "schema"}
 func resolveArgumentPath(top *yaml.Node, path string) int {
 	rest := strings.TrimPrefix(path, "arguments.")
 	_, argsVal := mappingChild(top, "arguments")
-	args := deref(argsVal)
+	args := yamlfix.Deref(argsVal)
 	if args == nil || args.Kind != yaml.MappingNode {
 		return 0
 	}
@@ -99,7 +100,7 @@ func resolveArgumentPath(top *yaml.Node, path string) int {
 	if field == "" {
 		return keyNode.Line
 	}
-	return fieldLineIn(deref(valNode), field)
+	return fieldLineIn(yamlfix.Deref(valNode), field)
 }
 
 // resolveModulePath resolves "modules[N].field" and "modules.NAME.field" within
@@ -109,7 +110,7 @@ func resolveArgumentPath(top *yaml.Node, path string) int {
 func resolveModulePath(top *yaml.Node, path string) int {
 	rest := strings.TrimPrefix(path, "modules")
 	_, seqVal := mappingChild(top, "modules")
-	seq := deref(seqVal)
+	seq := yamlfix.Deref(seqVal)
 	if seq == nil || seq.Kind != yaml.SequenceNode {
 		return 0
 	}
@@ -125,7 +126,7 @@ func resolveModulePath(top *yaml.Node, path string) int {
 			return 0
 		}
 		field := strings.TrimPrefix(rest[closeIdx+1:], ".")
-		return fieldLineIn(deref(seq.Content[idx]), field)
+		return fieldLineIn(yamlfix.Deref(seq.Content[idx]), field)
 	}
 
 	// Name form: modules.NAME.field — the LAST dot separates the (dotted) NAME
@@ -159,23 +160,14 @@ func fieldLineIn(m *yaml.Node, field string) int {
 	return keyNode.Line
 }
 
-// deref follows an alias node to its anchored target, returning other nodes
-// unchanged. A nil node returns nil.
-func deref(n *yaml.Node) *yaml.Node {
-	if n != nil && n.Kind == yaml.AliasNode && n.Alias != nil {
-		return n.Alias
-	}
-	return n
-}
-
 // mappingChild finds the key/value pair in a mapping node whose key scalar
 // equals key. Returns (nil, nil) if not found or m is not a mapping. Shares the
-// even-index key walk with findKey in fix.go.
+// even-index key walk with yamlfix.FindKey.
 func mappingChild(m *yaml.Node, key string) (keyNode, valNode *yaml.Node) {
 	if m == nil || m.Kind != yaml.MappingNode {
 		return nil, nil
 	}
-	if i := findKey(m, key); i >= 0 {
+	if i := yamlfix.FindKey(m, key); i >= 0 {
 		return m.Content[i], m.Content[i+1]
 	}
 	return nil, nil
@@ -189,7 +181,7 @@ func sequenceItemByName(seq *yaml.Node, name string) (item *yaml.Node, nameLine 
 		return nil, 0
 	}
 	for _, raw := range seq.Content {
-		it := deref(raw)
+		it := yamlfix.Deref(raw)
 		keyNode, valNode := mappingChild(it, "name")
 		if keyNode != nil && valNode != nil && valNode.Value == name {
 			return it, keyNode.Line
