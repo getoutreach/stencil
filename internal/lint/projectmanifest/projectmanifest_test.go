@@ -56,12 +56,31 @@ func TestValidate(t *testing.T) {
 		{"missing name", "modules:\n  - name: github.com/getoutreach/stencil-base\n"},
 		{"invalid name uppercase", "name: MyService\n"},
 		{"invalid name leading digit", "name: 9lives\n"},
+		{"module missing name", "name: s\nmodules:\n  - version: 1.0.0\n"},
+		{"module invalid version", "name: s\nmodules:\n  - name: github.com/x/y\n    version: not-a-constraint\n"},
+		{"deprecated url", "name: s\nmodules:\n  - name: github.com/x/y\n    url: https://github.com/x/y\n"},
+		{"deprecated prerelease", "name: s\nmodules:\n  - name: github.com/x/y\n    prerelease: true\n"},
+		{"empty versions value", "name: s\nversions:\n  golang: \"\"\n"},
+		{"valid versions value", "name: s\nversions:\n  golang: \"1.21\"\n"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cupaloy.SnapshotT(t, renderFindings(validateString(test.in)))
 		})
 	}
+}
+
+func TestValidateAnnotatesLines(t *testing.T) {
+	in := "name: s\nmodules:\n  - name: github.com/x/y\n    url: https://github.com/x/y\n"
+	findings := validateString(in)
+	var found bool
+	for _, f := range findings {
+		if f.Path == "modules.github.com/x/y.url" {
+			found = true
+			assert.Equal(t, 4, f.Line) // the 'url:' key is on line 4
+		}
+	}
+	assert.Assert(t, found, "expected a url finding")
 }
 
 func TestLoadValid(t *testing.T) {

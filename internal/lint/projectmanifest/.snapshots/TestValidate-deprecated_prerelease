@@ -1,0 +1,2 @@
+warning  modules.github.com/x/y.prerelease:4  module field 'prerelease' is deprecated; use 'channel: rc' instead (run 'stencil lint --fix' to migrate it automatically)
+

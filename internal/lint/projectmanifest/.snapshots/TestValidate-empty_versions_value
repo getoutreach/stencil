@@ -1,0 +1,2 @@
+warning  versions.golang:3  'versions.golang' is empty; set a value for 'golang' or remove the entry
+

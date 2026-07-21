@@ -14,7 +14,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"sort"
+	"strconv"
 
+	semver "github.com/Masterminds/semver/v3"
 	"go.yaml.in/yaml/v3"
 
 	"github.com/getoutreach/stencil/internal/lint"
@@ -126,7 +129,58 @@ func checkName(f *lint.Findings, mf *configuration.ServiceManifest) {
 	}
 }
 
-// checkModules, checkVersions, resolvePath are implemented in Task 3.
-func checkModules(_ *lint.Findings, _ *configuration.ServiceManifest)  {}
-func checkVersions(_ *lint.Findings, _ *configuration.ServiceManifest) {}
-func resolvePath(_ *yaml.Node, _ string) int                           { return 0 }
+// checkModules implements F3 (name required), F4 (version constraint valid),
+// F5 (deprecated url), F6 (deprecated prerelease), in slice order.
+func checkModules(f *lint.Findings, mf *configuration.ServiceManifest) {
+	for i, m := range mf.Modules {
+		path := modulePath(m, i)
+		if m.Name == "" {
+			f.Errorf(path,
+				"module name is required; set 'name' to the module's import path "+
+					"(e.g. 'github.com/getoutreach/stencil-base')")
+		}
+		if m.Version != "" {
+			if _, err := semver.NewConstraint(m.Version); err != nil {
+				f.Errorf(path+".version",
+					"invalid version constraint: %v; use a valid semver constraint "+
+						"(e.g. '>=1.0.0')", err)
+			}
+		}
+		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
+		if m.URL != "" {
+			f.Warnf(path+".url",
+				"module field 'url' is deprecated; replace it with 'name' set to the "+
+					"module's import path, then remove 'url' (not migrated automatically by --fix)")
+		}
+		//nolint:staticcheck // Why: the linter intentionally reads deprecated fields to warn about their use.
+		if m.Prerelease {
+			f.Warnf(path+".prerelease",
+				"module field 'prerelease' is deprecated; use 'channel: rc' instead "+
+					"(run 'stencil lint --fix' to migrate it automatically)")
+		}
+	}
+}
+
+// modulePath builds the finding path for module i, preferring its name.
+func modulePath(m *configuration.TemplateRepository, i int) string {
+	if m.Name != "" {
+		return "modules." + m.Name
+	}
+	return "modules[" + strconv.Itoa(i) + "]"
+}
+
+// checkVersions implements F7: a versions entry with an empty-string value.
+func checkVersions(f *lint.Findings, mf *configuration.ServiceManifest) {
+	names := make([]string, 0, len(mf.Versions))
+	for name := range mf.Versions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if mf.Versions[name] == "" {
+			f.Warnf("versions."+name,
+				"'versions.%s' is empty; set a value for '%s' or remove the entry",
+				name, name)
+		}
+	}
+}

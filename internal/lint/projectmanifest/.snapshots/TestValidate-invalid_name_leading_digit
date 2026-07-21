@@ -1,2 +1,2 @@
-error  name:0  'name' "9lives" is invalid; use a value matching `^[_a-z][_a-z0-9-]*$` (e.g. 'my-service')
+error  name:1  'name' "9lives" is invalid; use a value matching `^[_a-z][_a-z0-9-]*$` (e.g. 'my-service')
 
