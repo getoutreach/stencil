@@ -21,8 +21,9 @@ DESCRIPTION:
    Validate a Stencil module's manifest and templates without resolving dependencies
 
 COMMANDS:
-   module-manifest  Validate a module's manifest.yaml without resolving dependencies
-   templates        Validate Stencil templates' block correctness without rendering
+   module-manifest   Validate a module's manifest.yaml without resolving dependencies
+   templates         Validate Stencil templates' block correctness without rendering
+   project-manifest  Validate a project's service.yaml without resolving dependencies
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)

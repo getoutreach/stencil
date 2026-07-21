@@ -115,6 +115,8 @@ func resolveModulePath(top *yaml.Node, path string) int {
 	return fieldLineIn(item, field)
 }
 
+// fieldLineIn returns the 1-based line of key field within mapping m, or 0 if
+// m is not a mapping, field is empty, or the key is absent.
 func fieldLineIn(m *yaml.Node, field string) int {
 	if field == "" {
 		return 0
@@ -136,6 +138,9 @@ func mappingChild(m *yaml.Node, key string) (keyNode, valNode *yaml.Node) {
 	return nil, nil
 }
 
+// sequenceItemByName finds the mapping item in seq whose "name" scalar equals
+// name, returning the item node and its name key's 1-based line, or nil/0 if no
+// item matches.
 func sequenceItemByName(seq *yaml.Node, name string) (item *yaml.Node, nameLine int) {
 	if seq == nil || seq.Kind != yaml.SequenceNode {
 		return nil, 0
