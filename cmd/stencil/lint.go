@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
@@ -29,6 +30,7 @@ import (
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
 	lintprojectmanifest "github.com/getoutreach/stencil/internal/lint/projectmanifest"
 	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
+	"github.com/getoutreach/stencil/internal/modules"
 )
 
 // templatesDir is the conventional subdirectory holding a module's *.tpl files.
@@ -48,7 +50,7 @@ func NewLintCommand() *cli.Command {
 		Usage:       "Validate a Stencil module without resolving dependencies",
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest and templates without resolving dependencies",
-		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag(), offlineFlag()},
 		Commands:    []*cli.Command{newLintModuleManifestCommand(), newLintTemplatesCommand(), newLintProjectManifestCommand()},
 		Action:      runLintAggregate,
 	}
@@ -72,6 +74,17 @@ func fixFlag() cli.Flag {
 		Name: "fix",
 		Usage: "automatically fix safe deprecations in place (a manifest is " +
 			"re-encoded at 2-space indent when fixed; re-lints after fixing)",
+		Value: false,
+	}
+}
+
+// offlineFlag is declared on the lint group and the project-manifest
+// subcommand, since urfave/cli/v3 does not inherit parent flags. It skips
+// module resolution so only the offline syntactic checks run.
+func offlineFlag() cli.Flag {
+	return &cli.BoolFlag{
+		Name:  "offline",
+		Usage: "skip module resolution; run only offline syntactic checks",
 		Value: false,
 	}
 }
@@ -344,7 +357,7 @@ func failTemplates(log logrus.FieldLogger, findings []lint.Finding, warningsAsEr
 }
 
 // runLintAggregate is the `stencil lint [dir]` action.
-func runLintAggregate(_ context.Context, c *cli.Command) error {
+func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
 		return errors.New("expected at most one argument, a module directory")
 	}
@@ -413,7 +426,6 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	runners := []runner{
 		manifestRunner(filepath.Join(dir, "manifest.yaml")),
 		templateRunner(filepath.Join(dir, templatesDir)),
-		projectManifestRunner(filepath.Join(dir, "service.yaml")),
 	}
 
 	var all []lint.Finding
@@ -424,6 +436,24 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 		}
 		all = append(all, findings...)
 	}
+
+	// Out-of-band project-manifest phase: it needs ctx + the offline flag, which
+	// the runner signature can't carry. A missing service.yaml is skipped so a
+	// module without one is "nothing to lint". Kept last to preserve cross-runner
+	// order: manifest, templates, then service.yaml.
+	sp := filepath.Join(dir, "service.yaml")
+	if _, statErr := os.Stat(sp); statErr == nil {
+		raw, readErr := os.ReadFile(sp)
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", sp)
+		}
+		pf, err := runProjectManifestReaderOnline(ctx, log, sp, bytes.NewReader(raw), c.Bool("offline"))
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		all = append(all, pf...)
+	}
+
 	logFindings(log, all)
 	return failIfFindings(all, c.Bool("warnings-as-errors"))
 }
@@ -639,23 +669,28 @@ func newLintProjectManifestCommand() *cli.Command {
 		Usage:       "Validate a project's service.yaml without resolving dependencies",
 		ArgsUsage:   "[path]",
 		Description: "Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.",
-		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), offlineFlag()},
 		Action:      runLintProjectManifest,
 	}
 }
 
-// runLintProjectManifest is the `lint project-manifest [path]` action (offline).
-func runLintProjectManifest(_ context.Context, c *cli.Command) error {
+// runLintProjectManifest is the `lint project-manifest [path]` action. Unless
+// --offline (or stdin) is given, it resolves the manifest's modules and runs
+// the online checks (O1-O8) in addition to the offline syntactic checks.
+func runLintProjectManifest(ctx context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
 		return errors.New("expected at most one argument, a path to service.yaml")
 	}
 	log := newLintLogger(c)
+	offline := c.Bool("offline")
 
 	if c.Args().First() == "-" {
 		if readerIsTTY(c.Reader) {
 			return errors.New("'-' expects piped input, not an interactive terminal")
 		}
-		findings, err := runProjectManifestReader(log, stdinName, c.Reader)
+		// stdin has no on-disk module context to resolve against, so reading
+		// from '-' forces offline.
+		findings, err := runProjectManifestReaderOnline(ctx, log, stdinName, c.Reader, true)
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
 		}
@@ -678,7 +713,7 @@ func runLintProjectManifest(_ context.Context, c *cli.Command) error {
 	if closer != nil {
 		defer closer.Close()
 	}
-	findings, err := runProjectManifestReader(log, path, r)
+	findings, err := runProjectManifestReaderOnline(ctx, log, path, r, offline)
 	if err != nil {
 		return errors.Wrap(err, "lint failed")
 	}
@@ -686,23 +721,54 @@ func runLintProjectManifest(_ context.Context, c *cli.Command) error {
 	return failProjectManifest(log, path, findings, c.Bool("warnings-as-errors"))
 }
 
-// projectManifestRunner returns a runner that lints the service.yaml at path.
-// A missing file is skipped (nil, nil) so the aggregate treats a module without
-// a service.yaml as "nothing to lint" — mirroring manifestRunner.
-func projectManifestRunner(path string) runner {
-	return func(log logrus.FieldLogger) ([]lint.Finding, error) {
-		r, closer, finding, err := resolveProjectManifestReader(path)
-		if err != nil {
-			return nil, err
-		}
-		if finding != nil {
-			return nil, nil // missing service.yaml: skip in aggregate
-		}
-		if closer != nil {
-			defer closer.Close()
-		}
-		return runProjectManifestReader(log, path, r)
+// resolveAndValidateProjectManifest runs the offline checks and, unless offline,
+// resolves the manifest's modules and runs the online checks (O1-O8). O1 is
+// produced here (the resolver error is opaque, so a resolution failure yields a
+// single `modules` finding; a per-module Manifest decode failure is attributable
+// and yields modules.<name>); either skips O2-O8.
+func resolveAndValidateProjectManifest(ctx context.Context, log logrus.FieldLogger,
+	res *lintprojectmanifest.LoadResult, offline bool) []lint.Finding {
+	if offline || res.Manifest == nil {
+		return lintprojectmanifest.Validate(res)
 	}
+
+	token, err := github.GetToken()
+	if err != nil {
+		log.Warn("failed to get github token, using anonymous access")
+	}
+
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		ServiceManifest: res.Manifest,
+		Token:           token,
+		Log:             log,
+	})
+	if err != nil {
+		return append(lintprojectmanifest.Validate(res), lint.Finding{
+			Severity: lint.SeverityError,
+			Path:     "modules",
+			Message: fmt.Sprintf("failed to resolve modules: %v; ensure the module "+
+				"names, versions, and access (auth) are correct", err),
+		})
+	}
+
+	resolved := make([]lintprojectmanifest.ResolvedModule, 0, len(mods))
+	for _, m := range mods {
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return append(lintprojectmanifest.Validate(res), lint.Finding{
+				Severity: lint.SeverityError,
+				Path:     "modules." + m.Name,
+				Message:  fmt.Sprintf("failed to read module %q manifest: %v", m.Name, err),
+			})
+		}
+		mfCopy := mf // per-iteration allocation: Manifest returns by value; avoid aliasing.
+		resolved = append(resolved, lintprojectmanifest.ResolvedModule{
+			ImportPath: m.Name,
+			Module:     m,
+			Manifest:   &mfCopy,
+		})
+	}
+	return lintprojectmanifest.ValidateOnline(res, resolved)
 }
 
 // resolveProjectManifestReader resolves path to a service.yaml reader, appending
@@ -711,14 +777,17 @@ func resolveProjectManifestReader(path string) (io.Reader, io.Closer, *lint.Find
 	return resolveReader(path, "service.yaml", "service manifest")
 }
 
-// runProjectManifestReader loads + validates one service.yaml from r. It does
-// not log; the caller logs once. name is used in the multi-doc warning.
-func runProjectManifestReader(log logrus.FieldLogger, name string, r io.Reader) ([]lint.Finding, error) {
+// runProjectManifestReaderOnline loads one service.yaml from r and validates
+// it: always the offline checks, plus (unless offline) module resolution and
+// the online checks. It does not log; the caller logs once. name is used in the
+// multi-doc warning.
+func runProjectManifestReaderOnline(ctx context.Context, log logrus.FieldLogger,
+	name string, r io.Reader, offline bool) ([]lint.Finding, error) {
 	res, err := lintprojectmanifest.Load(r)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read service manifest %q", name)
 	}
-	findings := lintprojectmanifest.Validate(res)
+	findings := resolveAndValidateProjectManifest(ctx, log, res, offline)
 	if res.MultiDoc {
 		log.WithField("path", name).Warn("additional YAML documents after the first are ignored")
 	}
