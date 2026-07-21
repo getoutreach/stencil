@@ -32,7 +32,10 @@ func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	offline := Validate(res)
 
 	idx, o4 := buildArgIndex(mods)
-	online := append(o4, checkArguments(res, idx)...)
+	o2o3 := checkArguments(res, idx)
+	online := make([]lint.Finding, 0, len(o4)+len(o2o3))
+	online = append(online, o4...)
+	online = append(online, o2o3...)
 	sortOnline(online)
 
 	return append(offline, online...)

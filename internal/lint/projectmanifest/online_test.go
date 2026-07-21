@@ -129,6 +129,31 @@ func TestBuildArgIndexFromUnexposedArgument(t *testing.T) {
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
 
+// TestBuildArgIndexOwnerNotAliased guards the pointer-aliasing footgun: each
+// declaration's owner must be its own ResolvedModule, so a from: dependency
+// check reads the correct Modules slice. Module b (arg foo from a, lists a) is
+// fine; module c (arg bar from a, does NOT list a) must produce exactly one O4
+// finding attributed to bar. If owners were aliased to the last module, both
+// would read the same Modules and the O4 result would be wrong.
+func TestBuildArgIndexOwnerNotAliased(t *testing.T) {
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"foo": {Schema: map[string]interface{}{"type": "string"}},
+			"bar": {Schema: map[string]interface{}{"type": "string"}},
+		}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"foo": {From: "github.com/x/a"},
+		}, "github.com/x/a"), // lists a
+		mod("github.com/x/c", map[string]configuration.Argument{
+			"bar": {From: "github.com/x/a"},
+		}), // does NOT list a
+	}
+	_, findings := buildArgIndex(mods)
+	// Only c's 'bar' from: should fail (missing dependency listing).
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, "arguments.bar", findings[0].Path)
+}
+
 func TestCheckArgumentsO2Pass(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
 		"foo": {Schema: map[string]interface{}{"type": "string"}},

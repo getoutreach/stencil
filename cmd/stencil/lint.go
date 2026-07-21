@@ -441,21 +441,34 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	// the runner signature can't carry. A missing service.yaml is skipped so a
 	// module without one is "nothing to lint". Kept last to preserve cross-runner
 	// order: manifest, templates, then service.yaml.
-	sp := filepath.Join(dir, "service.yaml")
-	if _, statErr := os.Stat(sp); statErr == nil {
-		raw, readErr := os.ReadFile(sp)
-		if readErr != nil {
-			return errors.Wrapf(readErr, "failed to read %q", sp)
-		}
-		pf, err := runProjectManifestReaderOnline(ctx, log, sp, bytes.NewReader(raw), c.Bool("offline"))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		all = append(all, pf...)
+	pf, err := lintServiceYaml(ctx, log, filepath.Join(dir, "service.yaml"), c.Bool("offline"))
+	if err != nil {
+		return err
 	}
+	all = append(all, pf...)
 
 	logFindings(log, all)
 	return failIfFindings(all, c.Bool("warnings-as-errors"))
+}
+
+// lintServiceYaml runs the out-of-band online project-manifest phase for the
+// aggregate action. A missing service.yaml is skipped (nil, nil) so a module
+// without one is "nothing to lint". Errors are already wrapped with "lint
+// failed".
+func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
+	sp string, offline bool) ([]lint.Finding, error) {
+	if _, statErr := os.Stat(sp); statErr != nil {
+		return nil, nil // missing service.yaml is skipped
+	}
+	raw, readErr := os.ReadFile(sp)
+	if readErr != nil {
+		return nil, errors.Wrapf(readErr, "failed to read %q", sp)
+	}
+	pf, err := runProjectManifestReaderOnline(ctx, log, sp, bytes.NewReader(raw), offline)
+	if err != nil {
+		return nil, errors.Wrap(err, "lint failed")
+	}
+	return pf, nil
 }
 
 // runLintModuleManifest is the `stencil lint module-manifest [path]` action.

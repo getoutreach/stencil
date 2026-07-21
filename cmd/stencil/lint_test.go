@@ -936,6 +936,24 @@ func TestAggregateOfflineFlagSkipsResolution(t *testing.T) {
 	assert.NilError(t, err)
 }
 
+// TestProjectManifestOnlinePerModuleManifestFailure proves a per-module
+// manifest load failure (name mismatch: Manifest(ctx) rejects it) surfaces as
+// a non-zero run (an O1 modules.<name> error) without panicking or emitting
+// spurious argument findings. The module is a file:// replacement, so the run
+// is network-free.
+func TestProjectManifestOnlinePerModuleManifestFailure(t *testing.T) {
+	modDir := t.TempDir()
+	// name mismatch: Manifest(ctx) errors ("declares its import path as ...").
+	assert.NilError(t, os.WriteFile(filepath.Join(modDir, "manifest.yaml"),
+		[]byte("name: github.com/wrong/name\n"), 0o600))
+	dir := t.TempDir()
+	sy := "name: s\nmodules:\n  - name: github.com/x/a\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil) // O1 modules.<name> error → non-zero
+}
+
 func TestNewLintCommandHasProjectManifestSubcommand(t *testing.T) {
 	cmd := NewLintCommand()
 	assert.Assert(t, findSubcommand(cmd, "project-manifest") != nil)

@@ -22,6 +22,7 @@ DESCRIPTION:
 
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
+   --offline             skip module resolution; run only offline syntactic checks
    --help, -h            show help
 
 GLOBAL OPTIONS:
