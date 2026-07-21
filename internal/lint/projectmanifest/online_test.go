@@ -6,10 +6,12 @@
 package projectmanifest
 
 import (
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
 
+	lint "github.com/getoutreach/stencil/internal/lint"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
@@ -98,3 +100,98 @@ func TestBuildArgIndexFromUnexposedArgument(t *testing.T) {
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
+
+func TestCheckArgumentsO2Pass(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]interface{}{"type": "string"}},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"foo": "hello"},
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 0, len(findings))
+}
+
+func TestCheckArgumentsO2Violation(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]interface{}{"type": "string"}},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"foo": 123}, // number, want string
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+}
+
+func TestCheckArgumentsO3RequiredMissing(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Required: true},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{Arguments: nil}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+	assert.Assert(t, contains(findings[0].Message, "required"))
+}
+
+func TestCheckArgumentsO3RequiredSatisfiedByValue(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Required: true},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"foo": "x"},
+	}}
+	assert.Equal(t, 0, len(checkArguments(res, idx)))
+}
+
+func TestCheckArgumentsO3RequiredSatisfiedByDefault(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Required: true, Default: "d"},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{Arguments: nil}}
+	assert.Equal(t, 0, len(checkArguments(res, idx)))
+}
+
+func TestCheckArgumentsExplicitNullIsNotProvided(t *testing.T) {
+	// foo: null must count as NOT provided → required arg still missing (O3).
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Required: true},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"foo": nil},
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings)) // O3 fires
+}
+
+func TestCheckArgumentsOptionalOmittedNoFindings(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]interface{}{"type": "string"}}, // optional
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{Arguments: nil}}
+	assert.Equal(t, 0, len(checkArguments(res, idx)))
+}
+
+func TestCheckArgumentsHermeticExternalRef(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]interface{}{"$ref": "https://example.com/s.json"}},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"foo": "x"},
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings)) // external $ref rejected → O2 error, no fetch
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+}
+
+func contains(s, sub string) bool { return strings.Contains(s, sub) }

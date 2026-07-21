@@ -7,8 +7,15 @@
 package projectmanifest
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"sort"
 
+	"github.com/santhosh-tekuri/jsonschema/v5"
+
+	"github.com/getoutreach/stencil/internal/dotnotation"
 	"github.com/getoutreach/stencil/internal/lint"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
@@ -105,4 +112,94 @@ func resolveFrom(f *lint.Findings, mods []ResolvedModule, owner ResolvedModule,
 		return configuration.Argument{}, false
 	}
 	return refArg, true
+}
+
+// checkArguments implements O2 (value vs schema) and O3 (required). For each
+// argument name in the index (sorted), it locates the provided value in the
+// service.yaml arguments and validates it against EACH declaration's schema,
+// attributing failures to the declaring module. A required declaration with no
+// provided value and no default yields O3.
+func checkArguments(res *LoadResult, idx map[string][]declaration) []lint.Finding {
+	var f lint.Findings
+	if res.Manifest == nil {
+		return f.Items()
+	}
+	names := make([]string, 0, len(idx))
+	for name := range idx {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		value, provided := providedValue(res.Manifest.Arguments, name)
+		for _, d := range idx[name] {
+			if provided {
+				// O2: validate the value against this declaration's schema.
+				if len(d.arg.Schema) > 0 {
+					if err := validateValue(name, d.arg.Schema, value); err != nil {
+						f.Errorf("arguments."+name,
+							"argument %q does not satisfy the schema declared by module %q: %v",
+							name, d.importPath, err)
+					}
+				}
+			} else {
+				// O3: required with no default and no value.
+				if d.arg.Required && d.arg.Default == nil {
+					f.Errorf("arguments."+name,
+						"argument %q is required by module %q but is not set; "+
+							"set 'arguments.%s' in service.yaml", name, d.importPath, name)
+				}
+			}
+		}
+	}
+	return f.Items()
+}
+
+// providedValue reports whether name is provided in the service.yaml arguments
+// (key present AND value not nil), returning the value. An explicit null counts
+// as NOT provided. dotnotation.Get is used only to locate the value (supporting
+// dotted argument names); an absent key returns an error (not provided), a
+// present key returns (value, nil) — including (nil, nil) for an explicit null,
+// which we treat as not provided.
+func providedValue(args map[string]interface{}, name string) (interface{}, bool) {
+	if args == nil {
+		return nil, false
+	}
+	mapInf := make(map[interface{}]interface{}, len(args))
+	for k, v := range args {
+		mapInf[k] = v
+	}
+	v, err := dotnotation.Get(mapInf, name)
+	if err != nil {
+		return nil, false // key absent
+	}
+	if v == nil {
+		return nil, false // explicit null: treat as not provided
+	}
+	return v, true
+}
+
+// validateValue compiles a single argument schema (Draft 2020-12) HERMETICALLY
+// (external $ref rejected — no filesystem/network) and validates v against it.
+// Mirrors internal/lint/manifest/compileSchema, extended to also validate a
+// value. It intentionally diverges from render's non-hermetic validateArg.
+func validateValue(name string, schema map[string]interface{}, v interface{}) error {
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(schema); err != nil {
+		return err
+	}
+	jsc := jsonschema.NewCompiler()
+	jsc.Draft = jsonschema.Draft2020
+	jsc.LoadURL = func(ref string) (io.ReadCloser, error) {
+		return nil, fmt.Errorf("external $ref not allowed in lint: %s", ref)
+	}
+	url := "service.yaml/arguments/" + name
+	if err := jsc.AddResource(url, buf); err != nil {
+		return err
+	}
+	compiled, err := jsc.Compile(url)
+	if err != nil {
+		return err
+	}
+	return compiled.Validate(v)
 }
