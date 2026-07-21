@@ -1,3 +1,3 @@
-warning  arguments.x.type:4    argument field 'type' is deprecated; use 'schema'
-warning  arguments.x.values:5  argument field 'values' is deprecated; use 'schema'
+warning  arguments.x.type:4    argument field 'type' is deprecated; use 'schema.type' instead (run 'stencil lint --fix' to migrate it automatically)
+warning  arguments.x.values:5  argument field 'values' is deprecated; use 'schema.enum' instead (run 'stencil lint --fix' to migrate it automatically)
 

@@ -1,2 +1,2 @@
-warning  t.tpl:1  block "x" uses deprecated block syntax; please migrate to <<Stencil::Block(x)>> ... <</Stencil::Block>>.
+warning  t.tpl:1  block "x" uses deprecated block syntax; please migrate to <<Stencil::Block(x)>> ... <</Stencil::Block>> (run 'stencil lint templates --fix' to migrate it automatically).
 
