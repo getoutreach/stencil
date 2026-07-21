@@ -6,14 +6,42 @@
 package projectmanifest
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"gotest.tools/v3/assert"
 
 	lint "github.com/getoutreach/stencil/internal/lint"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
+
+// renderOnlineFindings formats findings deterministically for snapshotting,
+// mirroring projectmanifest_test.go's renderFindings (duplicated here because
+// online_test.go is the internal package, not the _test package).
+func renderOnlineFindings(findings []lint.Finding) string {
+	if len(findings) == 0 {
+		return "(no findings)\n"
+	}
+	sevWidth, locWidth := 0, 0
+	locs := make([]string, len(findings))
+	for i := range findings {
+		locs[i] = fmt.Sprintf("%s:%d", findings[i].Path, findings[i].Line)
+		if l := len(string(findings[i].Severity)); l > sevWidth {
+			sevWidth = l
+		}
+		if l := len(locs[i]); l > locWidth {
+			locWidth = l
+		}
+	}
+	var b strings.Builder
+	for i := range findings {
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n",
+			sevWidth, findings[i].Severity, locWidth, locs[i], findings[i].Message)
+	}
+	return b.String()
+}
 
 // mod is a test helper building a ResolvedModule from an import path and a set
 // of argument declarations (no filesystem/network — the manifest is in memory).
@@ -195,3 +223,63 @@ func TestCheckArgumentsHermeticExternalRef(t *testing.T) {
 }
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
+
+func TestValidateOnlineRunsOfflineFirst(t *testing.T) {
+	// An offline finding (invalid name, F2) AND an online finding (O3) both appear,
+	// offline first.
+	res, _ := Load(strings.NewReader("name: Bad Name\n"))
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Required: true},
+	})}
+	findings := ValidateOnline(res, mods)
+	assert.Assert(t, len(findings) >= 2)
+	assert.Equal(t, "name", findings[0].Path) // offline F2 precedes online O3
+}
+
+func TestValidateOnlineDeterministicOrder(t *testing.T) {
+	// Two modules both require distinct args; output is stable across runs.
+	res, _ := Load(strings.NewReader("name: s\n"))
+	mods := []ResolvedModule{
+		mod("github.com/x/b", map[string]configuration.Argument{"beta": {Required: true}}),
+		mod("github.com/x/a", map[string]configuration.Argument{"alpha": {Required: true}}),
+	}
+	f1 := ValidateOnline(res, mods)
+	f2 := ValidateOnline(res, mods)
+	assert.DeepEqual(t, f1, f2)
+	// sorted by Path: arguments.alpha before arguments.beta
+	assert.Equal(t, "arguments.alpha", f1[0].Path)
+	assert.Equal(t, "arguments.beta", f1[1].Path)
+}
+
+// TestValidateOnlineSnapshot exercises a mix of offline + O3 + O4 findings whose
+// messages are all stencil-owned, so the golden is stable. O2 (jsonschema
+// library-worded) violations are asserted by severity+path in
+// TestValidateOnlineO2SeverityPath, not snapshotted — the manifest package's
+// TestValidateExternalErrors is the precedent.
+func TestValidateOnlineSnapshot(t *testing.T) {
+	// Offline F2 (invalid name) + O3 (required arg missing) + O4 (from: missing dep).
+	res, _ := Load(strings.NewReader("name: Bad Name\n"))
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"needed": {Required: true},
+		}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"borrowed": {From: "github.com/x/c"}, // no dep listed → O4
+		}),
+	}
+	cupaloy.SnapshotT(t, renderOnlineFindings(ValidateOnline(res, mods)))
+}
+
+// TestValidateOnlineO2SeverityPath asserts the O2 (schema-violation) finding by
+// severity+path only; its message is jsonschema-library text and must not be
+// snapshotted.
+func TestValidateOnlineO2SeverityPath(t *testing.T) {
+	res, _ := Load(strings.NewReader("name: s\narguments:\n  foo: 123\n"))
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]interface{}{"type": "string"}},
+	})}
+	findings := ValidateOnline(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+}

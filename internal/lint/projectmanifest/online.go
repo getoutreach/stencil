@@ -20,6 +20,37 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
+// ValidateOnline runs the offline checks (Validate) then appends the online
+// argument checks (O2–O4) against the already-resolved modules, in a
+// deterministic total order (offline findings first; online sorted by Path,
+// then declaring-module import path, then check ID). It executes no templates
+// and performs no module resolution — the command layer resolves each module's
+// Manifest(ctx) and passes it in via ResolvedModule. O1 (resolution / per-module
+// manifest failure) is produced by the command layer, so this is only reached
+// on a fully-resolved module set. PR 3b appends O5–O8.
+func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
+	offline := Validate(res)
+
+	idx, o4 := buildArgIndex(mods)
+	online := append(o4, checkArguments(res, idx)...)
+	sortOnline(online)
+
+	return append(offline, online...)
+}
+
+// sortOnline sorts online findings by Path, then by the module import path
+// embedded in the message where present (a stable secondary key). Since
+// O2/O3/O4 all key on arguments.<name>, Path ordering plus the message tie-break
+// is deterministic.
+func sortOnline(findings []lint.Finding) {
+	sort.SliceStable(findings, func(i, j int) bool {
+		if findings[i].Path != findings[j].Path {
+			return findings[i].Path < findings[j].Path
+		}
+		return findings[i].Message < findings[j].Message
+	})
+}
+
 // declaration is one module's declaration of an argument (post-from:), retained
 // with the declaring module's import path (identity for messages/ordering) and
 // its owning manifest (owner.Modules drives the O4 dependency-listing check).

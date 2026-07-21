@@ -1,0 +1,4 @@
+error  name:1                'name' "Bad Name" is invalid; use a value matching `^[_a-z][_a-z0-9-]*$` (e.g. 'my-service')
+error  arguments.borrowed:0  argument "borrowed" uses 'from: github.com/x/c' but module "github.com/x/b" does not list "github.com/x/c" in its 'modules'; add it as a dependency
+error  arguments.needed:0    argument "needed" is required by module "github.com/x/a" but is not set; set 'arguments.needed' in service.yaml
+
