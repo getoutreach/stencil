@@ -15,6 +15,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/getoutreach/stencil/internal/lint"
+	"github.com/getoutreach/stencil/internal/lint/yamlfix"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
@@ -27,60 +28,12 @@ func mappingFrom(t *testing.T, in string) *yaml.Node {
 	return doc.Content[0]
 }
 
-func TestFindKey(t *testing.T) {
-	m := mappingFrom(t, "a: 1\nb: 2\n")
-	assert.Equal(t, 0, findKey(m, "a"))
-	assert.Equal(t, 2, findKey(m, "b"))
-	assert.Equal(t, -1, findKey(m, "missing"))
-}
-
-func TestRemoveKeyInPlace(t *testing.T) {
-	m := mappingFrom(t, "a: 1\nb: 2\nc: 3\n")
-	val := removeKey(m, "b")
-	assert.Assert(t, val != nil)
-	assert.Equal(t, "2", val.Value)
-	// a and c remain, in order; b is gone.
-	assert.Equal(t, 0, findKey(m, "a"))
-	assert.Equal(t, -1, findKey(m, "b"))
-	assert.Equal(t, 2, findKey(m, "c"))
-}
-
-func TestRemoveKeyMissing(t *testing.T) {
-	m := mappingFrom(t, "a: 1\n")
-	assert.Assert(t, removeKey(m, "nope") == nil)
-	assert.Equal(t, 0, findKey(m, "a"))
-}
-
-func TestEnsureMappingExisting(t *testing.T) {
-	m := mappingFrom(t, "schema:\n  type: string\n")
-	s := ensureMapping(m, "schema")
-	assert.Equal(t, yaml.MappingNode, s.Kind)
-	assert.Equal(t, 0, findKey(s, "type"))
-}
-
-func TestEnsureMappingCreates(t *testing.T) {
-	m := mappingFrom(t, "name: x\n")
-	s := ensureMapping(m, "schema")
-	assert.Equal(t, yaml.MappingNode, s.Kind)
-	// schema appended last.
-	assert.Equal(t, 2, findKey(m, "schema"))
-}
-
-func TestSetIfAbsent(t *testing.T) {
-	m := mappingFrom(t, "a: 1\n")
-	v := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rc"}
-	assert.Assert(t, setIfAbsent(m, "channel", v))
-	assert.Equal(t, 2, findKey(m, "channel"))
-	// Second call is a no-op.
-	assert.Assert(t, !setIfAbsent(m, "channel", v))
-}
-
 // argNode returns the value mapping for the single argument in
 // "arguments:\n  <name>:\n    ...". Helper for the per-argument fix tests.
 func argNode(t *testing.T, name, body string) *yaml.Node {
 	t.Helper()
 	m := mappingFrom(t, "arguments:\n  "+name+":\n"+body)
-	args := m.Content[findKey(m, "arguments")+1]
+	args := m.Content[yamlfix.FindKey(m, "arguments")+1]
 	return args.Content[1] // value of the first (only) argument
 }
 
@@ -89,9 +42,9 @@ func TestFixArgTypeMovesIntoSchema(t *testing.T) {
 	var applied []Applied
 	fixArgType("x", arg, &applied)
 
-	assert.Assert(t, findKey(arg, "type") == -1) // removed
-	schema := arg.Content[findKey(arg, "schema")+1]
-	ti := findKey(schema, "type")
+	assert.Assert(t, yamlfix.FindKey(arg, "type") == -1) // removed
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	ti := yamlfix.FindKey(schema, "type")
 	assert.Assert(t, ti >= 0)
 	assert.Equal(t, "string", schema.Content[ti+1].Value)
 	assert.Equal(t, 1, len(applied))
@@ -104,9 +57,9 @@ func TestFixArgTypeRedundantWhenSchemaTypeEqual(t *testing.T) {
 	fixArgType("x", arg, &applied)
 
 	// Deprecated type dropped; existing schema.type kept.
-	assert.Assert(t, findKey(arg, "type") == -1)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Equal(t, "string", schema.Content[findKey(schema, "type")+1].Value)
+	assert.Assert(t, yamlfix.FindKey(arg, "type") == -1)
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Equal(t, "string", schema.Content[yamlfix.FindKey(schema, "type")+1].Value)
 	assert.Equal(t, 1, len(applied)) // still logged as a change (removed redundant)
 }
 
@@ -116,9 +69,9 @@ func TestFixArgTypeNoChangeWhenSchemaTypeDiffers(t *testing.T) {
 	fixArgType("x", arg, &applied)
 
 	// Ambiguous: leave both, change nothing.
-	assert.Assert(t, findKey(arg, "type") >= 0)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Equal(t, "integer", schema.Content[findKey(schema, "type")+1].Value)
+	assert.Assert(t, yamlfix.FindKey(arg, "type") >= 0)
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Equal(t, "integer", schema.Content[yamlfix.FindKey(schema, "type")+1].Value)
 	assert.Equal(t, 0, len(applied))
 }
 
@@ -127,9 +80,9 @@ func TestFixArgValuesMovesIntoSchemaEnum(t *testing.T) {
 	var applied []Applied
 	fixArgValues("x", arg, &applied)
 
-	assert.Assert(t, findKey(arg, "values") == -1)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	enum := schema.Content[findKey(schema, "enum")+1]
+	assert.Assert(t, yamlfix.FindKey(arg, "values") == -1)
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	enum := schema.Content[yamlfix.FindKey(schema, "enum")+1]
 	assert.Equal(t, yaml.SequenceNode, enum.Kind)
 	assert.Equal(t, 2, len(enum.Content))
 	assert.Equal(t, 1, len(applied))
@@ -140,8 +93,8 @@ func TestFixModulePrereleaseTrueAddsChannel(t *testing.T) {
 	var applied []Applied
 	fixModulePrerelease("modules.m", mod, &applied)
 
-	assert.Assert(t, findKey(mod, "prerelease") == -1)
-	assert.Equal(t, "rc", mod.Content[findKey(mod, "channel")+1].Value)
+	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
+	assert.Equal(t, "rc", mod.Content[yamlfix.FindKey(mod, "channel")+1].Value)
 	assert.Equal(t, 1, len(applied))
 }
 
@@ -150,8 +103,8 @@ func TestFixModulePrereleaseKeepsExistingChannel(t *testing.T) {
 	var applied []Applied
 	fixModulePrerelease("modules.m", mod, &applied)
 
-	assert.Assert(t, findKey(mod, "prerelease") == -1)
-	assert.Equal(t, "stable", mod.Content[findKey(mod, "channel")+1].Value) // not overwritten
+	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
+	assert.Equal(t, "stable", mod.Content[yamlfix.FindKey(mod, "channel")+1].Value) // not overwritten
 	assert.Equal(t, 1, len(applied))
 }
 
@@ -160,8 +113,8 @@ func TestFixModulePrereleaseFalseDropped(t *testing.T) {
 	var applied []Applied
 	fixModulePrerelease("modules.m", mod, &applied)
 
-	assert.Assert(t, findKey(mod, "prerelease") == -1)
-	assert.Assert(t, findKey(mod, "channel") == -1) // false is just removed
+	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
+	assert.Assert(t, yamlfix.FindKey(mod, "channel") == -1) // false is just removed
 	assert.Equal(t, 1, len(applied))
 }
 
@@ -287,9 +240,9 @@ func TestFixArgValuesRedundantEnumDropped(t *testing.T) {
 	var applied []Applied
 	fixArgValues("x", arg, &applied)
 
-	assert.Assert(t, findKey(arg, "values") == -1) // deprecated values removed
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Assert(t, findKey(schema, "enum") >= 0) // schema.enum kept
+	assert.Assert(t, yamlfix.FindKey(arg, "values") == -1) // deprecated values removed
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Assert(t, yamlfix.FindKey(schema, "enum") >= 0) // schema.enum kept
 	assert.Equal(t, 1, len(applied))
 }
 
@@ -301,7 +254,7 @@ func TestFixConservativeSkips(t *testing.T) {
 		var applied []Applied
 		fixArgType("x", arg, &applied)
 
-		assert.Assert(t, findKey(arg, "type") >= 0) // left in place
+		assert.Assert(t, yamlfix.FindKey(arg, "type") >= 0) // left in place
 		assert.Equal(t, 0, len(applied))
 	})
 
@@ -310,7 +263,7 @@ func TestFixConservativeSkips(t *testing.T) {
 		var applied []Applied
 		fixModulePrerelease("modules.m", mod, &applied)
 
-		assert.Assert(t, findKey(mod, "prerelease") >= 0) // left in place
+		assert.Assert(t, yamlfix.FindKey(mod, "prerelease") >= 0) // left in place
 		assert.Equal(t, 0, len(applied))
 	})
 
@@ -319,7 +272,7 @@ func TestFixConservativeSkips(t *testing.T) {
 		var applied []Applied
 		fixModulePrerelease("modules.m", mod, &applied)
 
-		assert.Assert(t, findKey(mod, "prerelease") >= 0) // left in place
+		assert.Assert(t, yamlfix.FindKey(mod, "prerelease") >= 0) // left in place
 		assert.Equal(t, 0, len(applied))
 	})
 }
@@ -428,13 +381,13 @@ func TestFixConsolidatesUnknownSiblingIntoSchema(t *testing.T) {
 	// type and properties both live under schema now; description stays an arg field.
 	assert.Assert(t, strings.Contains(out, "schema:"), "got:\n%s", out)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
-	assert.Assert(t, findKey(arg, "type") == -1, "deprecated type must leave the arg, got:\n%s", out)
-	assert.Assert(t, findKey(arg, "properties") == -1, "stranded properties must leave the arg, got:\n%s", out)
-	assert.Assert(t, findKey(arg, "description") >= 0, "description must remain an arg field, got:\n%s", out)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Assert(t, findKey(schema, "type") >= 0, "schema.type expected, got:\n%s", out)
-	assert.Assert(t, findKey(schema, "properties") >= 0, "schema.properties expected, got:\n%s", out)
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
+	assert.Assert(t, yamlfix.FindKey(arg, "type") == -1, "deprecated type must leave the arg, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(arg, "properties") == -1, "stranded properties must leave the arg, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(arg, "description") >= 0, "description must remain an arg field, got:\n%s", out)
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Assert(t, yamlfix.FindKey(schema, "type") >= 0, "schema.type expected, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(schema, "properties") >= 0, "schema.properties expected, got:\n%s", out)
 	assert.Assert(t, len(applied) >= 1)
 
 	// The whole point: the fixed manifest must strictly decode (no unknown-field error).
@@ -451,10 +404,10 @@ func TestFixConsolidatesArraySibling(t *testing.T) {
 		"      type: string\n"
 	out, _ := fixString(t, in)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Assert(t, findKey(schema, "items") >= 0, "items must move into schema, got:\n%s", out)
-	assert.Assert(t, findKey(arg, "items") == -1, "items must leave the arg, got:\n%s", out)
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Assert(t, yamlfix.FindKey(schema, "items") >= 0, "items must move into schema, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(arg, "items") == -1, "items must leave the arg, got:\n%s", out)
 	assert.Equal(t, 0, len(fixRelintErrors(t, in)))
 }
 
@@ -472,13 +425,13 @@ func TestFixSiblingConsolidationKeepsKnownArgFields(t *testing.T) {
 		"    description: keep me\n"
 	out, _ := fixString(t, in)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
 	for _, k := range []string{"required", "default", "description"} {
-		assert.Assert(t, findKey(arg, k) >= 0, "%s must remain an arg field, got:\n%s", k, out)
+		assert.Assert(t, yamlfix.FindKey(arg, k) >= 0, "%s must remain an arg field, got:\n%s", k, out)
 	}
-	schema := arg.Content[findKey(arg, "schema")+1]
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
 	for _, k := range []string{"required", "default", "description"} {
-		assert.Assert(t, findKey(schema, k) == -1, "%s must NOT be in schema, got:\n%s", k, out)
+		assert.Assert(t, yamlfix.FindKey(schema, k) == -1, "%s must NOT be in schema, got:\n%s", k, out)
 	}
 	assert.Equal(t, 0, len(fixRelintErrors(t, in)))
 }
@@ -495,8 +448,8 @@ func TestFixDoesNotConsolidateSiblingsWithoutDeprecatedType(t *testing.T) {
 		"        type: string\n"
 	out, applied := fixString(t, in)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
-	assert.Assert(t, findKey(arg, "properties") >= 0,
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
+	assert.Assert(t, yamlfix.FindKey(arg, "properties") >= 0,
 		"properties must be left untouched when there is no deprecated type, got:\n%s", out)
 	assert.Equal(t, 0, len(applied))
 }
@@ -517,15 +470,15 @@ func TestFixDoesNotConsolidateSiblingsOnRedundantTypePath(t *testing.T) {
 		"        type: string\n"
 	out, applied := fixString(t, in)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
 
 	// The redundant deprecated `type` is removed...
-	assert.Assert(t, findKey(arg, "type") == -1, "redundant deprecated type should be removed, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(arg, "type") == -1, "redundant deprecated type should be removed, got:\n%s", out)
 	// ...but `properties` is intentionally left orphaned (not swept into schema).
-	assert.Assert(t, findKey(arg, "properties") >= 0,
+	assert.Assert(t, yamlfix.FindKey(arg, "properties") >= 0,
 		"properties must stay orphaned on the redundant path, got:\n%s", out)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Assert(t, findKey(schema, "properties") == -1,
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Assert(t, yamlfix.FindKey(schema, "properties") == -1,
 		"properties must NOT be moved into schema on the redundant path, got:\n%s", out)
 	// Exactly one change: the redundant-type removal. No sibling migration entries.
 	assert.Equal(t, 1, len(applied))
@@ -551,14 +504,14 @@ func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
 		"        type: string\n"
 	out, applied := fixString(t, in)
 	doc := mappingFrom(t, out)
-	arg := doc.Content[findKey(doc, "arguments")+1].Content[1]
+	arg := doc.Content[yamlfix.FindKey(doc, "arguments")+1].Content[1]
 
 	// Nothing moved: deprecated type, schema.type, and properties all stay put.
-	assert.Assert(t, findKey(arg, "type") >= 0, "deprecated type must stay on the differs path, got:\n%s", out)
-	assert.Assert(t, findKey(arg, "properties") >= 0, "properties must stay orphaned on the differs path, got:\n%s", out)
-	schema := arg.Content[findKey(arg, "schema")+1]
-	assert.Equal(t, "string", schema.Content[findKey(schema, "type")+1].Value)
-	assert.Assert(t, findKey(schema, "properties") == -1)
+	assert.Assert(t, yamlfix.FindKey(arg, "type") >= 0, "deprecated type must stay on the differs path, got:\n%s", out)
+	assert.Assert(t, yamlfix.FindKey(arg, "properties") >= 0, "properties must stay orphaned on the differs path, got:\n%s", out)
+	schema := arg.Content[yamlfix.FindKey(arg, "schema")+1]
+	assert.Equal(t, "string", schema.Content[yamlfix.FindKey(schema, "type")+1].Value)
+	assert.Assert(t, yamlfix.FindKey(schema, "properties") == -1)
 	assert.Equal(t, 0, len(applied))
 }
 
