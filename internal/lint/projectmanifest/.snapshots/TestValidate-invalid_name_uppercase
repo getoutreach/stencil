@@ -1,0 +1,2 @@
+error  name:0  'name' "MyService" is invalid; use a value matching `^[_a-z][_a-z0-9-]*$` (e.g. 'my-service')
+

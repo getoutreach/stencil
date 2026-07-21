@@ -12,6 +12,7 @@ package projectmanifest
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"go.yaml.in/yaml/v3"
@@ -72,5 +73,60 @@ func Load(r io.Reader) (*LoadResult, error) {
 	return res, nil
 }
 
-// Validate is defined in the next task.
-var _ = lint.SeverityError
+// Validate runs the offline project-manifest checks (F1–F7) and returns every
+// finding, annotated with the source line of the referenced YAML key where
+// resolvable. It never fails fast. res.Manifest may be nil (empty/malformed
+// input), in which case only the F1 finding is returned.
+func Validate(res *LoadResult) []lint.Finding {
+	var f lint.Findings
+
+	// F1: the document decoded into a mapping.
+	if res.Manifest == nil {
+		if errors.Is(res.DecodeErr, io.EOF) {
+			f.Errorf("service.yaml",
+				"service.yaml is empty; add at least a 'name' field (e.g. 'name: my-service')")
+		} else {
+			f.Errorf("service.yaml",
+				"invalid service.yaml: %v; check the YAML syntax near this location",
+				res.DecodeErr)
+		}
+		return f.Items()
+	}
+
+	checkName(&f, res.Manifest)
+	checkModules(&f, res.Manifest)
+	checkVersions(&f, res.Manifest)
+
+	// Annotate each finding with its source line where resolvable.
+	findings := f.Items()
+	if res.Root != nil {
+		for i := range findings {
+			if findings[i].Line == 0 {
+				findings[i].Line = resolvePath(res.Root, findings[i].Path)
+			}
+		}
+	}
+	return findings
+}
+
+// checkName implements F2. A service manifest's name is a service name and must
+// be present and match the service-name regex (unlike a module manifest, whose
+// name is an import path).
+func checkName(f *lint.Findings, mf *configuration.ServiceManifest) {
+	if mf.Name == "" {
+		f.Errorf("name",
+			"name is required; add a 'name' field matching `^[_a-z][_a-z0-9-]*$` "+
+				"(e.g. 'name: my-service')")
+		return
+	}
+	if !configuration.ValidateName(mf.Name) {
+		f.Errorf("name",
+			"'name' %q is invalid; use a value matching `^[_a-z][_a-z0-9-]*$` "+
+				"(e.g. 'my-service')", mf.Name)
+	}
+}
+
+// checkModules, checkVersions, resolvePath are implemented in Task 3.
+func checkModules(_ *lint.Findings, _ *configuration.ServiceManifest)  {}
+func checkVersions(_ *lint.Findings, _ *configuration.ServiceManifest) {}
+func resolvePath(_ *yaml.Node, _ string) int                           { return 0 }

@@ -1,0 +1,2 @@
+error  service.yaml:0  service.yaml is empty; add at least a 'name' field (e.g. 'name: my-service')
+

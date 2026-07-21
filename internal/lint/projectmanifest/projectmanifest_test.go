@@ -5,13 +5,64 @@
 package projectmanifest_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"gotest.tools/v3/assert"
 
+	lint "github.com/getoutreach/stencil/internal/lint"
 	projectmanifest "github.com/getoutreach/stencil/internal/lint/projectmanifest"
 )
+
+// renderFindings formats findings deterministically for snapshotting.
+// Mirrors internal/lint/manifest/manifest_test.go's helper.
+func renderFindings(findings []lint.Finding) string {
+	if len(findings) == 0 {
+		return "(no findings)\n"
+	}
+	sevWidth, locWidth := 0, 0
+	locs := make([]string, len(findings))
+	for i := range findings {
+		locs[i] = fmt.Sprintf("%s:%d", findings[i].Path, findings[i].Line)
+		if l := len(string(findings[i].Severity)); l > sevWidth {
+			sevWidth = l
+		}
+		if l := len(locs[i]); l > locWidth {
+			locWidth = l
+		}
+	}
+	var b strings.Builder
+	for i := range findings {
+		fmt.Fprintf(&b, "%-*s  %-*s  %s\n",
+			sevWidth, findings[i].Severity, locWidth, locs[i], findings[i].Message)
+	}
+	return b.String()
+}
+
+func validateString(in string) []lint.Finding {
+	res, _ := projectmanifest.Load(strings.NewReader(in))
+	return projectmanifest.Validate(res)
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{"valid minimal", "name: my-service\n"},
+		{"empty", "   \n"},
+		{"missing name", "modules:\n  - name: github.com/getoutreach/stencil-base\n"},
+		{"invalid name uppercase", "name: MyService\n"},
+		{"invalid name leading digit", "name: 9lives\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cupaloy.SnapshotT(t, renderFindings(validateString(test.in)))
+		})
+	}
+}
 
 func TestLoadValid(t *testing.T) {
 	res, err := projectmanifest.Load(strings.NewReader("name: my-service\n"))
