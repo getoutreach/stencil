@@ -14,7 +14,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 
 	semver "github.com/Masterminds/semver/v3"
@@ -171,11 +172,7 @@ func modulePath(m *configuration.TemplateRepository, i int) string {
 
 // checkVersions implements F7: a versions entry with an empty-string value.
 func checkVersions(f *lint.Findings, mf *configuration.ServiceManifest) {
-	names := make([]string, 0, len(mf.Versions))
-	for name := range mf.Versions {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(mf.Versions))
 	for _, name := range names {
 		if mf.Versions[name] == "" {
 			f.Warnf("versions."+name,

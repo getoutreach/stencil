@@ -14,6 +14,11 @@ import (
 	"github.com/getoutreach/stencil/internal/lint/yamlfix"
 )
 
+// opaqueLeafPrefixes are the top-level keys whose entries are opaque flat leaf
+// keys: their sub-keys may contain dots (e.g. import paths) but their values are
+// scalars, so a matching finding path has no trailing field to walk into.
+var opaqueLeafPrefixes = []string{"arguments.", "versions.", "replacements."}
+
 // resolvePath returns the 1-based line of the key identified by a dotted finding
 // path within root, or 0 if unresolvable. root is a yaml.v3 DocumentNode.
 //
@@ -40,7 +45,7 @@ func resolvePath(root *yaml.Node, path string) int {
 		return resolveModulePath(top, path)
 	}
 	// arguments.<key>, versions.<key>, replacements.<key>: opaque flat leaf key.
-	for _, p := range []string{"arguments.", "versions.", "replacements."} {
+	for _, p := range opaqueLeafPrefixes {
 		if after, ok := strings.CutPrefix(path, p); ok {
 			return resolveLeafKey(top, after, strings.TrimSuffix(p, "."))
 		}
