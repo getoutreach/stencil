@@ -308,3 +308,54 @@ func TestValidateOnlineO2SeverityPath(t *testing.T) {
 	assert.Equal(t, lint.SeverityError, findings[0].Severity)
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
+
+func TestCheckReplacementsUnmatchedKeyO5(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/nope": "file:///wherever"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "replacements.github.com/x/nope", findings[0].Path)
+}
+
+func TestCheckReplacementsMatchedLocalMissingO8(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "file:///does/not/exist/xyz"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity) // O8
+	assert.Equal(t, "replacements.github.com/x/a", findings[0].Path)
+}
+
+func TestCheckReplacementsMatchedLocalExistsNoFinding(t *testing.T) {
+	dir := t.TempDir()
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "file://" + dir},
+	}}
+	assert.Equal(t, 0, len(checkReplacements(res, mods)))
+}
+
+func TestCheckReplacementsMatchedRemoteNotChecked(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "https://github.com/x/a"},
+	}}
+	// matched key + remote value: neither O5 (matched) nor O8 (not local) → nothing.
+	assert.Equal(t, 0, len(checkReplacements(res, mods)))
+}
+
+func TestCheckReplacementsBareLocalPath(t *testing.T) {
+	// a bare path (no scheme) is local; missing → O8.
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "./nope-does-not-exist-xyz"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+}

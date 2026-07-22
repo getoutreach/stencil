@@ -11,7 +11,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"sort"
+	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
@@ -52,6 +54,57 @@ func sortOnline(findings []lint.Finding) {
 		}
 		return findings[i].Message < findings[j].Message
 	})
+}
+
+// uriIsLocal reports whether a replacement value is a local path (no scheme, or
+// a file:// URL), mirroring internal/modules' unexported uriIsLocal. Reimplemented
+// here to avoid exporting it from the modules package.
+func uriIsLocal(uri string) bool {
+	return !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://")
+}
+
+// checkReplacements implements O5 (a replacement key matching no resolved module
+// is inert → warning) and O8 (a replacement key that DOES match a resolved
+// module, whose value is a local path that does not exist → error). Remote
+// values on matched keys are not checked (a bad remote surfaces as O1). The two
+// checks share the matched-key computation and are the only replacement checks;
+// offline says nothing about replacements. Keys are processed in sorted order.
+func checkReplacements(res *LoadResult, mods []ResolvedModule) []lint.Finding {
+	var f lint.Findings
+	if res.Manifest == nil || len(res.Manifest.Replacements) == 0 {
+		return f.Items()
+	}
+	resolved := make(map[string]struct{}, len(mods))
+	for _, m := range mods {
+		resolved[m.ImportPath] = struct{}{}
+	}
+
+	keys := make([]string, 0, len(res.Manifest.Replacements))
+	for k := range res.Manifest.Replacements {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := res.Manifest.Replacements[key]
+		if _, matched := resolved[key]; !matched {
+			// O5: inert replacement key.
+			f.Warnf("replacements."+key,
+				"replacement for %q matches no module in the dependency graph and is "+
+					"ignored; remove it, or correct the import path to a resolved module", key)
+			continue
+		}
+		// Matched key: O8 checks a local path's existence.
+		if uriIsLocal(value) {
+			path := strings.TrimPrefix(value, "file://")
+			if _, err := os.Stat(path); err != nil {
+				f.Errorf("replacements."+key,
+					"replacement for %q points at a local path that does not exist: %s; "+
+						"create the path, or correct the replacement", key, path)
+			}
+		}
+	}
+	return f.Items()
 }
 
 // declaration is one module's declaration of an argument (post-from:), retained
