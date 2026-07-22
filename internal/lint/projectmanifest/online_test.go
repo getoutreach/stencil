@@ -369,6 +369,28 @@ func TestValidateOnlineO2SeverityPath(t *testing.T) {
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
 
+func TestValidateOnlineIncludesO5throughO8(t *testing.T) {
+	// One module resolved; service.yaml has an undeclared arg (O7) and an
+	// unmatched replacement key (O5). Both appear alongside offline findings.
+	res, _ := Load(strings.NewReader(
+		"name: s\narguments:\n  typo: x\nreplacements:\n  github.com/x/nope: file:///w\n"))
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"known": {},
+	})}
+	findings := ValidateOnline(res, mods)
+	var haveO5, haveO7 bool
+	for _, f := range findings {
+		if f.Path == "replacements.github.com/x/nope" {
+			haveO5 = true
+		}
+		if f.Path == "arguments.typo" {
+			haveO7 = true
+		}
+	}
+	assert.Assert(t, haveO5, "expected O5 unmatched-replacement finding")
+	assert.Assert(t, haveO7, "expected O7 undeclared-arg finding")
+}
+
 func TestCheckUndeclaredArgsFlagsUnknown(t *testing.T) {
 	idx := map[string][]declaration{"known": {{importPath: "github.com/x/a"}}}
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{

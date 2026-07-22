@@ -23,21 +23,22 @@ import (
 )
 
 // ValidateOnline runs the offline checks (Validate) then appends the online
-// argument checks (O2–O4) against the already-resolved modules, in a
+// argument checks (O2–O8) against the already-resolved modules, in a
 // deterministic total order (offline findings first; online sorted by Path,
-// then declaring-module import path, then check ID). It executes no templates
-// and performs no module resolution — the command layer resolves each module's
-// Manifest(ctx) and passes it in via ResolvedModule. O1 (resolution / per-module
-// manifest failure) is produced by the command layer, so this is only reached
-// on a fully-resolved module set. PR 3b appends O5–O8.
+// then message). It executes no templates and performs no module resolution —
+// the command layer resolves each module's Manifest(ctx) and passes it in via
+// ResolvedModule. O1 (resolution / per-module manifest failure) is produced by
+// the command layer, so this is only reached on a fully-resolved module set.
 func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	offline := Validate(res)
 
 	idx, o4 := buildArgIndex(mods)
-	o2o3 := checkArguments(res, idx)
-	online := make([]lint.Finding, 0, len(o4)+len(o2o3))
-	online = append(online, o4...)
-	online = append(online, o2o3...)
+	var online []lint.Finding
+	online = append(online, o4...)                                  // O4
+	online = append(online, checkArguments(res, idx)...)            // O2, O3
+	online = append(online, checkReplacements(res, mods)...)        // O5, O8
+	online = append(online, checkSchemaConflicts(idx)...)           // O6
+	online = append(online, checkUndeclaredArgs(res, idx, mods)...) // O7
 	sortOnline(online)
 
 	return append(offline, online...)
