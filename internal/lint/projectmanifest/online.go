@@ -201,6 +201,71 @@ func resolveFrom(f *lint.Findings, mods []ResolvedModule, owner ResolvedModule,
 	return refArg, true
 }
 
+// checkSchemaConflicts implements O6: for each argument name declared by 2+
+// modules with NON-equivalent schemas, emit one warning naming the first two
+// declarations (in sorted import-path order) whose schemas differ. Never fatal;
+// both schemas still drive O2. Arg names processed in sorted order.
+func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
+	var f lint.Findings
+	names := make([]string, 0, len(idx))
+	for name := range idx {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		decls := idx[name]
+		if len(decls) < 2 {
+			continue
+		}
+		// Sort declarations by import path for a deterministic "first two disagreeing".
+		sorted := make([]declaration, len(decls))
+		copy(sorted, decls)
+		sort.Slice(sorted, func(i, j int) bool { return sorted[i].importPath < sorted[j].importPath })
+
+		found := false
+		for i := 0; i < len(sorted) && !found; i++ {
+			for j := i + 1; j < len(sorted); j++ {
+				if !schemaEquivalent(sorted[i].arg.Schema, sorted[j].arg.Schema) {
+					f.Warnf("arguments."+name,
+						"modules %q and %q disagree on the schema for argument %q; "+
+							"align their manifests", sorted[i].importPath, sorted[j].importPath, name)
+					found = true
+					break
+				}
+			}
+		}
+	}
+	return f.Items()
+}
+
+// schemaEquivalent reports whether two argument schemas are byte-equal after a
+// deterministic (sorted-key) JSON marshal. A nil schema and an empty schema are
+// both treated as "no schema" and are equivalent to each other. This is a
+// conservative comparison: a cosmetic difference (e.g. an added description)
+// counts as non-equivalent, which is acceptable for a warning.
+func schemaEquivalent(a, b map[string]interface{}) bool {
+	aEmpty, bEmpty := len(a) == 0, len(b) == 0
+	if aEmpty || bEmpty {
+		return aEmpty && bEmpty
+	}
+	ab, err := marshalSorted(a)
+	if err != nil {
+		return false
+	}
+	bb, err := marshalSorted(b)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(ab, bb)
+}
+
+// marshalSorted JSON-marshals v with map keys sorted (encoding/json already
+// sorts map keys), returning canonical bytes for comparison.
+func marshalSorted(v map[string]interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
 // checkArguments implements O2 (value vs schema) and O3 (required). For each
 // argument name in the index (sorted), it locates the provided value in the
 // service.yaml arguments and validates it against EACH declaration's schema,

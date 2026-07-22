@@ -249,6 +249,66 @@ func TestCheckArgumentsHermeticExternalRef(t *testing.T) {
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
+func TestCheckSchemaConflictsNoneWhenEquivalent(t *testing.T) {
+	// Two modules declare foo with the same schema (different key order) → no O6.
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string", "minLength": 1}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"minLength": 1, "type": "string"}}},
+		},
+	}
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx)))
+}
+
+func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "integer"}}},
+		},
+	}
+	findings := checkSchemaConflicts(idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+	// names the two disagreeing modules (sorted import-path order: a before b)
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/b"))
+}
+
+func TestCheckSchemaConflictsOnePerArgForThreeModules(t *testing.T) {
+	// a≡b, c differs → exactly one O6 naming the first two disagreeing (a, c).
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/c", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "integer"}}},
+		},
+	}
+	findings := checkSchemaConflicts(idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/c"))
+}
+
+func TestCheckSchemaConflictsNilVsEmptyEquivalent(t *testing.T) {
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{Schema: nil}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{}}},
+		},
+	}
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx))) // both "no schema" → equivalent
+}
+
 func TestValidateOnlineRunsOfflineFirst(t *testing.T) {
 	// An offline finding (invalid name, F2) AND an online finding (O3) both appear,
 	// offline first.
