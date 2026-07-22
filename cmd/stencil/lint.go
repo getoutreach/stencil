@@ -551,16 +551,16 @@ func resolveManifestPath(path string) (resolved string, finding *lint.Finding, e
 	return path, nil, nil
 }
 
-// resolveManifestReader resolves path to an io.Reader. If path is a directory,
-// it appends "manifest.yaml". A missing file yields a "manifest file not found"
-// finding (not an error). The returned io.Closer (when non-nil) must be closed
-// by the caller. A non-nil error is an unexpected I/O failure.
-func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+// resolveReader resolves path to an io.Reader. If path is a directory, it
+// appends defaultFile. A missing file yields a "<kind> file not found" finding
+// (not an error). The returned io.Closer (when non-nil) must be closed by the
+// caller. A non-nil error is an unexpected I/O failure.
+func resolveReader(path, defaultFile, kind string) (io.Reader, io.Closer, *lint.Finding, error) {
 	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err == nil && info.IsDir() {
-		// A directory: lint its manifest.yaml (mirrors `lint [dir]`).
-		path = filepath.Join(path, "manifest.yaml")
+		// A directory: lint its default file (mirrors `lint [dir]`).
+		path = filepath.Join(path, defaultFile)
 		_, err = os.Stat(path)
 	}
 	if err != nil {
@@ -568,7 +568,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 			return nil, nil, &lint.Finding{
 				Severity: lint.SeverityError,
 				Path:     path,
-				Message:  fmt.Sprintf("manifest file not found: %s", path),
+				Message:  fmt.Sprintf("%s file not found: %s", kind, path),
 			}, nil
 		}
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
@@ -579,6 +579,12 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
 	return fh, fh, nil, nil
+}
+
+// resolveManifestReader resolves path to a manifest.yaml reader, appending
+// "manifest.yaml" for a directory. See resolveReader.
+func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+	return resolveReader(path, "manifest.yaml", "manifest")
 }
 
 // runManifestReader loads + validates one manifest from r and returns its
@@ -699,31 +705,10 @@ func projectManifestRunner(path string) runner {
 	}
 }
 
-// resolveProjectManifestReader resolves path to an io.Reader. If path is a
-// directory it appends "service.yaml". A missing file yields a "service manifest
-// file not found" finding (not an error). Mirrors resolveManifestReader.
+// resolveProjectManifestReader resolves path to a service.yaml reader, appending
+// "service.yaml" for a directory. See resolveReader.
 func resolveProjectManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
-	path = filepath.Clean(path)
-	info, err := os.Stat(path)
-	if err == nil && info.IsDir() {
-		path = filepath.Join(path, "service.yaml")
-		_, err = os.Stat(path)
-	}
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil, &lint.Finding{
-				Severity: lint.SeverityError,
-				Path:     path,
-				Message:  fmt.Sprintf("service manifest file not found: %s", path),
-			}, nil
-		}
-		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
-	}
-	fh, err := os.Open(path)
-	if err != nil {
-		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
-	}
-	return fh, fh, nil, nil
+	return resolveReader(path, "service.yaml", "service manifest")
 }
 
 // runProjectManifestReader loads + validates one service.yaml from r. It does
