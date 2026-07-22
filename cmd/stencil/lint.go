@@ -419,6 +419,12 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 		}
 		all = append(all, findings...)
 
+		pf, err := fixServiceYaml(ctx, log, filepath.Join(dir, "service.yaml"), c.Bool("offline"))
+		if err != nil {
+			return err
+		}
+		all = append(all, pf...)
+
 		logFindings(log, all)
 		return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
 	}
@@ -469,6 +475,26 @@ func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
 		return nil, errors.Wrap(err, "lint failed")
 	}
 	return pf, nil
+}
+
+// fixServiceYaml is the aggregate --fix counterpart to lintServiceYaml: it
+// migrates a module's service.yaml in place (if present) and returns the
+// post-fix findings. A missing service.yaml is skipped (nil, nil), matching
+// lintServiceYaml and the non-fix aggregate path.
+func fixServiceYaml(ctx context.Context, log logrus.FieldLogger,
+	sp string, offline bool) ([]lint.Finding, error) {
+	if _, statErr := os.Stat(sp); statErr != nil {
+		return nil, nil // missing service.yaml is skipped
+	}
+	raw, readErr := os.ReadFile(sp)
+	if readErr != nil {
+		return nil, errors.Wrapf(readErr, "failed to read %q", sp)
+	}
+	findings, err := fixProjectManifestBytes(ctx, log, sp, raw, offline, writeFixedFile(sp, raw))
+	if err != nil {
+		return nil, errors.Wrap(err, "lint failed")
+	}
+	return findings, nil
 }
 
 // runLintModuleManifest is the `stencil lint module-manifest [path]` action.

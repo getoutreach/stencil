@@ -822,6 +822,33 @@ func TestRunLintAggregateFixTemplatesUnfixableFails(t *testing.T) {
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
 }
 
+// TestRunLintAggregateFixMigratesServiceYaml proves aggregate --fix also
+// migrates a module's service.yaml, keeping runner order (manifest, templates,
+// then service.yaml). The module is a file:// replacement so the post-fix
+// online re-lint stays network-free.
+func TestRunLintAggregateFixMigratesServiceYaml(t *testing.T) {
+	modDir := writeLocalModule(t, "name: github.com/x/a\n")
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\n"), 0o600))
+	assert.NilError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n    prerelease: true\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	sp := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(sp, []byte(sy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // only finding was a fixable warning → exit 0 after fix
+
+	out, _ := os.ReadFile(sp)
+	assert.Assert(t, strings.Contains(string(out), "channel: rc"),
+		"aggregate --fix should migrate service.yaml, got:\n%s", string(out))
+	assert.Assert(t, !strings.Contains(string(out), "prerelease"))
+}
+
 // runProjectManifest runs `lint project-manifest [args...]`, feeding stdin/stdout
 // on the subcommand. Mirrors runModuleManifest.
 func runProjectManifest(t *testing.T, args []string, stdin io.Reader, stdout io.Writer) error {
