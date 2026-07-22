@@ -356,6 +356,52 @@ func failTemplates(log logrus.FieldLogger, findings []lint.Finding, warningsAsEr
 	return failLint(log, "templates are", findings, warningsAsErrors)
 }
 
+// runLintAggregateFix fixes a module's manifest.yaml, template files, and
+// service.yaml in place (each skipped when absent), then logs and applies the
+// warnings-as-errors policy to whatever findings survive. It mirrors the
+// non-fix aggregate runner order: manifest, templates, then service.yaml.
+func runLintAggregateFix(ctx context.Context, c *cli.Command, log logrus.FieldLogger, dir string) error {
+	var all []lint.Finding
+
+	fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	if finding == nil {
+		raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath, raw))
+		if fixErr != nil {
+			return errors.Wrap(fixErr, "lint failed")
+		}
+		all = append(all, findings...)
+	}
+	// A missing manifest is skipped, not fixed: aggregate lint treats it as
+	// "nothing to lint" (a module may be templates-only), matching the
+	// non-fix aggregate path and manifestRunner.
+
+	files, err := collectTemplateFiles(log, filepath.Join(dir, templatesDir))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	findings, err := fixTemplateFiles(log, files)
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	all = append(all, findings...)
+
+	pf, err := fixServiceYaml(ctx, log, filepath.Join(dir, "service.yaml"), c.Bool("offline"))
+	if err != nil {
+		return err
+	}
+	all = append(all, pf...)
+
+	logFindings(log, all)
+	return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
+}
+
 // runLintAggregate is the `stencil lint [dir]` action.
 func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
@@ -388,45 +434,7 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	}
 
 	if c.Bool("fix") {
-		var all []lint.Finding
-
-		fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		if finding == nil {
-			raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
-			if readErr != nil {
-				return errors.Wrapf(readErr, "failed to read %q", fixPath)
-			}
-			findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath, raw))
-			if fixErr != nil {
-				return errors.Wrap(fixErr, "lint failed")
-			}
-			all = append(all, findings...)
-		}
-		// A missing manifest is skipped, not fixed: aggregate lint treats it as
-		// "nothing to lint" (a module may be templates-only), matching the
-		// non-fix aggregate path and manifestRunner.
-
-		files, err := collectTemplateFiles(log, filepath.Join(dir, templatesDir))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		findings, err := fixTemplateFiles(log, files)
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		all = append(all, findings...)
-
-		pf, err := fixServiceYaml(ctx, log, filepath.Join(dir, "service.yaml"), c.Bool("offline"))
-		if err != nil {
-			return err
-		}
-		all = append(all, pf...)
-
-		logFindings(log, all)
-		return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
+		return runLintAggregateFix(ctx, c, log, dir)
 	}
 
 	runners := []runner{

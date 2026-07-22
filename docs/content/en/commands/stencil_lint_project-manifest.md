@@ -23,6 +23,7 @@ DESCRIPTION:
 OPTIONS:
    --warnings-as-errors  treat warnings as errors (fail on any finding)
    --offline             skip module resolution; run only offline syntactic checks
+   --fix                 automatically fix safe deprecations in place (a manifest is re-encoded at 2-space indent when fixed; re-lints after fixing)
    --help, -h            show help
 
 GLOBAL OPTIONS:

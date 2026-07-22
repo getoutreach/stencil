@@ -99,11 +99,11 @@ func encode(t *testing.T, doc *yaml.Node) string {
 }
 
 // fixString decodes in, runs Fix, and returns the re-encoded YAML plus applied.
-func fixString(t *testing.T, in string) (string, []Applied) {
+func fixString(t *testing.T, in string) (fixed string, applied []Applied) {
 	t.Helper()
 	var doc yaml.Node
 	assert.NilError(t, yaml.Unmarshal([]byte(in), &doc))
-	applied := Fix(&doc)
+	applied = Fix(&doc)
 	return encode(t, &doc), applied
 }
 
