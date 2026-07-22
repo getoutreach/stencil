@@ -44,10 +44,9 @@ func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	return append(offline, online...)
 }
 
-// sortOnline sorts online findings by Path, then by the module import path
-// embedded in the message where present (a stable secondary key). Since
-// O2/O3/O4 all key on arguments.<name>, Path ordering plus the message tie-break
-// is deterministic.
+// sortOnline sorts online findings by Path, then Message (a stable secondary
+// key). Since O2/O3/O4 all key on arguments.<name>, Path ordering plus the
+// Message tie-break is deterministic.
 func sortOnline(findings []lint.Finding) {
 	sort.SliceStable(findings, func(i, j int) bool {
 		if findings[i].Path != findings[j].Path {

@@ -391,6 +391,23 @@ func TestValidateOnlineIncludesO5throughO8(t *testing.T) {
 	assert.Assert(t, haveO7, "expected O7 undeclared-arg finding")
 }
 
+// TestValidateOnlineO5O6O7Snapshot exercises O5 (unmatched replacement key),
+// O6 (schema conflict between modules a and b on 'shared'), and O7 (undeclared
+// arg 'ghost') together, plus the offline 'name' finding. Every message is
+// stencil-owned (no jsonschema-library text — O2 is intentionally not
+// triggered), so the golden is stable.
+func TestValidateOnlineO5O6O7Snapshot(t *testing.T) {
+	res, _ := Load(strings.NewReader(
+		"name: s\narguments:\n  ghost: x\nreplacements:\n  github.com/x/nope: https://x\n"))
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"shared": {Schema: map[string]interface{}{"type": "string"}}}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"shared": {Schema: map[string]interface{}{"type": "integer"}}}),
+	}
+	cupaloy.SnapshotT(t, renderOnlineFindings(ValidateOnline(res, mods)))
+}
+
 func TestCheckUndeclaredArgsFlagsUnknown(t *testing.T) {
 	idx := map[string][]declaration{"known": {{importPath: "github.com/x/a"}}}
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
