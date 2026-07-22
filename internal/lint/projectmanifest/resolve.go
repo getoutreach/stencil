@@ -41,15 +41,15 @@ func resolvePath(root *yaml.Node, path string) int {
 	}
 	// arguments.<key>, versions.<key>, replacements.<key>: opaque flat leaf key.
 	for _, p := range []string{"arguments.", "versions.", "replacements."} {
-		if strings.HasPrefix(path, p) {
-			return resolveLeafKey(top, strings.TrimPrefix(path, p), strings.TrimSuffix(p, "."))
+		if after, ok := strings.CutPrefix(path, p); ok {
+			return resolveLeafKey(top, after, strings.TrimSuffix(p, "."))
 		}
 	}
 
 	// General dotted mapping walk (covers "name").
 	cur := top
 	lastKeyLine := 0
-	for _, seg := range strings.Split(path, ".") {
+	for seg := range strings.SplitSeq(path, ".") {
 		if cur == nil || cur.Kind != yaml.MappingNode {
 			return 0
 		}
