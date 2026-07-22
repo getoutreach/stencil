@@ -11,16 +11,14 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/getoutreach/stencil/internal/lint/modulefix"
 	"github.com/getoutreach/stencil/internal/lint/yamlfix"
 	"go.yaml.in/yaml/v3"
 )
 
-// Applied records one fix the fixer made, for logging. Path mirrors the
-// corresponding lint.Finding.Path (e.g. "arguments.x.type").
-type Applied struct {
-	Path    string
-	Message string
-}
+// Applied records one fix the fixer made, for logging. Aliased to the shared
+// modulefix.Applied so both linters and the command layer log fixes uniformly.
+type Applied = modulefix.Applied
 
 // scalarsEqual reports whether a and b are both scalar nodes with equal values.
 func scalarsEqual(a, b *yaml.Node) bool {
@@ -143,45 +141,6 @@ func fixArgValues(argName string, arg *yaml.Node, applied *[]Applied) {
 	})
 }
 
-// fixModulePrerelease migrates a deprecated module `prerelease` field. A true
-// value becomes `channel: rc`, unless `channel` is already set, in which case
-// `channel` is preserved and `prerelease` is just dropped; a false value is
-// simply removed as a redundant default.
-func fixModulePrerelease(modPath string, mod *yaml.Node, applied *[]Applied) {
-	i := yamlfix.FindKey(mod, "prerelease")
-	if i < 0 {
-		return
-	}
-	val := mod.Content[i+1]
-	if val.Kind != yaml.ScalarNode {
-		return
-	}
-	switch val.Value {
-	case "true":
-		srcKey := mod.Content[i] // capture before removeKey
-		yamlfix.RemoveKey(mod, "prerelease")
-		if yamlfix.SetIfAbsent(mod, "channel",
-			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rc"}) {
-			yamlfix.CarryKeyComments(mod, "channel", srcKey)
-			*applied = append(*applied, Applied{
-				Path:    modPath + ".prerelease",
-				Message: "migrated 'prerelease: true' to 'channel: rc'",
-			})
-		} else {
-			*applied = append(*applied, Applied{
-				Path:    modPath + ".prerelease",
-				Message: "removed deprecated 'prerelease' (channel already set)",
-			})
-		}
-	case "false":
-		yamlfix.RemoveKey(mod, "prerelease")
-		*applied = append(*applied, Applied{
-			Path:    modPath + ".prerelease",
-			Message: "removed redundant 'prerelease: false'",
-		})
-	}
-}
-
 // Fix applies the safe deprecation migrations to the manifest document node in
 // place and returns the list of changes made. doc is the *yaml.Node from
 // yaml.Unmarshal (a DocumentNode wrapping a MappingNode). It never returns an
@@ -199,7 +158,7 @@ func Fix(doc *yaml.Node) []Applied {
 
 	var applied []Applied
 	fixArguments(root, &applied)
-	fixModules(root, &applied)
+	applied = append(applied, modulefix.FixModules(root)...)
 	return applied
 }
 
@@ -233,35 +192,6 @@ func fixArguments(root *yaml.Node, applied *[]Applied) {
 		fixArgType(name, arg, applied)
 		fixArgValues(name, arg, applied)
 	}
-}
-
-// fixModules applies module migrations in slice order.
-func fixModules(root *yaml.Node, applied *[]Applied) {
-	mi := yamlfix.FindKey(root, "modules")
-	if mi < 0 {
-		return
-	}
-	modules := root.Content[mi+1]
-	if modules.Kind != yaml.SequenceNode {
-		return
-	}
-	for i, raw := range modules.Content {
-		mod := yamlfix.Deref(raw)
-		if mod.Kind != yaml.MappingNode {
-			continue
-		}
-		fixModulePrerelease(moduleFixPath(mod, i), mod, applied)
-	}
-}
-
-// moduleFixPath builds the finding path for module i, preferring its name, by
-// delegating to the checker's shared moduleIDPath formatter.
-func moduleFixPath(mod *yaml.Node, i int) string {
-	name := ""
-	if ni := yamlfix.FindKey(mod, "name"); ni >= 0 {
-		name = mod.Content[ni+1].Value
-	}
-	return moduleIDPath(name, i)
 }
 
 // FixBytes decodes raw as a YAML node, applies the safe deprecation migrations,
