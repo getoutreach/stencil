@@ -1114,3 +1114,39 @@ func TestProjectManifestFixNoOpDoesNotRewrite(t *testing.T) {
 	info2, _ := os.Stat(p)
 	assert.Equal(t, info1.ModTime(), info2.ModTime()) // no change -> not rewritten
 }
+
+// TestProjectManifestFixNotFound proves --fix on a missing service.yaml emits
+// the not-found finding and fails, rather than erroring on a raw stat failure.
+func TestProjectManifestFixNotFound(t *testing.T) {
+	dir := t.TempDir()
+	err := runProjectManifestFix(t, []string{"--offline", filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestProjectManifestFixMalformedFallsBack proves --fix on unparseable YAML
+// skips fixing and re-lints the original bytes, so the decode error surfaces as
+// a finding (and fails the run) instead of a fix-time crash.
+func TestProjectManifestFixMalformedFallsBack(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte("name: [unterminated\n"), 0o600))
+	err := runProjectManifestFix(t, []string{"--offline", p}, nil, nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunLintAggregateFixMissingServiceYaml proves aggregate --fix treats an
+// absent service.yaml as nothing to lint (skipped, not an error), matching the
+// non-fix aggregate path.
+func TestRunLintAggregateFixMissingServiceYaml(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\n"), 0o600))
+	assert.NilError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // no service.yaml -> skipped, nothing fails
+}

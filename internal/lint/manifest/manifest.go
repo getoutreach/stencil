@@ -226,8 +226,8 @@ func checkModules(f *lint.Findings, mf *configuration.TemplateRepositoryManifest
 }
 
 // moduleIDPath builds the finding path for module i, preferring its name over
-// its slice index. Shared by the checker (modulePath) and the fixer
-// (moduleFixPath) so their finding paths stay identical.
+// its slice index. Kept identical to modulefix.ModulePath so the checker's and
+// the fixer's finding paths stay in sync.
 func moduleIDPath(name string, i int) string {
 	if name != "" {
 		return "modules." + name
