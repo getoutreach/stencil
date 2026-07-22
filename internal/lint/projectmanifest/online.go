@@ -107,6 +107,85 @@ func checkReplacements(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	return f.Items()
 }
 
+// checkUndeclaredArgs implements O7: a service.yaml argument whose key matches no
+// declared argument (from the index) is flagged as likely a typo/leftover. It is
+// suppressed entirely when any resolved module declares a dynamic/catch-all
+// argument, since then an "undeclared" key may be legitimately consumed. Matching
+// is at top-level-key granularity: a provided top-level key is undeclared iff no
+// declared name has it as its first (dot-separated) segment, so a dotted declared
+// name (e.g. aws.IRSA) matches a correctly-nested value. Provided arg keys are
+// processed in sorted order.
+func checkUndeclaredArgs(res *LoadResult, idx map[string][]declaration, mods []ResolvedModule) []lint.Finding {
+	var f lint.Findings
+	if res.Manifest == nil || len(res.Manifest.Arguments) == 0 {
+		return f.Items()
+	}
+	if hasDynamicArg(mods) {
+		return f.Items() // carve-out: catch-all arg present → suppress O7
+	}
+
+	// Build the set of top-level service.yaml keys and check each against the
+	// declared set. A provided top-level key is undeclared iff NO declared name
+	// resolves into it. Since declared names may be dotted (nested), we check
+	// whether any declared name has this top-level key as its first segment.
+	declaredTop := map[string]struct{}{}
+	for name := range idx {
+		top := name
+		if i := strings.IndexByte(name, '.'); i >= 0 {
+			top = name[:i]
+		}
+		declaredTop[top] = struct{}{}
+	}
+
+	keys := make([]string, 0, len(res.Manifest.Arguments))
+	for k := range res.Manifest.Arguments {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		if _, ok := declaredTop[key]; ok {
+			continue // this top-level key is (a prefix of) a declared name
+		}
+		f.Warnf("arguments."+key,
+			"no resolved module declares argument %q; check for a typo or remove it", key)
+	}
+	return f.Items()
+}
+
+// hasDynamicArg reports whether any resolved module declares a catch-all argument
+// — a schema that is an open object (type object with additionalProperties not
+// disabled). Such a module may legitimately consume otherwise-undeclared keys, so
+// O7 is suppressed when one is present.
+func hasDynamicArg(mods []ResolvedModule) bool {
+	for _, m := range mods {
+		if m.Manifest == nil {
+			continue
+		}
+		for _, arg := range m.Manifest.Arguments {
+			if len(arg.Schema) == 0 {
+				continue
+			}
+			t, _ := arg.Schema["type"].(string)
+			if t != "object" {
+				continue
+			}
+			ap, present := arg.Schema["additionalProperties"]
+			// Open object: additionalProperties absent (default true) or explicitly true / a schema.
+			if !present {
+				return true
+			}
+			if b, ok := ap.(bool); ok && b {
+				return true
+			}
+			if _, isSchema := ap.(map[string]interface{}); isSchema {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // declaration is one module's declaration of an argument (post-from:), retained
 // with the declaring module's import path (identity for messages/ordering) and
 // its owning manifest (owner.Modules drives the O4 dependency-listing check).

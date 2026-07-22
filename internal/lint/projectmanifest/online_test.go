@@ -369,6 +369,47 @@ func TestValidateOnlineO2SeverityPath(t *testing.T) {
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
 
+func TestCheckUndeclaredArgsFlagsUnknown(t *testing.T) {
+	idx := map[string][]declaration{"known": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"known": {},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"known": "v", "typo": "v"},
+	}}
+	findings := checkUndeclaredArgs(res, idx, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "arguments.typo", findings[0].Path)
+}
+
+func TestCheckUndeclaredArgsDottedNameMatches(t *testing.T) {
+	// declared name aws.IRSA; provided as nested aws: {IRSA: ...} → NOT undeclared.
+	idx := map[string][]declaration{"aws.IRSA": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"aws.IRSA": {},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{
+			"aws": map[string]interface{}{"IRSA": true},
+		},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
+func TestCheckUndeclaredArgsCarveOutSuppressesAll(t *testing.T) {
+	// a module declares a catch-all arg (open object) → O7 suppressed entirely.
+	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"catchall": {Schema: map[string]interface{}{
+			"type": "object", "additionalProperties": true}},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"anything": "v"},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
 func TestCheckReplacementsUnmatchedKeyO5(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", nil)}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
