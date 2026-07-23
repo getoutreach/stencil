@@ -9,9 +9,12 @@ package projectmanifest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -79,13 +82,7 @@ func checkReplacements(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 		resolved[m.ImportPath] = struct{}{}
 	}
 
-	keys := make([]string, 0, len(res.Manifest.Replacements))
-	for k := range res.Manifest.Replacements {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
+	for _, key := range slices.Sorted(maps.Keys(res.Manifest.Replacements)) {
 		value := res.Manifest.Replacements[key]
 		if _, matched := resolved[key]; !matched {
 			// O5: inert replacement key.
@@ -97,7 +94,7 @@ func checkReplacements(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 		// Matched key: O8 checks a local path's existence.
 		if uriIsLocal(value) {
 			path := strings.TrimPrefix(value, "file://")
-			if _, err := os.Stat(path); err != nil {
+			if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 				f.Errorf("replacements."+key,
 					"replacement for %q points at a local path that does not exist: %s; "+
 						"create the path, or correct the replacement", key, path)
@@ -137,13 +134,7 @@ func checkUndeclaredArgs(res *LoadResult, idx map[string][]declaration, mods []R
 		declaredTop[top] = struct{}{}
 	}
 
-	keys := make([]string, 0, len(res.Manifest.Arguments))
-	for k := range res.Manifest.Arguments {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
+	for _, key := range slices.Sorted(maps.Keys(res.Manifest.Arguments)) {
 		if _, ok := declaredTop[key]; ok {
 			continue // this top-level key is (a prefix of) a declared name
 		}
@@ -170,16 +161,17 @@ func hasDynamicArg(mods []ResolvedModule) bool {
 			if t != "object" {
 				continue
 			}
-			ap, present := arg.Schema["additionalProperties"]
-			// Open object: additionalProperties absent (default true) or explicitly true / a schema.
-			if !present {
-				return true
-			}
-			if b, ok := ap.(bool); ok && b {
-				return true
-			}
-			if _, isSchema := ap.(map[string]interface{}); isSchema {
-				return true
+			// Open object: additionalProperties absent (default true), explicitly
+			// true, a sub-schema, or present-but-null (treated as open).
+			switch ap := arg.Schema["additionalProperties"].(type) {
+			case nil:
+				return true // key absent, or present-but-null → open
+			case bool:
+				if ap {
+					return true // additionalProperties: true → open
+				}
+			case map[string]interface{}:
+				return true // additionalProperties is a sub-schema → open
 			}
 		}
 	}
@@ -286,13 +278,7 @@ func resolveFrom(f *lint.Findings, mods []ResolvedModule, owner ResolvedModule,
 // both schemas still drive O2. Arg names processed in sorted order.
 func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
 	var f lint.Findings
-	names := make([]string, 0, len(idx))
-	for name := range idx {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
+	for _, name := range slices.Sorted(maps.Keys(idx)) {
 		decls := idx[name]
 		if len(decls) < 2 {
 			continue
@@ -319,30 +305,26 @@ func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
 }
 
 // schemaEquivalent reports whether two argument schemas are byte-equal after a
-// deterministic (sorted-key) JSON marshal. A nil schema and an empty schema are
-// both treated as "no schema" and are equivalent to each other. This is a
-// conservative comparison: a cosmetic difference (e.g. an added description)
-// counts as non-equivalent, which is acceptable for a warning.
+// JSON marshal. encoding/json sorts map keys recursively and preserves slice
+// order, so the marshaled bytes are canonical and the comparison is
+// order-insensitive for keys. A nil schema and an empty schema are both treated
+// as "no schema" and are equivalent to each other. This is a conservative
+// comparison: a cosmetic difference (e.g. an added description) counts as
+// non-equivalent, which is acceptable for a warning.
 func schemaEquivalent(a, b map[string]interface{}) bool {
 	aEmpty, bEmpty := len(a) == 0, len(b) == 0
 	if aEmpty || bEmpty {
 		return aEmpty && bEmpty
 	}
-	ab, err := marshalSorted(a)
+	ab, err := json.Marshal(a)
 	if err != nil {
 		return false
 	}
-	bb, err := marshalSorted(b)
+	bb, err := json.Marshal(b)
 	if err != nil {
 		return false
 	}
 	return bytes.Equal(ab, bb)
-}
-
-// marshalSorted JSON-marshals v with map keys sorted (encoding/json already
-// sorts map keys), returning canonical bytes for comparison.
-func marshalSorted(v map[string]interface{}) ([]byte, error) {
-	return json.Marshal(v)
 }
 
 // checkArguments implements O2 (value vs schema) and O3 (required). For each

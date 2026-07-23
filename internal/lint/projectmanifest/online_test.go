@@ -449,6 +449,21 @@ func TestCheckUndeclaredArgsCarveOutSuppressesAll(t *testing.T) {
 	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
 }
 
+// TestCheckUndeclaredArgsCarveOutNullAdditionalProperties pins that an object
+// schema with additionalProperties present-but-null is treated as an open
+// (catch-all) object, so O7 is suppressed — the same as absent/true/sub-schema.
+func TestCheckUndeclaredArgsCarveOutNullAdditionalProperties(t *testing.T) {
+	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"catchall": {Schema: map[string]interface{}{
+			"type": "object", "additionalProperties": nil}},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"anything": "v"},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
 func TestCheckReplacementsUnmatchedKeyO5(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", nil)}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
