@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+// This block contains sentinel errors returned by this package.
 var (
 	// ErrDataNotMap is returned when the data being traversed is not a map.
 	ErrDataNotMap = errors.New("data is not a map")
