@@ -14,6 +14,33 @@ import (
 	"github.com/pkg/errors"
 )
 
+// This block contains sentinel errors returned by block parsing.
+var (
+	// ErrEndBlockClosingTag is returned when a legacy EndBlock command is
+	// written using a closing tag instead of a closing Block tag.
+	ErrEndBlockClosingTag = errors.New("invalid EndBlock closing tag")
+
+	// ErrClosingTagArgs is returned when a closing Block tag is given
+	// arguments, which is not allowed.
+	ErrClosingTagArgs = errors.New("invalid closing tag arguments")
+
+	// ErrAlreadyInsideBlock is returned when a Block command is found
+	// while already inside of another block.
+	ErrAlreadyInsideBlock = errors.New("invalid nested block")
+
+	// ErrNotInsideBlock is returned when an EndBlock command is found
+	// while not inside of a block.
+	ErrNotInsideBlock = errors.New("invalid EndBlock")
+
+	// ErrMismatchedEndBlockName is returned when an EndBlock command's
+	// name doesn't match the name of the block it's closing.
+	ErrMismatchedEndBlockName = errors.New("mismatched EndBlock name")
+
+	// ErrDanglingBlock is returned when a file ends while still inside
+	// of an unclosed block.
+	ErrDanglingBlock = errors.New("dangling block")
+)
+
 // StartStatement is a constant for the start of a statement.
 const StartStatement = "Block"
 
@@ -69,14 +96,14 @@ func parseBlocks(filePath string) (map[string]string, error) {
 				cmd := v2Matches[3]
 				if v2Matches[2] == "/" {
 					if cmd == EndStatement {
-						return nil, fmt.Errorf("line %d: %s", i+1, MsgEndBlockClosingTag)
+						return nil, fmt.Errorf("%w: line %d: %s", ErrEndBlockClosingTag, i+1, MsgEndBlockClosingTag)
 					}
 
 					// If there is a /, it's a closing tag and we should
 					// translate it to a closing block command
 					cmd = EndStatement
 					if v2Matches[4] != "" {
-						return nil, fmt.Errorf("line %d: %s", i+1, MsgClosingTagArgs)
+						return nil, fmt.Errorf("%w: line %d: %s", ErrClosingTagArgs, i+1, MsgClosingTagArgs)
 					}
 
 					v2Matches[4] = fmt.Sprintf("(%s)", curBlockName)
@@ -110,20 +137,20 @@ func parseBlocks(filePath string) (map[string]string, error) {
 			case StartStatement:
 				blockName := matches[3]
 				if curBlockName != "" {
-					return nil, fmt.Errorf("invalid Block when already inside of a block, at %s:%d", filePath, i+1)
+					return nil, fmt.Errorf("%w: at %s:%d", ErrAlreadyInsideBlock, filePath, i+1)
 				}
 				curBlockName = blockName
 			case EndStatement:
 				blockName := matches[3]
 
 				if curBlockName == "" {
-					return nil, fmt.Errorf("invalid EndBlock when not inside of a block, at %s:%d", filePath, i+1)
+					return nil, fmt.Errorf("%w: at %s:%d", ErrNotInsideBlock, filePath, i+1)
 				}
 
 				if blockName != curBlockName {
 					return nil, fmt.Errorf(
-						"invalid EndBlock, found EndBlock with name %q while inside of block with name %q, at %s:%d",
-						blockName, curBlockName, filePath, i+1,
+						"%w: found %q, expected %q, at %s:%d",
+						ErrMismatchedEndBlockName, blockName, curBlockName, filePath, i+1,
 					)
 				}
 
@@ -152,7 +179,7 @@ func parseBlocks(filePath string) (map[string]string, error) {
 	}
 
 	if curBlockName != "" {
-		return nil, fmt.Errorf("found dangling Block (%s) in %s", curBlockName, filePath)
+		return nil, fmt.Errorf("%w: %q, at %s", ErrDanglingBlock, curBlockName, filePath)
 	}
 
 	return blocks, nil

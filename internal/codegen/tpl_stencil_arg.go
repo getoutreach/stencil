@@ -19,6 +19,39 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
+// This block contains errors returned by argument resolution/validation.
+var (
+	// ErrArgumentNotListed is returned when an argument is not listed
+	// in the module's manifest.
+	ErrArgumentNotListed = errors.New("module doesn't list argument as an argument in its manifest")
+
+	// ErrRequiredArgumentNotSet is returned when a required argument
+	// is not set.
+	ErrRequiredArgumentNotSet = errors.New("module requires argument but is not set")
+
+	// ErrInvalidArgumentType is returned when an argument's type is
+	// invalid or unsupported.
+	ErrInvalidArgumentType = errors.New("module argument has invalid type")
+
+	// ErrArgumentDependencyNotListed is returned when an argument
+	// references an argument in another module that isn't listed as
+	// a dependency.
+	ErrArgumentDependencyNotListed = errors.New("module argument references an argument in a module, but doesn't list it as a dependency")
+
+	// ErrArgumentNotImportedByStencil is returned when an argument
+	// references an argument in a module that wasn't imported by
+	// stencil.
+	ErrArgumentNotImportedByStencil = errors.New("module argument references an argument in a module, but wasn't imported by stencil (bug)")
+
+	// ErrArgumentNotExposedByModule is returned when an argument
+	// references an argument in a module that doesn't expose it.
+	ErrArgumentNotExposedByModule = errors.New("module argument references an argument in a module, but the module doesn't expose it")
+
+	// ErrModuleValidationFailed is returned when a module's argument
+	// fails schema validation.
+	ErrModuleValidationFailed = errors.New("module validation failed")
+)
+
 // Arg returns the value of an argument in the service's manifest
 //
 //	{{- stencil.Arg "name" }}
@@ -45,7 +78,7 @@ func (s *TplStencil) Arg(pth string) (any, error) {
 	}
 
 	if _, ok := mf.Arguments[pth]; !ok {
-		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in its manifest", s.t.Module.Name, pth)
+		return "", fmt.Errorf("%w: module %q argument %q", ErrArgumentNotListed, s.t.Module.Name, pth)
 	}
 	arg := mf.Arguments[pth]
 
@@ -91,7 +124,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 	}
 
 	if arg.Required {
-		return nil, fmt.Errorf("module %q requires argument %q but is not set", s.t.Module.Name, pth)
+		return nil, fmt.Errorf("%w: module %q argument %q", ErrRequiredArgumentNotSet, s.t.Module.Name, pth)
 	}
 
 	// json schema convention is to define "type" as the top level key.
@@ -109,7 +142,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 	}
 	typs, ok := typ.(string)
 	if !ok {
-		return nil, fmt.Errorf("module %q argument %q has invalid type: %v", s.t.Module.Name, pth, typ)
+		return nil, fmt.Errorf("%w: module %q argument %q: %v", ErrInvalidArgumentType, s.t.Module.Name, pth, typ)
 	}
 
 	var v any
@@ -125,7 +158,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 	case "string":
 		v = ""
 	default:
-		return "", fmt.Errorf("module %q argument %q has invalid type %q", s.t.Module.Name, pth, typs)
+		return "", fmt.Errorf("%w: module %q argument %q: %q", ErrInvalidArgumentType, s.t.Module.Name, pth, typs)
 	}
 
 	return v, nil
@@ -147,8 +180,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	}
 	if !foundModuleInDeps {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but doesn't list it as a dependency",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references module %q",
+			ErrArgumentDependencyNotListed, s.t.Module.Name, pth, arg.From,
 		)
 	}
 
@@ -168,8 +201,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	}
 	if fromMf == nil {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but wasn't imported by stencil (this is a bug)",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references module %q",
+			ErrArgumentNotImportedByStencil, s.t.Module.Name, pth, arg.From,
 		)
 	}
 
@@ -177,8 +210,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	fromArg, ok := fromMf.Arguments[pth]
 	if !ok {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but the module does not expose that argument",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references module %q",
+			ErrArgumentNotExposedByModule, s.t.Module.Name, pth, arg.From,
 		)
 	}
 	return &fromArg, nil
@@ -215,7 +248,7 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v any)
 				s.log.Errorf("Encountered a validation error for %q: %v", path, validationErr.Error)
 			}
 
-			return fmt.Errorf("module %q validation failed", s.t.Module.Name)
+			return fmt.Errorf("%w: module %q", ErrModuleValidationFailed, s.t.Module.Name)
 		}
 
 		return errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)

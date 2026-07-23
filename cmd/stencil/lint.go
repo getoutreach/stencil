@@ -30,6 +30,13 @@ import (
 	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
 )
 
+// This block contains errors.
+var (
+	// ErrLintFailed is returned when lint findings fail the configured
+	// warnings-as-errors policy.
+	ErrLintFailed = errors.New("lint failed")
+)
+
 // templatesDir is the conventional subdirectory holding a module's *.tpl files.
 const templatesDir = "templates"
 
@@ -724,7 +731,7 @@ func failIfFindings(findings []lint.Finding, warningsAsErrors bool) error {
 	if !fail {
 		return nil
 	}
-	return fmt.Errorf("lint failed: %d error(s), %d warning(s)", errs, warns)
+	return fmt.Errorf("%w: %d error(s), %d warning(s)", ErrLintFailed, errs, warns)
 }
 
 // stdinIsPipe reports whether stdin is a pipe or a regular-file redirect (i.e.

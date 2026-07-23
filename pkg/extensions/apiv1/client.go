@@ -18,6 +18,13 @@ import (
 
 // IDEA(jaredallard): Cleanup this to return a Implementation backed by a transport as well.
 
+// This block contains errors returned by this file.
+var (
+	// ErrInvalidImplementationType is returned when a dispensed plugin type
+	// doesn't implement the expected implementationTransport interface.
+	ErrInvalidImplementationType = errors.New("failed to create apiv1.Implementation from invalid type")
+)
+
 // NewExtensionClient creates a new Implementation from a plugin.
 func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLogger) (Implementation, func() error, error) {
 	// create a connection to the extension
@@ -50,7 +57,7 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 
 	ext, ok := raw.(implementationTransport)
 	if !ok {
-		return nil, func() error { return nil }, fmt.Errorf("failed to create apiv1.Implementation from type %s", reflect.TypeOf(raw).String())
+		return nil, func() error { return nil }, fmt.Errorf("%w: %s", ErrInvalidImplementationType, reflect.TypeOf(raw).String())
 	}
 
 	return newImplementationTransportToImplementation(ext), rpcClient.Close, nil

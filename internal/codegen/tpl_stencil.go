@@ -19,6 +19,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrUnsupportedModuleBlockDataType is returned when data passed to
+// AddToModuleHook is not a slice.
+var ErrUnsupportedModuleBlockDataType = errors.New("unsupported module block data type")
+
 // TplStencil contains the global functions available to a template for
 // interacting with stencil.
 type TplStencil struct {
@@ -143,7 +147,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err er
 	// we only allow slices or maps to allow multiple templates to
 	// write to the same block
 	if v.Kind() != reflect.Slice {
-		err := fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
+		err := fmt.Errorf("%w %q, supported type is slice", ErrUnsupportedModuleBlockDataType, v.Kind())
 		return err, err
 	}
 

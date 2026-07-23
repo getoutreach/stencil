@@ -32,6 +32,13 @@ import (
 // to wrap the go plugin call to invoke said function.
 type generatedTemplateFunc func(...any) (any, error)
 
+// This block contains errors returned by this file.
+var (
+	// ErrTooManyArguments is returned when a template function is called with
+	// more arguments than it accepts.
+	ErrTooManyArguments = errors.New("too many arguments")
+)
+
 // Host implements an extension host that handles
 // registering extensions and executing them.
 type Host struct {
@@ -61,7 +68,7 @@ func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Impl
 
 	return func(args ...any) (any, error) {
 		if len(args) > fn.NumberOfArguments {
-			return nil, fmt.Errorf("too many arguments, expected %d, got %d", fn.NumberOfArguments, len(args))
+			return nil, fmt.Errorf("%w, expected %d, got %d", ErrTooManyArguments, fn.NumberOfArguments, len(args))
 		}
 
 		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{

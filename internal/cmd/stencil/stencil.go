@@ -32,6 +32,18 @@ import (
 	"golang.org/x/term"
 )
 
+// This block contains sentinel errors returned by this package.
+var (
+	// ErrFrozenLockfileFileDependency is returned when a frozen lockfile is
+	// used with a module that has a file:// replacement dependency.
+	ErrFrozenLockfileFileDependency = errors.New("cannot use frozen lockfile for file dependency")
+
+	// ErrUnsupportedMajorVersionUpgrade is returned when a module's name does
+	// not contain enough path segments to determine its GitHub repository for
+	// a major version upgrade.
+	ErrUnsupportedMajorVersionUpgrade = errors.New("unsupported major version upgrade for module")
+)
+
 // Command is a thin wrapper around the codegen package that
 // implements the "stencil" command.
 type Command struct {
@@ -241,7 +253,7 @@ func (c *Command) useModulesFromLock() error {
 		// ensure that a user doesn't try to frozen-lockfile a replaced
 		// module that uses a directory path, as that would be non-deterministic.
 		if strings.HasPrefix(l.URL, "file://") {
-			return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
+			return fmt.Errorf("%w %q, re-add replacement or run without --frozen-lockfile", ErrFrozenLockfileFileDependency, l.Name)
 		}
 
 		// set a constraint on the module that is equal
@@ -327,7 +339,7 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 
 	spl := strings.Split(m.Name, "/")
 	if len(spl) < 3 {
-		return fmt.Errorf("unsupported major version upgrade for module %q", m.Name)
+		return fmt.Errorf("%w %q", ErrUnsupportedMajorVersionUpgrade, m.Name)
 	}
 
 	rel, _, err := gh.Repositories.GetReleaseByTag(ctx, spl[1], spl[2], m.Version)

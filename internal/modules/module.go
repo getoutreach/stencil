@@ -32,6 +32,16 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// This block contains sentinel errors for this package.
+var (
+	// ErrModuleVersionRequired is returned when a module is specified without a version.
+	ErrModuleVersionRequired = errors.New("version must be specified for module")
+
+	// ErrModuleImportPathMismatch is returned when a module's declared import path
+	// does not match the path it was imported as.
+	ErrModuleImportPathMismatch = errors.New("module declares an import path that does not match how it was imported")
+)
+
 // localModuleVersion is the version string used for local modules.
 const localModuleVersion = "local"
 
@@ -90,7 +100,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		tr.Version = localModuleVersion
 	}
 	if tr.Version == "" {
-		return nil, fmt.Errorf("version must be specified for module %q", tr.Name)
+		return nil, fmt.Errorf("%w %q", ErrModuleVersionRequired, tr.Name)
 	}
 
 	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
@@ -166,8 +176,8 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	// ensure that the manifest name is equal to the import path
 	if manifest.Name != m.Name {
 		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
-			"module declares its import path as %q but was imported as %q",
-			manifest.Name, m.Name,
+			"%w: declared as %q, imported as %q",
+			ErrModuleImportPathMismatch, manifest.Name, m.Name,
 		)
 	}
 

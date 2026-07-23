@@ -24,6 +24,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrModuleChannelMismatch is returned when a module was previously resolved
+// with a different channel than what is now being requested.
+var ErrModuleChannelMismatch = errors.New("module was previously resolved with a different channel than now requested")
+
 // workList is a list of modules to resolve.
 type workList struct {
 	tasks []*resolveModule
@@ -270,9 +274,8 @@ func resolveChannel(moduleName, current string, history []resolution) (string, e
 		//
 		// If it doesn't match, we don't know how to resolve the module, so we error.
 		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return "", fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				moduleName, r.channel, r.parentModule, channel)
+			return "", fmt.Errorf("%w: %s previously resolved with channel %s (parent: %s), but now requires channel %s",
+				ErrModuleChannelMismatch, moduleName, r.channel, r.parentModule, channel)
 		}
 
 		// use the first history entry that has a channel since we can't have multiple channels

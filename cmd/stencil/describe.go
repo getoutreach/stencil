@@ -16,6 +16,16 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// This block contains errors.
+var (
+	// ErrFileNotExist is returned when the given file does not exist on disk.
+	ErrFileNotExist = errors.New("file does not exist")
+
+	// ErrFileNotStencilManaged is returned when the given file exists on disk
+	// but was not created by stencil.
+	ErrFileNotStencilManaged = errors.New("file isn't created by stencil")
+)
+
 // NewDescribeCmd returns a new urfave/cli.Command for the
 // describe command.
 func NewDescribeCmd() *cli.Command {
@@ -61,7 +71,7 @@ func describeFile(filePath string) error {
 	// check if the file exists on disk before we try to find
 	// it in the lockfile
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("file %q does not exist", filePath)
+		return fmt.Errorf("%w: %q", ErrFileNotExist, filePath)
 	}
 
 	relativeFilePath, err := cleanPath(filePath)
@@ -76,5 +86,5 @@ func describeFile(filePath string) error {
 		}
 	}
 
-	return fmt.Errorf("file %q isn't created by stencil", filePath)
+	return fmt.Errorf("%w: %q", ErrFileNotStencilManaged, filePath)
 }

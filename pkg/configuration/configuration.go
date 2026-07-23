@@ -7,11 +7,23 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 
 	"go.yaml.in/yaml/v3"
+)
+
+// This block contains sentinel errors returned by this package.
+var (
+	// ErrInvalidNameField is returned when a service manifest's name field
+	// fails validation.
+	ErrInvalidNameField = errors.New("name field was invalid")
+
+	// ErrDeprecationMessageMustBeString is returned when a deprecation
+	// message is not provided as a string.
+	ErrDeprecationMessageMustBeString = errors.New("deprecation message must be a string")
 )
 
 // ValidateNameRegexp is the regex used to validate the service's name.
@@ -32,7 +44,7 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 	}
 
 	if !ValidateName(s.Name) {
-		return nil, fmt.Errorf("name field in %q was invalid", path)
+		return nil, fmt.Errorf("%w: %q", ErrInvalidNameField, path)
 	}
 
 	return s, nil
@@ -150,8 +162,8 @@ func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
 		*d = DeprecationMessage(value.Value)
 		return nil
 	default:
-		return fmt.Errorf("deprecation message must be a string, got %s (%q); "+
-			"the bool form is not supported — supply a migration message", value.Tag, value.Value)
+		return fmt.Errorf("%w, got %s (%q); "+
+			"the bool form is not supported — supply a migration message", ErrDeprecationMessageMustBeString, value.Tag, value.Value)
 	}
 }
 
