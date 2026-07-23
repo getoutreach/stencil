@@ -124,7 +124,7 @@ func fromTOML(str string) (any, error) {
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead.
-var Default = template.FuncMap{
+var Default = template.FuncMap{ //nolint:gochecknoglobals // Why: map literals can't be const.
 	"Dereference":      dereference,
 	"QuoteJoinStrings": quotejoinstrings,
 	"toYaml":           toYAML,

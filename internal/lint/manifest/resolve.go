@@ -68,7 +68,7 @@ func resolvePath(root *yaml.Node, path string) int {
 // They form a closed set, so a finding path "arguments.NAME.FIELD" can be split
 // unambiguously even when NAME itself contains dots: the trailing FIELD is one
 // of these, and everything between "arguments." and it is the (flat) NAME.
-var argumentFields = []string{"type", "values", "schema"}
+var argumentFields = []string{"type", "values", "schema"} //nolint:gochecknoglobals // Why: slice literals can't be const.
 
 // resolveArgumentPath resolves "arguments.NAME" and "arguments.NAME.FIELD"
 // within the top mapping, where NAME is a single flat key that may contain dots

@@ -28,7 +28,7 @@ type Applied struct {
 // entry here (only reachable if BlockPattern's alternation is ever extended
 // without updating this map) is left unfixed rather than guessed at, so that
 // case fails safe instead of emitting a tag with no comment prefix.
-var legacyToV2Prefix = map[string]string{
+var legacyToV2Prefix = map[string]string{ //nolint:gochecknoglobals // Why: map literals can't be const.
 	"###":   "##",
 	"///":   "//",
 	"<!---": "<!--",

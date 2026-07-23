@@ -34,7 +34,7 @@ func scalarsEqual(a, b *yaml.Node) bool {
 // decoder drops it, and the strict lint decoder rejects it. The legacy `type:`
 // form placed JSON-Schema keywords (properties, items, …) here as siblings, so
 // these are the keys the fixer consolidates into `schema` when migrating `type`.
-var knownArgFields = map[string]bool{
+var knownArgFields = map[string]bool{ //nolint:gochecknoglobals // Why: map literals can't be const.
 	"description": true,
 	"required":    true,
 	"default":     true,
