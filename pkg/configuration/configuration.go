@@ -29,6 +29,30 @@ var (
 // ValidateNameRegexp is the regex used to validate the service's name.
 const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
 
+// ServiceManifest is a manifest used to describe a service and impact
+// what files are included.
+type ServiceManifest struct {
+	// Name is the name of the service
+	Name string `yaml:"name"`
+
+	// Arguments is a map of arbitrary arguments to pass to the generator
+	Arguments map[string]any `yaml:"arguments"`
+
+	// Modules are the template modules that this service depends
+	// on and utilizes
+	Modules []*TemplateRepository `yaml:"modules,omitempty"`
+
+	// Versions is a map of versions of certain tools, this is used by templates
+	// and will likely be replaced with something better in the future.
+	Versions map[string]string `yaml:"versions,omitempty"`
+
+	// Replacements is a list of module names to replace their URI.
+	// Expected format:
+	// - local file: file://path/to/module
+	// - remote file: https://github.com/getoutreach/stencil-base
+	Replacements map[string]string `yaml:"replacements,omitempty"`
+}
+
 // NewServiceManifest reads a service manifest from disk at the
 // specified path, parses it, and returns the output.
 func NewServiceManifest(path string) (*ServiceManifest, error) {
@@ -54,30 +78,6 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 // from a set default path on disk.
 func NewDefaultServiceManifest() (*ServiceManifest, error) {
 	return NewServiceManifest("service.yaml")
-}
-
-// ServiceManifest is a manifest used to describe a service and impact
-// what files are included.
-type ServiceManifest struct {
-	// Name is the name of the service
-	Name string `yaml:"name"`
-
-	// Arguments is a map of arbitrary arguments to pass to the generator
-	Arguments map[string]any `yaml:"arguments"`
-
-	// Modules are the template modules that this service depends
-	// on and utilizes
-	Modules []*TemplateRepository `yaml:"modules,omitempty"`
-
-	// Versions is a map of versions of certain tools, this is used by templates
-	// and will likely be replaced with something better in the future.
-	Versions map[string]string `yaml:"versions,omitempty"`
-
-	// Replacements is a list of module names to replace their URI.
-	// Expected format:
-	// - local file: file://path/to/module
-	// - remote file: https://github.com/getoutreach/stencil-base
-	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
 // TemplateRepository is a repository of template files.

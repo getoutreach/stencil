@@ -210,21 +210,6 @@ func (s *TplStencil) Exists(name string) bool {
 	return ok
 }
 
-// exists returns a billy.File if the file exists, and true. If it doesn't,
-// nil is returned and false.
-func (s *TplStencil) exists(name string) (billy.File, bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, false
-	}
-
-	f, err := osfs.New(cwd).Open(name)
-	if err != nil {
-		return nil, false
-	}
-	return f, true
-}
-
 // ApplyTemplate executes a template inside of the current module
 //
 // This function does not support rendering a template from another module.
@@ -310,4 +295,19 @@ func (s *TplStencil) Debug(args ...any) error {
 
 	// We have to return something...
 	return nil
+}
+
+// exists returns a billy.File if the file exists, and true. If it doesn't,
+// nil is returned and false.
+func (s *TplStencil) exists(name string) (billy.File, bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, false
+	}
+
+	f, err := osfs.New(cwd).Open(name)
+	if err != nil {
+		return nil, false
+	}
+	return f, true
 }

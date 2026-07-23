@@ -131,23 +131,6 @@ func (t *Template) ErrorContains(msg string) {
 	t.errStr = msg
 }
 
-// getModuleDependencies returns modules that are dependencies of the current module
-// the top-level manifest should be used to create the module that is passed in to ensure
-// that the version criteria is met.
-func (t *Template) getModuleDependencies(ctx context.Context, m *modules.Module) ([]*modules.Module, error) {
-	token, err := github.GetToken()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to get github token: %v", err)
-	}
-
-	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		Token:  token,
-		Module: m,
-		Log:    t.log,
-	})
-	return mods, err
-}
-
 // Run runs the test.
 func (t *Template) Run(save bool) {
 	t.t.Run(t.path, func(got *testing.T) {
@@ -228,6 +211,23 @@ func (t *Template) Run(save bool) {
 			break
 		}
 	})
+}
+
+// getModuleDependencies returns modules that are dependencies of the current module
+// the top-level manifest should be used to create the module that is passed in to ensure
+// that the version criteria is met.
+func (t *Template) getModuleDependencies(ctx context.Context, m *modules.Module) ([]*modules.Module, error) {
+	token, err := github.GetToken()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to get github token: %v", err)
+	}
+
+	mods, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
+		Token:  token,
+		Module: m,
+		Log:    t.log,
+	})
+	return mods, err
 }
 
 // RegenerateSnapshots determines whether to regenerate template

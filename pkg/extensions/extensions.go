@@ -60,31 +60,6 @@ func NewHost(log logrus.FieldLogger) *Host {
 	}
 }
 
-// createFunctionFromTemplateFunction takes a given
-// TemplateFunction and turns it into a callable function.
-func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation,
-	fn *apiv1.TemplateFunction) generatedTemplateFunc {
-	extPath := extName + "." + fn.Name
-
-	return func(args ...any) (any, error) {
-		if len(args) > fn.NumberOfArguments {
-			return nil, fmt.Errorf("%w, expected %d, got %d", ErrTooManyArguments, fn.NumberOfArguments, len(args))
-		}
-
-		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
-			Name:      fn.Name,
-			Arguments: args,
-		})
-		if err != nil {
-			// return an error if the extension returns an error
-			return nil, errors.Wrapf(err, "failed to execute template function %q", extPath)
-		}
-
-		// return the response, and a nil error
-		return resp, nil
-	}
-}
-
 // GetExtensionCaller returns an extension caller that's
 // aware of all extension functions.
 func (h *Host) GetExtensionCaller(ctx context.Context) (*ExtensionCaller, error) {
@@ -154,6 +129,43 @@ func (h *Host) RegisterExtension(ctx context.Context, source, name string, versi
 func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 	h.log.WithField("extension", name).Debug("Registered inproc extension")
 	h.extensions[name] = extension{ext, func() error { return nil }}
+}
+
+// Close terminates the extension host, which in turn stops
+// all current native extensions.
+func (h *Host) Close() error {
+	var result error
+	for _, ext := range h.extensions {
+		if err := ext.closer(); err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+	return result
+}
+
+// createFunctionFromTemplateFunction takes a given
+// TemplateFunction and turns it into a callable function.
+func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation,
+	fn *apiv1.TemplateFunction) generatedTemplateFunc {
+	extPath := extName + "." + fn.Name
+
+	return func(args ...any) (any, error) {
+		if len(args) > fn.NumberOfArguments {
+			return nil, fmt.Errorf("%w, expected %d, got %d", ErrTooManyArguments, fn.NumberOfArguments, len(args))
+		}
+
+		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
+			Name:      fn.Name,
+			Arguments: args,
+		})
+		if err != nil {
+			// return an error if the extension returns an error
+			return nil, errors.Wrapf(err, "failed to execute template function %q", extPath)
+		}
+
+		// return the response, and a nil error
+		return resp, nil
+	}
 }
 
 // getExtensionPath returns the path to an extension binary.
@@ -265,16 +277,4 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	}
 
 	return dlPath, nil
-}
-
-// Close terminates the extension host, which in turn stops
-// all current native extensions.
-func (h *Host) Close() error {
-	var result error
-	for _, ext := range h.extensions {
-		if err := ext.closer(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-	return result
 }

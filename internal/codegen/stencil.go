@@ -25,18 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// NewStencil creates a new, fully initialized Stencil renderer function.
-func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
-	return &Stencil{
-		log:         log,
-		m:           m,
-		ext:         extensions.NewHost(log),
-		modules:     mods,
-		isFirstPass: true,
-		sharedData:  newSharedData(),
-	}
-}
-
 // Stencil provides the basic functions for
 // stencil templates.
 type Stencil struct {
@@ -55,6 +43,18 @@ type Stencil struct {
 
 	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
+}
+
+// NewStencil creates a new, fully initialized Stencil renderer function.
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
+	return &Stencil{
+		log:         log,
+		m:           m,
+		ext:         extensions.NewHost(log),
+		modules:     mods,
+		isFirstPass: true,
+		sharedData:  newSharedData(),
+	}
 }
 
 // hashModuleHookValue hashes the module hook value using the
@@ -176,13 +176,6 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 	return l
 }
 
-// sortModuleHooks sorts the module hooks by their hash.
-func (s *Stencil) sortModuleHooks() {
-	for _, m := range s.sharedData.moduleHooks {
-		m.Sort()
-	}
-}
-
 // Render renders all templates using the ServiceManifest that was
 // provided to stencil at creation time, returned is the templates
 // that were produced and their associated files.
@@ -246,6 +239,45 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	return tpls, nil
 }
 
+// PostRun runs all post run commands specified in the modules that
+// this service depends on.
+func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
+	log.Info("Running post-run command(s)")
+	for _, m := range s.modules {
+		mf, err := m.Manifest(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, cmdStr := range mf.PostRunCommand {
+			log.Infof(" - %s", cmdStr.Name)
+			//nolint:gosec // Why: This is by design
+			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
+			cmd.Stdin = os.Stdin
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			if err := cmd.Run(); err != nil {
+				return errors.Wrapf(err, "failed to run post run command for module %s and command %s", m.Name, cmdStr.Command)
+			}
+		}
+	}
+
+	return nil
+}
+
+// Close closes all resources that should be closed when done
+// rendering templates.
+func (s *Stencil) Close() error {
+	return errors.Wrap(s.ext.Close(), "failed to close native extensions")
+}
+
+// sortModuleHooks sorts the module hooks by their hash.
+func (s *Stencil) sortModuleHooks() {
+	for _, m := range s.sharedData.moduleHooks {
+		m.Sort()
+	}
+}
+
 // deprecatedArgumentWarnings returns one warning message per (module, argument)
 // where the module's manifest marks the argument deprecated (a non-empty
 // Deprecated string) AND the service manifest sets a value for it. Messages are
@@ -280,32 +312,6 @@ func (s *Stencil) deprecatedArgumentWarnings(ctx context.Context) ([]string, err
 		}
 	}
 	return warnings, nil
-}
-
-// PostRun runs all post run commands specified in the modules that
-// this service depends on.
-func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
-	log.Info("Running post-run command(s)")
-	for _, m := range s.modules {
-		mf, err := m.Manifest(ctx)
-		if err != nil {
-			return err
-		}
-
-		for _, cmdStr := range mf.PostRunCommand {
-			log.Infof(" - %s", cmdStr.Name)
-			//nolint:gosec // Why: This is by design
-			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
-			cmd.Stdin = os.Stdin
-			cmd.Stderr = os.Stderr
-			cmd.Stdout = os.Stdout
-			if err := cmd.Run(); err != nil {
-				return errors.Wrapf(err, "failed to run post run command for module %s and command %s", m.Name, cmdStr.Command)
-			}
-		}
-	}
-
-	return nil
 }
 
 // getTemplates takes all modules attached to this stencil
@@ -384,10 +390,4 @@ func (s *Stencil) getTemplates(ctx context.Context, log logrus.FieldLogger) ([]*
 	log.Debug("Finished discovering templates")
 
 	return tpls, nil
-}
-
-// Close closes all resources that should be closed when done
-// rendering templates.
-func (s *Stencil) Close() error {
-	return errors.Wrap(s.ext.Close(), "failed to close native extensions")
 }
