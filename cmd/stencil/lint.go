@@ -28,6 +28,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
+	"github.com/getoutreach/stencil/internal/lint/modulefix"
 	lintprojectmanifest "github.com/getoutreach/stencil/internal/lint/projectmanifest"
 	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
 	"github.com/getoutreach/stencil/internal/modules"
@@ -465,18 +466,36 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	return failIfFindings(all, c.Bool("warnings-as-errors"))
 }
 
-// lintServiceYaml runs the out-of-band online project-manifest phase for the
-// aggregate action. A missing service.yaml is skipped (nil, nil) so a module
-// without one is "nothing to lint". Errors are already wrapped with "lint
-// failed".
-func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
-	sp string, offline bool) ([]lint.Finding, error) {
+// readServiceYamlOrSkip reads service.yaml at sp for the aggregate action. It
+// reports skip=true when the file is absent, so a module without one is
+// "nothing to lint". A stat error other than absence (e.g. a permission
+// failure) is surfaced rather than silently skipped, so it is not mistaken for
+// "nothing to lint". Returned errors are already wrapped.
+func readServiceYamlOrSkip(sp string) (raw []byte, skip bool, err error) {
 	if _, statErr := os.Stat(sp); statErr != nil {
-		return nil, nil // missing service.yaml is skipped
+		if os.IsNotExist(statErr) {
+			return nil, true, nil // missing service.yaml is skipped
+		}
+		return nil, false, errors.Wrapf(statErr, "failed to stat %q", sp)
 	}
 	raw, readErr := os.ReadFile(sp)
 	if readErr != nil {
-		return nil, errors.Wrapf(readErr, "failed to read %q", sp)
+		return nil, false, errors.Wrapf(readErr, "failed to read %q", sp)
+	}
+	return raw, false, nil
+}
+
+// lintServiceYaml runs the out-of-band online project-manifest phase for the
+// aggregate action. A missing service.yaml is skipped (nil, nil) so a module
+// without one is "nothing to lint".
+func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
+	sp string, offline bool) ([]lint.Finding, error) {
+	raw, skip, err := readServiceYamlOrSkip(sp)
+	if err != nil {
+		return nil, err
+	}
+	if skip {
+		return nil, nil
 	}
 	pf, err := runProjectManifestReaderOnline(ctx, log, sp, bytes.NewReader(raw), offline)
 	if err != nil {
@@ -491,12 +510,12 @@ func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
 // lintServiceYaml and the non-fix aggregate path.
 func fixServiceYaml(ctx context.Context, log logrus.FieldLogger,
 	sp string, offline bool) ([]lint.Finding, error) {
-	if _, statErr := os.Stat(sp); statErr != nil {
-		return nil, nil // missing service.yaml is skipped
+	raw, skip, err := readServiceYamlOrSkip(sp)
+	if err != nil {
+		return nil, err
 	}
-	raw, readErr := os.ReadFile(sp)
-	if readErr != nil {
-		return nil, errors.Wrapf(readErr, "failed to read %q", sp)
+	if skip {
+		return nil, nil
 	}
 	findings, err := fixProjectManifestBytes(ctx, log, sp, raw, offline, writeFixedFile(sp, raw))
 	if err != nil {
@@ -929,8 +948,9 @@ func failProjectManifest(log logrus.FieldLogger, name string, findings []lint.Fi
 	return failLint(log, fmt.Sprintf("service manifest %q is", name), findings, warningsAsErrors)
 }
 
-// logApplied logs one info line per fix the fixer applied.
-func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
+// logApplied logs one info line per fix a module fixer applied. It takes the
+// shared modulefix.Applied so it serves every fixer, not just the manifest one.
+func logApplied(log logrus.FieldLogger, applied []modulefix.Applied) {
 	for _, a := range applied {
 		logFixed(log, a.Path, a.Message, nil)
 	}
