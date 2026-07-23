@@ -1,10 +1,7 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
-// Description: This file implements a dotnotation parser for
-// accessing a map[string]interface{}
+// Description: This file contains tests for the dotnotation parser.
 
-// Package dotnotation implements a dotnotation (hello.world) for
-// accessing fields within a map[string]interface{}
 package dotnotation
 
 import (

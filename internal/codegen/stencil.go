@@ -1,6 +1,7 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
 // Description: Implements the stencil function passed to templates
+
 package codegen
 
 import (

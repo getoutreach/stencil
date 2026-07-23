@@ -2,9 +2,6 @@
 
 // Description: See package description
 
-// Package stencil implements the stencil command, which is
-// essentially a thing wrapper around the codegen package
-// which does most of the heavy lifting.
 package stencil
 
 import (

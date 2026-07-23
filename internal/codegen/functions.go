@@ -2,7 +2,6 @@
 
 // Description: Implements all functions provided to stencil templates.
 
-// package codegen provides funcutions to stencil templates.
 package codegen
 
 import (

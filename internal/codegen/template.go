@@ -2,6 +2,7 @@
 
 // Description: This file contains the logic and type for a template
 // that is being rendered by stencil.
+
 package codegen
 
 import (
