@@ -8,22 +8,23 @@
 package dotnotation
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
 // Get looks up an entry in data by parsing the "key" into deeply nested keys, traversing it by "dots" in the key name.
-func Get(data interface{}, key string) (interface{}, error) {
+func Get(data any, key string) (any, error) {
 	return get(data, key)
 }
 
-// getFieldOnMap returns a field on a given map
-func getFieldOnMap(data interface{}, key string) (interface{}, error) {
+// getFieldOnMap returns a field on a given map.
+func getFieldOnMap(data any, key string) (any, error) {
 	dataVal := reflect.ValueOf(data)
 	dataTyp := dataVal.Type()
 	if dataTyp.Kind() != reflect.Map {
-		return nil, fmt.Errorf("data is not a map")
+		return nil, errors.New("data is not a map")
 	}
 
 	// iterate over the keys of the map
@@ -53,8 +54,8 @@ func getFieldOnMap(data interface{}, key string) (interface{}, error) {
 // get is a recursive function to get a field from a map[interface{}]interface{}
 // this is done by splitting the key on "." and using the first part of the
 // split, if there is anymore parts of the key then get() is called with
-// the non processed part
-func get(data interface{}, key string) (interface{}, error) {
+// the non processed part.
+func get(data any, key string) (any, error) {
 	spl := strings.Split(key, ".")
 
 	v, err := getFieldOnMap(data, spl[0])

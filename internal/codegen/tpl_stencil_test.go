@@ -84,15 +84,15 @@ func TestTplStencil_GetModuleHook(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		inserts []interface{}
+		inserts []any
 		args    args
-		want    []interface{}
+		want    []any
 	}{
 		{
-			inserts: []interface{}{
+			inserts: []any{
 				[]string{"abc"},
 				[]string{"def"},
-				[]interface{}{map[string]interface{}{
+				[]any{map[string]any{
 					"abc": "def",
 				}},
 				[]string{"abc"},
@@ -100,9 +100,9 @@ func TestTplStencil_GetModuleHook(t *testing.T) {
 			args: args{
 				name: "name",
 			},
-			want: []interface{}{
+			want: []any{
 				// This is what the hashing resulted in
-				map[string]interface{}{
+				map[string]any{
 					"abc": "def",
 				},
 				"def",

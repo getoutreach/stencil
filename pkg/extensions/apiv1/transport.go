@@ -13,10 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// _ is a implementation check
+// _ is a implementation check.
 var _ Implementation = &implementationTransportToImplementation{}
 
-// _ is a implementation check
+// _ is a implementation check.
 var _ implementationTransport = &implementationToImplementationTransport{}
 
 // implementationTransport is the interface used for sending data over the
@@ -28,7 +28,7 @@ type implementationTransport interface {
 	ExecuteTemplateFunction(t *TemplateFunctionExec) ([]byte, error)
 }
 
-// newImplementationToImplementationTransport creates a new Implementation backed by a transportImplementation
+// newImplementationToImplementationTransport creates a new Implementation backed by a transportImplementation.
 func newImplementationToImplementationTransport(impl Implementation) *implementationToImplementationTransport {
 	return &implementationToImplementationTransport{impl}
 }
@@ -40,12 +40,12 @@ type implementationToImplementationTransport struct {
 	impl Implementation
 }
 
-// GetConfig returns the config for the extension
+// GetConfig returns the config for the extension.
 func (t *implementationToImplementationTransport) GetConfig() (*Config, error) {
 	return t.impl.GetConfig()
 }
 
-// GetTemplateFunctions returns the template functions for this extension
+// GetTemplateFunctions returns the template functions for this extension.
 func (t *implementationToImplementationTransport) GetTemplateFunctions() ([]*TemplateFunction, error) {
 	return t.impl.GetTemplateFunctions()
 }
@@ -68,7 +68,7 @@ func (t *implementationToImplementationTransport) ExecuteTemplateFunction(exec *
 	return b.Bytes(), nil
 }
 
-// newImplementationTransportToImplementation creates a new Implementation backed by a transportImplementation
+// newImplementationTransportToImplementation creates a new Implementation backed by a transportImplementation.
 func newImplementationTransportToImplementation(impl implementationTransport) *implementationTransportToImplementation {
 	return &implementationTransportToImplementation{impl}
 }
@@ -79,25 +79,25 @@ type implementationTransportToImplementation struct {
 	impl implementationTransport
 }
 
-// GetConfig returns the config for the extension
+// GetConfig returns the config for the extension.
 func (t *implementationTransportToImplementation) GetConfig() (*Config, error) {
 	return t.impl.GetConfig()
 }
 
-// GetTemplateFunctions returns the template functions for this extension
+// GetTemplateFunctions returns the template functions for this extension.
 func (t *implementationTransportToImplementation) GetTemplateFunctions() ([]*TemplateFunction, error) {
 	return t.impl.GetTemplateFunctions()
 }
 
 // ExecuteTemplateFunction calls the implementation to execute a template function
 // and serializes the response to json to be sent over the wire.
-func (t *implementationTransportToImplementation) ExecuteTemplateFunction(exec *TemplateFunctionExec) (interface{}, error) {
+func (t *implementationTransportToImplementation) ExecuteTemplateFunction(exec *TemplateFunctionExec) (any, error) {
 	resp, err := t.impl.ExecuteTemplateFunction(exec)
 	if err != nil {
 		return nil, err
 	}
 
-	var respVal interface{}
+	var respVal any
 	if err := json.NewDecoder(bytes.NewReader(resp)).Decode(&respVal); err != nil {
 		return nil, errors.Wrap(err, "failed to encode response")
 	}

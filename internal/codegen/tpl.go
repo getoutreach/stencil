@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// NewFuncMap returns the standard func map for a template
+// NewFuncMap returns the standard func map for a template.
 func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncMap {
 	// We allow tplst & tplf to be nil in the case of
 	// .Parse() of a template, where they need to be present

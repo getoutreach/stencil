@@ -9,7 +9,7 @@ import (
 )
 
 // NewCreateCommand returns a new urfave/cli.Command for the
-// create command
+// create command.
 func NewCreateCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "create",

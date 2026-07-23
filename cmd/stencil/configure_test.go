@@ -29,7 +29,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
@@ -45,7 +45,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
@@ -65,7 +65,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
@@ -81,7 +81,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
@@ -103,7 +103,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,
@@ -121,7 +121,7 @@ func TestConfigureModule(t *testing.T) {
 						Prerelease: false,
 					},
 				},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"description": "test module configure",
 					"releaseOptions": map[string]bool{
 						"enablePrereleases": true,

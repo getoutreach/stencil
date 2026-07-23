@@ -6,20 +6,21 @@
 package extensions
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
-// ExtensionCaller calls extension functions
+// ExtensionCaller calls extension functions.
 type ExtensionCaller struct {
 	funcMap map[string]map[string]generatedTemplateFunc
 }
 
-// Call returns a function based on its path, e.g. test.callFunction
-func (ec *ExtensionCaller) Call(args ...interface{}) (interface{}, error) {
+// Call returns a function based on its path, e.g. test.callFunction.
+func (ec *ExtensionCaller) Call(args ...any) (any, error) {
 	if len(args) == 0 {
-		return nil, fmt.Errorf("expected at least 1 arg")
+		return nil, errors.New("expected at least 1 arg")
 	}
 
 	extPath, ok := args[0].(string)

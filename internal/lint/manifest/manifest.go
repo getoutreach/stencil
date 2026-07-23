@@ -243,7 +243,7 @@ func modulePath(m *configuration.TemplateRepository, i int) string {
 // compileSchema compiles a single argument schema (Draft 2020-12) without
 // validating a value, surfacing malformed schemas. Mirrors the render-time
 // compiler in internal/codegen/tpl_stencil_arg.go.
-func compileSchema(name string, schema map[string]interface{}) error {
+func compileSchema(name string, schema map[string]any) error {
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(schema); err != nil {
 		return err

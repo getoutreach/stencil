@@ -19,7 +19,7 @@ import (
 // dereference dereferences a pointer returning the
 // referenced data type. If the provided value is not
 // a pointer, it is returned.
-func dereference(i interface{}) interface{} {
+func dereference(i any) any {
 	infType := reflect.TypeOf(i)
 
 	// If not a pointer, noop
@@ -32,7 +32,7 @@ func dereference(i interface{}) interface{} {
 
 // quotejoinstrings takes a slice of strings and joins
 // them with the provided seperator, sep, while quoting all
-// values
+// values.
 func quotejoinstrings(elems []string, sep string) string {
 	for i := range elems {
 		elems[i] = fmt.Sprintf("%q", elems[i])
@@ -45,7 +45,7 @@ func quotejoinstrings(elems []string, sep string) string {
 //
 // Based on:
 // https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L83
-func toYAML(v interface{}) (string, error) {
+func toYAML(v any) (string, error) {
 	// If no data, return an empty string
 	if v == nil {
 		return "", nil
@@ -62,8 +62,8 @@ func toYAML(v interface{}) (string, error) {
 // fromYAML converts a YAML document into a interface{}.
 //
 // Based on: https://github.com/helm/helm/blob/a499b4b179307c267bdf3ec49b880e3dbd2a5591/pkg/engine/funcs.go#L98
-func fromYAML(str string) (interface{}, error) {
-	var m interface{}
+func fromYAML(str string) (any, error) {
+	var m any
 
 	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func fromYAML(str string) (interface{}, error) {
 }
 
 // toJSON converts a interface{} into a JSON document.
-func toJSON(v interface{}) (string, error) {
+func toJSON(v any) (string, error) {
 	// If no data, return an empty string
 	if v == nil {
 		return "", nil
@@ -87,8 +87,8 @@ func toJSON(v interface{}) (string, error) {
 }
 
 // fromJSON converts a JSON document into a interface{}.
-func fromJSON(str string) (interface{}, error) {
-	var m interface{}
+func fromJSON(str string) (any, error) {
+	var m any
 
 	if err := json.Unmarshal([]byte(str), &m); err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func fromTOML(str string) (any, error) {
 
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
-// in the scope of the file renderer function instead
+// in the scope of the file renderer function instead.
 var Default = template.FuncMap{
 	"Dereference":      dereference,
 	"QuoteJoinStrings": quotejoinstrings,

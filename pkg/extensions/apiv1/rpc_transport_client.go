@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// _ is a compile time assertion we implement the interface
+// _ is a compile time assertion we implement the interface.
 var _ implementationTransport = &rpcTransportClient{}
 
 // rpcTransportClient implements the plugin client over
@@ -21,21 +21,21 @@ type rpcTransportClient struct {
 	client *rpc.Client
 }
 
-// GetConfig returns the config for the extension
+// GetConfig returns the config for the extension.
 func (g *rpcTransportClient) GetConfig() (*Config, error) {
 	var resp *Config
-	err := g.client.Call("Plugin.GetConfig", new(interface{}), &resp)
+	err := g.client.Call("Plugin.GetConfig", new(any), &resp)
 	return resp, err
 }
 
-// GetTemplateFunctions returns the template functions for this extension
+// GetTemplateFunctions returns the template functions for this extension.
 func (g *rpcTransportClient) GetTemplateFunctions() ([]*TemplateFunction, error) {
 	var resp []*TemplateFunction
-	err := g.client.Call("Plugin.GetTemplateFunctions", new(interface{}), &resp)
+	err := g.client.Call("Plugin.GetTemplateFunctions", new(any), &resp)
 	return resp, err
 }
 
-// ExecuteTemplateFunction exectues a template function for this extension
+// ExecuteTemplateFunction exectues a template function for this extension.
 func (g *rpcTransportClient) ExecuteTemplateFunction(t *TemplateFunctionExec) ([]byte, error) {
 	// IDEA(jaredallard): Actually stream this data in the future
 	var resp []byte

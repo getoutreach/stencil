@@ -27,7 +27,7 @@ import (
 // and is equivalent to `stencil.Args`. However, that is DEPRECATED
 // along with `stencil.Args` as it doesn't provide default types, or
 // check the JSON schema, or track which module calls what argument.
-func (s *TplStencil) Arg(pth string) (interface{}, error) {
+func (s *TplStencil) Arg(pth string) (any, error) {
 	if pth == "" {
 		return s.Args(), nil
 	}
@@ -60,7 +60,7 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 		arg = *fromArg
 	}
 
-	mapInf := make(map[interface{}]interface{})
+	mapInf := make(map[any]any)
 	for k, v := range s.s.m.Arguments {
 		mapInf[k] = v
 	}
@@ -84,8 +84,8 @@ func (s *TplStencil) Arg(pth string) (interface{}, error) {
 	return v, nil
 }
 
-// resolveDefault resolves the default value of an argument from the manifest
-func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (interface{}, error) {
+// resolveDefault resolves the default value of an argument from the manifest.
+func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (any, error) {
 	if arg.Default != nil {
 		return arg.Default, nil
 	}
@@ -112,12 +112,12 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (in
 		return nil, fmt.Errorf("module %q argument %q has invalid type: %v", s.t.Module.Name, pth, typ)
 	}
 
-	var v interface{}
+	var v any
 	switch typs {
 	case "map", "object":
-		v = make(map[interface{}]interface{})
+		v = make(map[any]any)
 	case "list", "array":
-		v = []interface{}{}
+		v = []any{}
 	case "boolean", "bool":
 		v = false
 	case "integer", "int", "number":
@@ -131,7 +131,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (in
 	return v, nil
 }
 
-// resolveFrom resoles the "from" field of an argument
+// resolveFrom resoles the "from" field of an argument.
 func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configuration.Argument) (*configuration.Argument, error) {
 	foundModuleInDeps := false
 	ourMf, err := s.t.Module.Manifest(ctx)
@@ -184,8 +184,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	return &fromArg, nil
 }
 
-// validateArg validates an argument against the schema
-func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v interface{}) error {
+// validateArg validates an argument against the schema.
+func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v any) error {
 	schemaBuf := new(bytes.Buffer)
 	if err := json.NewEncoder(schemaBuf).Encode(arg.Schema); err != nil {
 		return errors.Wrap(err, "failed to encode schema into JSON")
@@ -232,7 +232,7 @@ func buildErrorPath(absoluteKeywordLocation string) (string, error) {
 	// Validates that we have two items. We only want the second item which contains the path inside
 	// the manifest file.
 	if len(splitOnManifest) != 2 {
-		return "", fmt.Errorf("could not split provided path")
+		return "", errors.New("could not split provided path")
 	}
 
 	// The path is devided by either "/" or "#/" we want to remove both.

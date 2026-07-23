@@ -520,7 +520,7 @@ func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
 // into schema by consolidateSchemaSiblings.
 func TestKnownArgFieldsMatchesArgument(t *testing.T) {
 	want := map[string]bool{}
-	rt := reflect.TypeOf(configuration.Argument{})
+	rt := reflect.TypeFor[configuration.Argument]()
 	for i := 0; i < rt.NumField(); i++ {
 		tag := rt.Field(i).Tag.Get("yaml")
 		if tag == "" || tag == "-" {

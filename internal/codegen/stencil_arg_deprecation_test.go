@@ -15,7 +15,7 @@ import (
 func TestDeprecatedArgumentWarnings(t *testing.T) {
 	t.Run("warns when a deprecated arg is set in service.yaml", func(t *testing.T) {
 		tt := fakeTemplate(t,
-			map[string]interface{}{"oldArg": "x"}, // service.yaml sets it
+			map[string]any{"oldArg": "x"}, // service.yaml sets it
 			map[string]configuration.Argument{
 				"oldArg": {Deprecated: "use newArg instead"},
 			})
@@ -28,7 +28,7 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 
 	t.Run("warns when a deprecated arg is present with an empty value", func(t *testing.T) {
 		tt := fakeTemplate(t,
-			map[string]interface{}{"oldArg": ""}, // present in service.yaml, empty value
+			map[string]any{"oldArg": ""}, // present in service.yaml, empty value
 			map[string]configuration.Argument{
 				"oldArg": {Deprecated: "use newArg instead"},
 			})
@@ -41,7 +41,7 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 
 	t.Run("no warning when the deprecated arg is not set", func(t *testing.T) {
 		tt := fakeTemplate(t,
-			map[string]interface{}{}, // service.yaml does NOT set it
+			map[string]any{}, // service.yaml does NOT set it
 			map[string]configuration.Argument{
 				"oldArg": {Deprecated: "use newArg instead"},
 			})
@@ -52,7 +52,7 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 
 	t.Run("no warning for a non-deprecated arg that is set", func(t *testing.T) {
 		tt := fakeTemplate(t,
-			map[string]interface{}{"normalArg": "x"},
+			map[string]any{"normalArg": "x"},
 			map[string]configuration.Argument{
 				"normalArg": {},
 			})
@@ -63,7 +63,7 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 
 	t.Run("deterministic sorted order for multiple deprecated args", func(t *testing.T) {
 		tt := fakeTemplate(t,
-			map[string]interface{}{"bArg": "x", "aArg": "y"},
+			map[string]any{"bArg": "x", "aArg": "y"},
 			map[string]configuration.Argument{
 				"bArg": {Deprecated: "msg b"},
 				"aArg": {Deprecated: "msg a"},
@@ -80,7 +80,7 @@ func TestDeprecatedArgumentWarnings(t *testing.T) {
 		// test-0 re-exports "shared" from test-1 via from:; test-1 owns the
 		// deprecation. The from: entry must NOT warn.
 		tt := fakeTemplateMultipleModules(t,
-			map[string]interface{}{"shared": "x"},
+			map[string]any{"shared": "x"},
 			// test-0 (the importer)
 			map[string]configuration.Argument{
 				"shared": {From: "test-1", Deprecated: "ignored on from"},

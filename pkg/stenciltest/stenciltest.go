@@ -43,7 +43,7 @@ type Template struct {
 	t *testing.T
 
 	// args are the arguments to the template.
-	args map[string]interface{}
+	args map[string]any
 
 	// mods are the modules passed to the template's service manifest.
 	mods []*configuration.TemplateRepository
@@ -98,7 +98,7 @@ func New(t *testing.T, templatePath string, additionalTemplates ...string) *Temp
 }
 
 // Args sets the arguments to the template.
-func (t *Template) Args(args map[string]interface{}) *Template {
+func (t *Template) Args(args map[string]any) *Template {
 	t.args = args
 	return t
 }

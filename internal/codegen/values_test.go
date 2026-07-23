@@ -103,7 +103,7 @@ func TestGeneratedValues(t *testing.T) {
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "testing",
-		Arguments: map[string]interface{}{},
+		Arguments: map[string]any{},
 	}, []*modules.Module{m}, log)
 	tpls, err := st.Render(context.Background(), log)
 	assert.NilError(t, err, "failed to render templates")

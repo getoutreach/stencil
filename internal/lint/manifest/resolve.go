@@ -50,7 +50,7 @@ func resolvePath(root *yaml.Node, path string) int {
 	// General dotted mapping walk.
 	cur := top
 	lastKeyLine := 0
-	for _, seg := range strings.Split(path, ".") {
+	for seg := range strings.SplitSeq(path, ".") {
 		if cur == nil || cur.Kind != yaml.MappingNode {
 			return 0
 		}
@@ -86,8 +86,8 @@ func resolveArgumentPath(top *yaml.Node, path string) int {
 	// the (bare) argument name.
 	name, field := rest, ""
 	for _, fld := range argumentFields {
-		if strings.HasSuffix(rest, "."+fld) {
-			name = strings.TrimSuffix(rest, "."+fld)
+		if before, ok := strings.CutSuffix(rest, "."+fld); ok {
+			name = before
 			field = fld
 			break
 		}

@@ -17,7 +17,7 @@ import (
 // StartStatement is a constant for the start of a statement.
 const StartStatement = "Block"
 
-// EndStatement is a constant for the end of a statement
+// EndStatement is a constant for the end of a statement.
 const EndStatement = "EndBlock"
 
 // Block-misuse messages, shared with the templates linter so runtime and lint
@@ -42,7 +42,7 @@ var BlockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-z
 // internal/lint/templates.classify depends on these indices.
 var V2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 _]+\))?>>`)
 
-// parseBlocks reads the blocks from an existing file
+// parseBlocks reads the blocks from an existing file.
 func parseBlocks(filePath string) (map[string]string, error) {
 	blocks := make(map[string]string)
 	f, err := os.Open(filePath)
