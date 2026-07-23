@@ -774,11 +774,10 @@ func resolveAndValidateProjectManifest(ctx context.Context, log logrus.FieldLogg
 				Message:  fmt.Sprintf("failed to read module %q manifest: %v", m.Name, err),
 			})
 		}
-		mfCopy := mf // per-iteration allocation: Manifest returns by value; avoid aliasing.
 		resolved = append(resolved, lintprojectmanifest.ResolvedModule{
 			ImportPath: m.Name,
 			Module:     m,
-			Manifest:   &mfCopy,
+			Manifest:   &mf,
 		})
 	}
 	return lintprojectmanifest.ValidateOnline(res, resolved)
