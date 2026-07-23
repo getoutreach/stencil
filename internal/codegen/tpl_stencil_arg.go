@@ -137,7 +137,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 		// so return nothing. This is likely problematic so a linter
 		// should warn on this.
 		if arg.Type == "" { //nolint:staticcheck // Why: Compat
-			return nil, nil
+			return nil, nil //nolint:nilnil // Why: no type info means no default, which is a valid state, not an error.
 		}
 	}
 	typs, ok := typ.(string)

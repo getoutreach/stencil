@@ -65,8 +65,10 @@ type Template struct {
 
 // New creates a new test for a given template.
 func New(t *testing.T, templatePath string, additionalTemplates ...string) *Template {
+	t.Helper()
+
 	// GOMOD: <module path>/go.mod
-	b, err := exec.Command("go", "env", "GOMOD").Output()
+	b, err := exec.CommandContext(context.Background(), "go", "env", "GOMOD").Output()
 	if err != nil {
 		t.Fatalf("failed to determine path to manifest: %v", err)
 	}

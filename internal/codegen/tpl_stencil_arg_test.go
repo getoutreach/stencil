@@ -28,6 +28,8 @@ type testTpl struct {
 // template functions.
 func fakeTemplate(t *testing.T, args map[string]any,
 	requestArgs map[string]configuration.Argument) *testTpl {
+	t.Helper()
+
 	test := &testTpl{}
 	log := logrus.New()
 
@@ -78,6 +80,8 @@ func fakeTemplate(t *testing.T, args map[string]any,
 // the first module will import all other modules.
 func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]any,
 	args ...map[string]configuration.Argument) *testTpl {
+	t.Helper()
+
 	test := &testTpl{}
 	log := logrus.New()
 
@@ -100,7 +104,7 @@ func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]an
 		mods[i] = m
 	}
 
-	var trs []*configuration.TemplateRepository
+	trs := make([]*configuration.TemplateRepository, 0, len(importList))
 	for _, imp := range importList {
 		trs = append(trs, &configuration.TemplateRepository{Name: imp})
 	}

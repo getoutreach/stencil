@@ -153,7 +153,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err er
 
 	// convert the slice into a []any
 	interfaceSlice := make([]any, v.Len())
-	for i := 0; i < v.Len(); i++ {
+	for i := range v.Len() {
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 

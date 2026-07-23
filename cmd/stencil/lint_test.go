@@ -244,10 +244,10 @@ func TestNewLintCommandShape(t *testing.T) {
 	}
 }
 
-// findSubcommand returns the named subcommand of cmd, or nil if not present.
-func findSubcommand(cmd *cli.Command, name string) *cli.Command {
+// findSubcommand returns the "templates" subcommand of cmd, or nil if not present.
+func findSubcommand(cmd *cli.Command) *cli.Command {
 	for _, sub := range cmd.Commands {
-		if sub.Name == name {
+		if sub.Name == "templates" {
 			return sub
 		}
 	}
@@ -263,9 +263,9 @@ func flagPresent(flags []cli.Flag, name string) bool {
 	return false
 }
 
-// runModuleManifest invokes the real `lint module-manifest` action via the
-// command tree, with the given trailing args, the --fix flag, and an optional
-// stdin reader / stdout writer. It returns the command's error (nil means exit
+// runModuleManifest invokes the real `lint module-manifest --fix` action via
+// the command tree, with the given trailing args and an optional stdin
+// reader / stdout writer. It returns the command's error (nil means exit
 // 0). Effects are asserted via the file, stdout, and this error; the action
 // builds its own logger, so logger text is not captured here.
 //
@@ -274,7 +274,7 @@ func flagPresent(flags []cli.Flag, name string) bool {
 // The reader/writer are set on the module-manifest subcommand (the command that
 // runs the action); urfave/cli/v3 defaults each command's Reader/Writer
 // independently and does not inherit them from the parent.
-func runModuleManifest(t *testing.T, args []string, fix bool,
+func runModuleManifest(t *testing.T, args []string,
 	stdin io.Reader, stdout io.Writer) error {
 	t.Helper()
 	root := NewLintCommand()
@@ -287,10 +287,8 @@ func runModuleManifest(t *testing.T, args []string, fix bool,
 		}
 	}
 
-	fullArgs := []string{"lint", "module-manifest"}
-	if fix {
-		fullArgs = append(fullArgs, "--fix")
-	}
+	fullArgs := make([]string, 0, 3+len(args))
+	fullArgs = append(fullArgs, "lint", "module-manifest", "--fix")
 	fullArgs = append(fullArgs, args...)
 
 	return root.Run(t.Context(), fullArgs)
@@ -302,7 +300,7 @@ func TestRunLintModuleManifestFixInPlace(t *testing.T) {
 	assert.NilError(t, os.WriteFile(path,
 		[]byte("name: m\narguments:\n  x:\n    type: string\n"), 0o600))
 
-	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	err := runModuleManifest(t, []string{path}, nil, io.Discard)
 	assert.NilError(t, err) // the only finding was a fixable warning → exit 0
 
 	out, readErr := os.ReadFile(path)
@@ -320,7 +318,7 @@ func TestRunLintModuleManifestFixLeavesUnfixable(t *testing.T) {
 	assert.NilError(t, os.WriteFile(path,
 		[]byte("name: m\ntype: bogus\narguments:\n  x:\n    type: string\n"), 0o600))
 
-	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	err := runModuleManifest(t, []string{path}, nil, io.Discard)
 	assert.Assert(t, err != nil, "remaining error must fail the run")
 
 	out, _ := os.ReadFile(path)
@@ -335,7 +333,7 @@ func TestRunLintModuleManifestFixNoOpDoesNotRewrite(t *testing.T) {
 	assert.NilError(t, os.WriteFile(path, clean, 0o600))
 
 	info1, _ := os.Stat(path)
-	err := runModuleManifest(t, []string{path}, true, nil, io.Discard)
+	err := runModuleManifest(t, []string{path}, nil, io.Discard)
 	assert.NilError(t, err)
 
 	out, _ := os.ReadFile(path)
@@ -393,7 +391,7 @@ func TestWriteFixedFileDoesNotReReadPath(t *testing.T) {
 func TestRunLintModuleManifestFixStdin(t *testing.T) {
 	in := strings.NewReader("name: m\narguments:\n  x:\n    type: string\n")
 	var stdout bytes.Buffer
-	err := runModuleManifest(t, []string{"-"}, true, in, &stdout)
+	err := runModuleManifest(t, []string{"-"}, in, &stdout)
 	assert.NilError(t, err)
 	assert.Assert(t, strings.Contains(stdout.String(), "schema:"),
 		"fixed YAML must be written to stdout, got:\n%s", stdout.String())
@@ -428,7 +426,7 @@ func TestRunLintAggregateFixInPlace(t *testing.T) {
 func TestRunLintFixMissingManifest(t *testing.T) {
 	t.Run("module-manifest", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "nope.yaml")
-		err := runModuleManifest(t, []string{missing}, true, nil, io.Discard)
+		err := runModuleManifest(t, []string{missing}, nil, io.Discard)
 		assert.Assert(t, err != nil, "missing manifest must fail")
 		assert.Assert(t, strings.Contains(err.Error(), "1 error(s)"),
 			"expected the not-found finding to fail the run, got: %v", err)
@@ -445,7 +443,7 @@ func TestRunLintFixMissingManifest(t *testing.T) {
 
 func TestNewLintCommandHasTemplatesSubcommand(t *testing.T) {
 	cmd := NewLintCommand()
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	assert.Assert(t, sub != nil)
 	assert.Assert(t, flagPresent(sub.Flags, "warnings-as-errors"))
 }
@@ -560,7 +558,7 @@ func TestRunLintTemplatesStdin(t *testing.T) {
 	var out bytes.Buffer
 	cmd := NewLintCommand()
 	// Drive the templates subcommand directly with '-' and a piped reader.
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	assert.Assert(t, sub != nil)
 	sub.Reader = strings.NewReader(bad)
 	sub.Writer = &out
@@ -630,7 +628,7 @@ func TestAggregateTemplatesOnlyModuleStillLintsTemplates(t *testing.T) {
 }
 
 func TestNewLintCommandTemplatesHasFixFlag(t *testing.T) {
-	sub := findSubcommand(NewLintCommand(), "templates")
+	sub := findSubcommand(NewLintCommand())
 	assert.Assert(t, sub != nil)
 	assert.Assert(t, flagPresent(sub.Flags, "fix"))
 }
@@ -642,7 +640,7 @@ func TestRunLintTemplatesFixInPlace(t *testing.T) {
 	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
 
 	cmd := NewLintCommand()
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	sub.Writer = io.Discard
 	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
 	assert.NilError(t, err) // the only finding was the fixable legacy warning → exit 0
@@ -662,7 +660,7 @@ func TestRunLintTemplatesFixLeavesUnfixable(t *testing.T) {
 	assert.NilError(t, os.WriteFile(path, []byte(legacy), 0o600))
 
 	cmd := NewLintCommand()
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	sub.Writer = io.Discard
 	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
 	assert.Assert(t, err != nil, "remaining rule-1 error must fail the run")
@@ -682,7 +680,7 @@ func TestRunLintTemplatesFixNoOpDoesNotRewrite(t *testing.T) {
 
 	info1, _ := os.Stat(path)
 	cmd := NewLintCommand()
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	sub.Writer = io.Discard
 	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", path})
 	assert.NilError(t, err)
@@ -697,7 +695,7 @@ func TestRunLintTemplatesFixStdin(t *testing.T) {
 	legacy := "###Block(x)\n{{ file.Block \"x\" }}\n###EndBlock(x)\n"
 	var stdout bytes.Buffer
 	cmd := NewLintCommand()
-	sub := findSubcommand(cmd, "templates")
+	sub := findSubcommand(cmd)
 	sub.Reader = strings.NewReader(legacy)
 	sub.Writer = &stdout
 	err := cmd.Run(context.Background(), []string{"lint", "templates", "--fix", "-"})

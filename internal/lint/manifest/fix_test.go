@@ -28,17 +28,17 @@ func mappingFrom(t *testing.T, in string) *yaml.Node {
 	return doc.Content[0]
 }
 
-// argNode returns the value mapping for the single argument in
-// "arguments:\n  <name>:\n    ...". Helper for the per-argument fix tests.
-func argNode(t *testing.T, name, body string) *yaml.Node {
+// argNode returns the value mapping for the single argument "x" in
+// "arguments:\n  x:\n    ...". Helper for the per-argument fix tests.
+func argNode(t *testing.T, body string) *yaml.Node {
 	t.Helper()
-	m := mappingFrom(t, "arguments:\n  "+name+":\n"+body)
+	m := mappingFrom(t, "arguments:\n  x:\n"+body)
 	args := m.Content[yamlfix.FindKey(m, "arguments")+1]
 	return args.Content[1] // value of the first (only) argument
 }
 
 func TestFixArgTypeMovesIntoSchema(t *testing.T) {
-	arg := argNode(t, "x", "    type: string\n")
+	arg := argNode(t, "    type: string\n")
 	var applied []Applied
 	fixArgType("x", arg, &applied)
 
@@ -52,7 +52,7 @@ func TestFixArgTypeMovesIntoSchema(t *testing.T) {
 }
 
 func TestFixArgTypeRedundantWhenSchemaTypeEqual(t *testing.T) {
-	arg := argNode(t, "x", "    type: string\n    schema:\n      type: string\n")
+	arg := argNode(t, "    type: string\n    schema:\n      type: string\n")
 	var applied []Applied
 	fixArgType("x", arg, &applied)
 
@@ -64,7 +64,7 @@ func TestFixArgTypeRedundantWhenSchemaTypeEqual(t *testing.T) {
 }
 
 func TestFixArgTypeNoChangeWhenSchemaTypeDiffers(t *testing.T) {
-	arg := argNode(t, "x", "    type: string\n    schema:\n      type: integer\n")
+	arg := argNode(t, "    type: string\n    schema:\n      type: integer\n")
 	var applied []Applied
 	fixArgType("x", arg, &applied)
 
@@ -76,7 +76,7 @@ func TestFixArgTypeNoChangeWhenSchemaTypeDiffers(t *testing.T) {
 }
 
 func TestFixArgValuesMovesIntoSchemaEnum(t *testing.T) {
-	arg := argNode(t, "x", "    values: [a, b]\n")
+	arg := argNode(t, "    values: [a, b]\n")
 	var applied []Applied
 	fixArgValues("x", arg, &applied)
 
@@ -236,7 +236,7 @@ func TestFixPreservesKeyOrder(t *testing.T) {
 // TestFixArgValuesRedundantEnumDropped verifies that when both the deprecated
 // values: and schema.enum are present, fixArgValues drops values and keeps enum.
 func TestFixArgValuesRedundantEnumDropped(t *testing.T) {
-	arg := argNode(t, "x", "    values: [a]\n    schema:\n      enum: [a]\n")
+	arg := argNode(t, "    values: [a]\n    schema:\n      enum: [a]\n")
 	var applied []Applied
 	fixArgValues("x", arg, &applied)
 
@@ -250,7 +250,7 @@ func TestFixArgValuesRedundantEnumDropped(t *testing.T) {
 // change and no Applied entries when the deprecated field is not a fixable shape.
 func TestFixConservativeSkips(t *testing.T) {
 	t.Run("non-scalar type left alone", func(t *testing.T) {
-		arg := argNode(t, "x", "    type:\n      nested: true\n")
+		arg := argNode(t, "    type:\n      nested: true\n")
 		var applied []Applied
 		fixArgType("x", arg, &applied)
 
@@ -521,7 +521,7 @@ func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
 func TestKnownArgFieldsMatchesArgument(t *testing.T) {
 	want := map[string]bool{}
 	rt := reflect.TypeFor[configuration.Argument]()
-	for i := 0; i < rt.NumField(); i++ {
+	for i := range rt.NumField() {
 		tag := rt.Field(i).Tag.Get("yaml")
 		if tag == "" || tag == "-" {
 			continue
@@ -549,7 +549,7 @@ func TestFixArgumentsOrderAndFromSkip(t *testing.T) {
 	var applied []Applied
 	fixArguments(root, &applied)
 
-	var paths []string
+	paths := make([]string, 0, len(applied))
 	for _, a := range applied {
 		paths = append(paths, a.Path)
 	}
