@@ -13,29 +13,73 @@ linters:
   # Inverted configuration with enable-all and disable is not scalable during updates of golangci-lint.
   default: none
   enable:
+    - asciicheck # Flags non-ASCII identifiers (guards against homoglyph/confusable-character tricks).
+    - bidichk # Flags dangerous unicode bidi control characters (Trojan Source-style attacks).
     - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
     - copyloopvar # Detects places where loop variables are copied.
     - dogsled
+    - dupl
+    - durationcheck
+    - embeddedstructfieldcheck
+    - err113
     - errcheck
+    - errname
     - errorlint
     - exhaustive # Checks exhaustiveness of enum switch statements.
+    - exptostd
+    - fatcontext
+    - funcorder
     - funlen
+    - gocheckcompilerdirectives
+    - gochecknoglobals
     - gochecknoinits
+    - gochecksumtype
     - goconst
     - gocritic
     - gocyclo
+    - godoclint
+    - godot
+    - gomoddirectives
     - gosec
     - govet
+    - importas
     - ineffassign
+    - intrange
+    - iotamixing
     - lll
+    - makezero
+    - mirror
     # - misspell        # The reason we're disabling this right now is because it uses 1/2 of the memory of the run.
+    - modernize
+    - musttag
     - nakedret
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - predeclared
+    - protogetter
+    - recvcheck
     - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
     - staticcheck
+    - thelper
     - unconvert
-    # - unparam # Previously suppressed by --fast in v1, disabling for now to avoid noise
-    # - unused # Previously suppressed by --fast in v1, disabling for now to avoid noise
+    - unparam
+    - unqueryvet
+    - unused
+    - usestdlibvars
+    - wastedassign
     - whitespace
+    - zerologlint
   settings:
     dupl:
       threshold: 100
@@ -60,6 +104,10 @@ linters:
         - style
     gocyclo:
       min-complexity: 25
+    godot:
+      exclude:
+        - "^\\s*<<Stencil::Block\\(.+\\)>>$"
+        - "^\\s*<</Stencil::Block>>$"
     govet:
       enable:
         - shadow
@@ -92,18 +140,12 @@ linters:
         - name: range
         - name: receiver-naming
         - name: time-naming
-        - name: unexported-return
-          disabled: true # Previously suppressed by --fast in v1, disabling for now to avoid noise
         - name: indent-error-flow
         - name: errorf
         - name: empty-block
         - name: superfluous-else
         - name: unreachable-code
         - name: redefines-builtin-id
-        # While we agree with this rule, right now it would break too many
-        # projects. So, we disable it by default.
-        - name: unused-parameter
-          disabled: true
     staticcheck:
       checks:
         [
