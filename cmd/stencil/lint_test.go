@@ -822,6 +822,33 @@ func TestRunLintAggregateFixTemplatesUnfixableFails(t *testing.T) {
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
 }
 
+// TestRunLintAggregateFixMigratesServiceYaml proves aggregate --fix also
+// migrates a module's service.yaml, keeping runner order (manifest, templates,
+// then service.yaml). The module is a file:// replacement so the post-fix
+// online re-lint stays network-free.
+func TestRunLintAggregateFixMigratesServiceYaml(t *testing.T) {
+	modDir := writeLocalModule(t, "name: github.com/x/a\n")
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\n"), 0o600))
+	assert.NilError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n    prerelease: true\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	sp := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(sp, []byte(sy), 0o600))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // only finding was a fixable warning → exit 0 after fix
+
+	out, _ := os.ReadFile(sp)
+	assert.Assert(t, strings.Contains(string(out), "channel: rc"),
+		"aggregate --fix should migrate service.yaml, got:\n%s", string(out))
+	assert.Assert(t, !strings.Contains(string(out), "prerelease"))
+}
+
 // runProjectManifest runs `lint project-manifest [args...]`, feeding stdin/stdout
 // on the subcommand. Mirrors runModuleManifest.
 func runProjectManifest(t *testing.T, args []string, stdin io.Reader, stdout io.Writer) error {
@@ -1033,4 +1060,93 @@ func TestAggregateMissingServiceYamlIsNoOp(t *testing.T) {
 	root.Writer = io.Discard
 	err := root.Run(context.Background(), []string{"lint", dir})
 	assert.NilError(t, err) // nothing to lint → success
+}
+
+// runProjectManifestFix runs `lint project-manifest --fix [args...]`, wiring
+// optional stdin/stdout onto the subcommand like runProjectManifest does.
+func runProjectManifestFix(t *testing.T, args []string, stdin io.Reader, stdout io.Writer) error {
+	t.Helper()
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	sub := findSubcommand(root, "project-manifest")
+	assert.Assert(t, sub != nil, "project-manifest subcommand must exist")
+	if stdout != nil {
+		sub.Writer = stdout
+	}
+	if stdin != nil {
+		sub.Reader = stdin
+	}
+	full := append([]string{"lint", "project-manifest", "--fix"}, args...)
+	return root.Run(context.Background(), full)
+}
+
+func TestProjectManifestFixInPlace(t *testing.T) {
+	modDir := writeLocalModule(t, "name: github.com/x/a\n")
+	dir := t.TempDir()
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n    prerelease: true\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte(sy), 0o600))
+	err := runProjectManifestFix(t, []string{p}, nil, nil)
+	assert.NilError(t, err) // only finding was a fixable warning -> exit 0 after fix
+	out, _ := os.ReadFile(p)
+	assert.Assert(t, strings.Contains(string(out), "channel: rc"))
+	assert.Assert(t, !strings.Contains(string(out), "prerelease"))
+}
+
+func TestProjectManifestFixStdinFilter(t *testing.T) {
+	var stdout bytes.Buffer
+	in := "name: s\nmodules:\n  - name: github.com/x/a\n    prerelease: true\n"
+	// stdin forces offline; fixed YAML goes to stdout.
+	err := runProjectManifestFix(t, []string{"-"}, strings.NewReader(in), &stdout)
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(stdout.String(), "channel: rc"))
+}
+
+func TestProjectManifestFixNoOpDoesNotRewrite(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte("name: s\n"), 0o600))
+	info1, _ := os.Stat(p)
+	err := runProjectManifestFix(t, []string{"--offline", p}, nil, nil)
+	assert.NilError(t, err)
+	info2, _ := os.Stat(p)
+	assert.Equal(t, info1.ModTime(), info2.ModTime()) // no change -> not rewritten
+}
+
+// TestProjectManifestFixNotFound proves --fix on a missing service.yaml emits
+// the not-found finding and fails, rather than erroring on a raw stat failure.
+func TestProjectManifestFixNotFound(t *testing.T) {
+	dir := t.TempDir()
+	err := runProjectManifestFix(t, []string{"--offline", filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestProjectManifestFixMalformedFallsBack proves --fix on unparseable YAML
+// skips fixing and re-lints the original bytes, so the decode error surfaces as
+// a finding (and fails the run) instead of a fix-time crash.
+func TestProjectManifestFixMalformedFallsBack(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte("name: [unterminated\n"), 0o600))
+	err := runProjectManifestFix(t, []string{"--offline", p}, nil, nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
+}
+
+// TestRunLintAggregateFixMissingServiceYaml proves aggregate --fix treats an
+// absent service.yaml as nothing to lint (skipped, not an error), matching the
+// non-fix aggregate path.
+func TestRunLintAggregateFixMissingServiceYaml(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte("name: m\n"), 0o600))
+	assert.NilError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--fix", dir})
+	assert.NilError(t, err) // no service.yaml -> skipped, nothing fails
 }

@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -24,6 +23,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/getoutreach/stencil/internal/lint"
+	"github.com/getoutreach/stencil/internal/lint/modulefix"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
@@ -226,13 +226,10 @@ func checkModules(f *lint.Findings, mf *configuration.TemplateRepositoryManifest
 }
 
 // moduleIDPath builds the finding path for module i, preferring its name over
-// its slice index. Shared by the checker (modulePath) and the fixer
-// (moduleFixPath) so their finding paths stay identical.
+// its slice index. Delegates to modulefix.ModulePath so the checker and the
+// fixer produce identical paths from a single implementation.
 func moduleIDPath(name string, i int) string {
-	if name != "" {
-		return "modules." + name
-	}
-	return "modules[" + strconv.Itoa(i) + "]"
+	return modulefix.ModulePath(name, i)
 }
 
 // modulePath builds the finding path for module i, preferring its name.

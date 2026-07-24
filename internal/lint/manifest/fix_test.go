@@ -88,36 +88,6 @@ func TestFixArgValuesMovesIntoSchemaEnum(t *testing.T) {
 	assert.Equal(t, 1, len(applied))
 }
 
-func TestFixModulePrereleaseTrueAddsChannel(t *testing.T) {
-	mod := mappingFrom(t, "name: m\nprerelease: true\n")
-	var applied []Applied
-	fixModulePrerelease("modules.m", mod, &applied)
-
-	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
-	assert.Equal(t, "rc", mod.Content[yamlfix.FindKey(mod, "channel")+1].Value)
-	assert.Equal(t, 1, len(applied))
-}
-
-func TestFixModulePrereleaseKeepsExistingChannel(t *testing.T) {
-	mod := mappingFrom(t, "name: m\nchannel: stable\nprerelease: true\n")
-	var applied []Applied
-	fixModulePrerelease("modules.m", mod, &applied)
-
-	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
-	assert.Equal(t, "stable", mod.Content[yamlfix.FindKey(mod, "channel")+1].Value) // not overwritten
-	assert.Equal(t, 1, len(applied))
-}
-
-func TestFixModulePrereleaseFalseDropped(t *testing.T) {
-	mod := mappingFrom(t, "name: m\nprerelease: false\n")
-	var applied []Applied
-	fixModulePrerelease("modules.m", mod, &applied)
-
-	assert.Assert(t, yamlfix.FindKey(mod, "prerelease") == -1)
-	assert.Assert(t, yamlfix.FindKey(mod, "channel") == -1) // false is just removed
-	assert.Equal(t, 1, len(applied))
-}
-
 func encode(t *testing.T, doc *yaml.Node) string {
 	t.Helper()
 	var sb strings.Builder
@@ -129,11 +99,11 @@ func encode(t *testing.T, doc *yaml.Node) string {
 }
 
 // fixString decodes in, runs Fix, and returns the re-encoded YAML plus applied.
-func fixString(t *testing.T, in string) (string, []Applied) {
+func fixString(t *testing.T, in string) (fixed string, applied []Applied) {
 	t.Helper()
 	var doc yaml.Node
 	assert.NilError(t, yaml.Unmarshal([]byte(in), &doc))
-	applied := Fix(&doc)
+	applied = Fix(&doc)
 	return encode(t, &doc), applied
 }
 
@@ -255,24 +225,6 @@ func TestFixConservativeSkips(t *testing.T) {
 		fixArgType("x", arg, &applied)
 
 		assert.Assert(t, yamlfix.FindKey(arg, "type") >= 0) // left in place
-		assert.Equal(t, 0, len(applied))
-	})
-
-	t.Run("sequence prerelease left alone", func(t *testing.T) {
-		mod := mappingFrom(t, "name: m\nprerelease: [x]\n")
-		var applied []Applied
-		fixModulePrerelease("modules.m", mod, &applied)
-
-		assert.Assert(t, yamlfix.FindKey(mod, "prerelease") >= 0) // left in place
-		assert.Equal(t, 0, len(applied))
-	})
-
-	t.Run("non-bool scalar prerelease left alone", func(t *testing.T) {
-		mod := mappingFrom(t, "name: m\nprerelease: maybe\n")
-		var applied []Applied
-		fixModulePrerelease("modules.m", mod, &applied)
-
-		assert.Assert(t, yamlfix.FindKey(mod, "prerelease") >= 0) // left in place
 		assert.Equal(t, 0, len(applied))
 	})
 }

@@ -28,6 +28,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
+	"github.com/getoutreach/stencil/internal/lint/modulefix"
 	lintprojectmanifest "github.com/getoutreach/stencil/internal/lint/projectmanifest"
 	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
 	"github.com/getoutreach/stencil/internal/modules"
@@ -356,6 +357,52 @@ func failTemplates(log logrus.FieldLogger, findings []lint.Finding, warningsAsEr
 	return failLint(log, "templates are", findings, warningsAsErrors)
 }
 
+// runLintAggregateFix fixes a module's manifest.yaml, template files, and
+// service.yaml in place (each skipped when absent), then logs and applies the
+// warnings-as-errors policy to whatever findings survive. It mirrors the
+// non-fix aggregate runner order: manifest, templates, then service.yaml.
+func runLintAggregateFix(ctx context.Context, c *cli.Command, log logrus.FieldLogger, dir string) error {
+	var all []lint.Finding
+
+	fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	if finding == nil {
+		raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath, raw))
+		if fixErr != nil {
+			return errors.Wrap(fixErr, "lint failed")
+		}
+		all = append(all, findings...)
+	}
+	// A missing manifest is skipped, not fixed: aggregate lint treats it as
+	// "nothing to lint" (a module may be templates-only), matching the
+	// non-fix aggregate path and manifestRunner.
+
+	files, err := collectTemplateFiles(log, filepath.Join(dir, templatesDir))
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	findings, err := fixTemplateFiles(log, files)
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	all = append(all, findings...)
+
+	pf, err := fixServiceYaml(ctx, log, filepath.Join(dir, "service.yaml"), c.Bool("offline"))
+	if err != nil {
+		return err
+	}
+	all = append(all, pf...)
+
+	logFindings(log, all)
+	return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
+}
+
 // runLintAggregate is the `stencil lint [dir]` action.
 func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	if c.Args().Len() > 1 {
@@ -388,39 +435,7 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	}
 
 	if c.Bool("fix") {
-		var all []lint.Finding
-
-		fixPath, finding, err := resolveManifestPath(filepath.Join(dir, "manifest.yaml"))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		if finding == nil {
-			raw, readErr := os.ReadFile(fixPath) // path was cleaned inside resolveManifestPath.
-			if readErr != nil {
-				return errors.Wrapf(readErr, "failed to read %q", fixPath)
-			}
-			findings, fixErr := fixManifestBytes(log, fixPath, raw, writeFixedFile(fixPath, raw))
-			if fixErr != nil {
-				return errors.Wrap(fixErr, "lint failed")
-			}
-			all = append(all, findings...)
-		}
-		// A missing manifest is skipped, not fixed: aggregate lint treats it as
-		// "nothing to lint" (a module may be templates-only), matching the
-		// non-fix aggregate path and manifestRunner.
-
-		files, err := collectTemplateFiles(log, filepath.Join(dir, templatesDir))
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		findings, err := fixTemplateFiles(log, files)
-		if err != nil {
-			return errors.Wrap(err, "lint failed")
-		}
-		all = append(all, findings...)
-
-		logFindings(log, all)
-		return failLint(log, fmt.Sprintf("module %q is", dir), all, c.Bool("warnings-as-errors"))
+		return runLintAggregateFix(ctx, c, log, dir)
 	}
 
 	runners := []runner{
@@ -451,24 +466,62 @@ func runLintAggregate(ctx context.Context, c *cli.Command) error {
 	return failIfFindings(all, c.Bool("warnings-as-errors"))
 }
 
-// lintServiceYaml runs the out-of-band online project-manifest phase for the
-// aggregate action. A missing service.yaml is skipped (nil, nil) so a module
-// without one is "nothing to lint". Errors are already wrapped with "lint
-// failed".
-func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
-	sp string, offline bool) ([]lint.Finding, error) {
+// readServiceYamlOrSkip reads service.yaml at sp for the aggregate action. It
+// reports skip=true when the file is absent, so a module without one is
+// "nothing to lint". A stat error other than absence (e.g. a permission
+// failure) is surfaced rather than silently skipped, so it is not mistaken for
+// "nothing to lint". Returned errors are already wrapped.
+func readServiceYamlOrSkip(sp string) (raw []byte, skip bool, err error) {
 	if _, statErr := os.Stat(sp); statErr != nil {
-		return nil, nil // missing service.yaml is skipped
+		if os.IsNotExist(statErr) {
+			return nil, true, nil // missing service.yaml is skipped
+		}
+		return nil, false, errors.Wrapf(statErr, "failed to stat %q", sp)
 	}
 	raw, readErr := os.ReadFile(sp)
 	if readErr != nil {
-		return nil, errors.Wrapf(readErr, "failed to read %q", sp)
+		return nil, false, errors.Wrapf(readErr, "failed to read %q", sp)
+	}
+	return raw, false, nil
+}
+
+// lintServiceYaml runs the out-of-band online project-manifest phase for the
+// aggregate action. A missing service.yaml is skipped (nil, nil) so a module
+// without one is "nothing to lint".
+func lintServiceYaml(ctx context.Context, log logrus.FieldLogger,
+	sp string, offline bool) ([]lint.Finding, error) {
+	raw, skip, err := readServiceYamlOrSkip(sp)
+	if err != nil {
+		return nil, err
+	}
+	if skip {
+		return nil, nil
 	}
 	pf, err := runProjectManifestReaderOnline(ctx, log, sp, bytes.NewReader(raw), offline)
 	if err != nil {
 		return nil, errors.Wrap(err, "lint failed")
 	}
 	return pf, nil
+}
+
+// fixServiceYaml is the aggregate --fix counterpart to lintServiceYaml: it
+// migrates a module's service.yaml in place (if present) and returns the
+// post-fix findings. A missing service.yaml is skipped (nil, nil), matching
+// lintServiceYaml and the non-fix aggregate path.
+func fixServiceYaml(ctx context.Context, log logrus.FieldLogger,
+	sp string, offline bool) ([]lint.Finding, error) {
+	raw, skip, err := readServiceYamlOrSkip(sp)
+	if err != nil {
+		return nil, err
+	}
+	if skip {
+		return nil, nil
+	}
+	findings, err := fixProjectManifestBytes(ctx, log, sp, raw, offline, writeFixedFile(sp, raw))
+	if err != nil {
+		return nil, errors.Wrap(err, "lint failed")
+	}
+	return findings, nil
 }
 
 // runLintModuleManifest is the `stencil lint module-manifest [path]` action.
@@ -682,7 +735,7 @@ func newLintProjectManifestCommand() *cli.Command {
 		Usage:       "Validate a project's service.yaml without resolving dependencies",
 		ArgsUsage:   "[path]",
 		Description: "Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.",
-		Flags:       []cli.Flag{warningsAsErrorsFlag(), offlineFlag()},
+		Flags:       []cli.Flag{warningsAsErrorsFlag(), offlineFlag(), fixFlag()},
 		Action:      runLintProjectManifest,
 	}
 }
@@ -703,6 +756,18 @@ func runLintProjectManifest(ctx context.Context, c *cli.Command) error {
 		}
 		// stdin has no on-disk module context to resolve against, so reading
 		// from '-' forces offline.
+		if c.Bool("fix") {
+			raw, rerr := io.ReadAll(c.Reader)
+			if rerr != nil {
+				return errors.Wrap(rerr, "failed to read stdin")
+			}
+			// stdin forces offline; fixed YAML to stdout, diagnostics to stderr.
+			return fixAndRelintProjectManifest(ctx, c, log, stdinName, raw, true,
+				func(fixed []byte) error {
+					_, werr := c.Writer.Write(fixed)
+					return werr
+				})
+		}
 		findings, err := runProjectManifestReaderOnline(ctx, log, stdinName, c.Reader, true)
 		if err != nil {
 			return errors.Wrap(err, "lint failed")
@@ -714,6 +779,23 @@ func runLintProjectManifest(ctx context.Context, c *cli.Command) error {
 	path := "./service.yaml"
 	if c.Args().Len() == 1 {
 		path = c.Args().First()
+	}
+	if c.Bool("fix") {
+		fixPath, finding, err := resolveProjectManifestPath(path)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		if finding != nil {
+			logFindings(log, []lint.Finding{*finding})
+			return failProjectManifest(log, fixPath, []lint.Finding{*finding},
+				c.Bool("warnings-as-errors"))
+		}
+		raw, readErr := os.ReadFile(fixPath)
+		if readErr != nil {
+			return errors.Wrapf(readErr, "failed to read %q", fixPath)
+		}
+		return fixAndRelintProjectManifest(ctx, c, log, fixPath, raw, offline,
+			writeFixedFile(fixPath, raw))
 	}
 	r, closer, finding, err := resolveProjectManifestReader(path)
 	if err != nil {
@@ -783,6 +865,60 @@ func resolveAndValidateProjectManifest(ctx context.Context, log logrus.FieldLogg
 	return lintprojectmanifest.ValidateOnline(res, resolved)
 }
 
+// resolveProjectManifestPath resolves path to the service.yaml to fix. A
+// directory arg has "service.yaml" appended; a missing file yields a
+// not-found finding (not an error), mirroring resolveManifestPath.
+func resolveProjectManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+	path = filepath.Clean(path)
+	info, statErr := os.Stat(path)
+	if statErr == nil && info.IsDir() {
+		path = filepath.Join(path, "service.yaml")
+		_, statErr = os.Stat(path)
+	}
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return path, &lint.Finding{
+				Severity: lint.SeverityError,
+				Path:     path,
+				Message:  fmt.Sprintf("service manifest file not found: %s", path),
+			}, nil
+		}
+		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
+	}
+	return path, nil, nil
+}
+
+// fixProjectManifestBytes applies the project-manifest fixes to raw, writes the
+// fixed bytes via writeFixed, logs each applied fix, and returns the findings
+// from re-linting the fixed content in the ambient mode (online unless offline).
+// If raw cannot be parsed as YAML, fixing is skipped and the original bytes are
+// linted instead, so the decode error surfaces as a normal finding. Mirrors
+// fixManifestBytes but threads ctx + offline for the online re-lint.
+func fixProjectManifestBytes(ctx context.Context, log logrus.FieldLogger, name string,
+	raw []byte, offline bool, writeFixed func([]byte) error) ([]lint.Finding, error) {
+	fixed, applied, ok := lintprojectmanifest.FixBytes(raw)
+	if !ok {
+		return runProjectManifestReaderOnline(ctx, log, name, bytes.NewReader(raw), offline)
+	}
+	if err := writeFixed(fixed); err != nil {
+		return nil, errors.Wrap(err, "failed to write fixed service manifest")
+	}
+	logApplied(log, applied)
+	return runProjectManifestReaderOnline(ctx, log, name, bytes.NewReader(fixed), offline)
+}
+
+// fixAndRelintProjectManifest wraps fixProjectManifestBytes with logging and the
+// warnings-as-errors policy, mirroring fixAndRelint.
+func fixAndRelintProjectManifest(ctx context.Context, c *cli.Command, log logrus.FieldLogger,
+	name string, raw []byte, offline bool, writeFixed func([]byte) error) error {
+	findings, err := fixProjectManifestBytes(ctx, log, name, raw, offline, writeFixed)
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	logFindings(log, findings)
+	return failProjectManifest(log, name, findings, c.Bool("warnings-as-errors"))
+}
+
 // resolveProjectManifestReader resolves path to a service.yaml reader, appending
 // "service.yaml" for a directory. See resolveReader.
 func resolveProjectManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
@@ -812,8 +948,9 @@ func failProjectManifest(log logrus.FieldLogger, name string, findings []lint.Fi
 	return failLint(log, fmt.Sprintf("service manifest %q is", name), findings, warningsAsErrors)
 }
 
-// logApplied logs one info line per fix the fixer applied.
-func logApplied(log logrus.FieldLogger, applied []lintmanifest.Applied) {
+// logApplied logs one info line per fix a module fixer applied. It takes the
+// shared modulefix.Applied so it serves every fixer, not just the manifest one.
+func logApplied(log logrus.FieldLogger, applied []modulefix.Applied) {
 	for _, a := range applied {
 		logFixed(log, a.Path, a.Message, nil)
 	}
