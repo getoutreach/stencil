@@ -20,11 +20,11 @@
 <meta property="og:description" content="Validate a Stencil module's manifest and templates without resolving dependencies">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_lint/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8346852721968085235.png"><meta property="article:section" content="commands">
-<meta property="article:modified_time" content="2026-07-24T08:48:17-07:00">
+<meta property="article:modified_time" content="2026-07-24T09:56:11-07:00">
 <meta itemprop=name content="stencil lint">
 <meta itemprop=description content="Validate a Stencil module's manifest and templates without resolving dependencies">
-<meta itemprop=dateModified content="2026-07-24T08:48:17-07:00">
-<meta itemprop=wordCount content="89"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta itemprop=dateModified content="2026-07-24T09:56:11-07:00">
+<meta itemprop=wordCount content="98"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_8346852721968085235.png">
 <meta name=twitter:title content="stencil lint">
@@ -91,6 +91,7 @@ Validate a Stencil module&rsquo;s manifest and templates without resolving depen
 </span></span><span class=line><span class=cl>OPTIONS:
 </span></span><span class=line><span class=cl>   --warnings-as-errors  treat warnings as errors <span class=o>(</span>fail on any finding<span class=o>)</span>
 </span></span><span class=line><span class=cl>   --fix                 automatically fix safe deprecations in place <span class=o>(</span>a manifest is re-encoded at 2-space indent when fixed<span class=p>;</span> re-lints after fixing<span class=o>)</span>
+</span></span><span class=line><span class=cl>   --offline             skip module resolution<span class=p>;</span> run only offline syntactic checks
 </span></span><span class=line><span class=cl>   --help, -h            show <span class=nb>help</span>
 </span></span></code></pre></div></div></div></div><div class="order-0 w-20 dn db-l">
 <nav role=navigation>
@@ -338,7 +339,7 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: July 24, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/4909e8d9ea1ea701735c0eac8cb246f373d562ad>feat(lint): add offline `stencil lint project-manifest` (#503) (4909e8d)</a>
+Last updated: July 24, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/89d69be3df0ddb3c8be2c11de5da74b30770c92c>feat(lint): validate project-manifest arguments against resolved modules (#504) (89d69be)</a>
 </h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_lint.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
