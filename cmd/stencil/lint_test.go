@@ -840,6 +840,120 @@ func runProjectManifest(t *testing.T, args []string, stdin io.Reader, stdout io.
 	return root.Run(context.Background(), full)
 }
 
+// runProjectManifestOffline mirrors runProjectManifest but passes --offline so
+// module resolution is skipped and only the offline syntactic checks run.
+func runProjectManifestOffline(t *testing.T, args []string) error {
+	t.Helper()
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	sub := findSubcommand(root, "project-manifest")
+	assert.Assert(t, sub != nil, "project-manifest subcommand must exist")
+	full := append([]string{"lint", "project-manifest", "--offline"}, args...)
+	return root.Run(context.Background(), full)
+}
+
+// writeLocalModule writes a minimal module (manifest.yaml with the given
+// contents) to a temp dir and returns its path, for use as a file://
+// replacement so online resolution never hits the network.
+func writeLocalModule(t *testing.T, manifestYAML string) string {
+	t.Helper()
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"),
+		[]byte(manifestYAML), 0o600))
+	return dir
+}
+
+func TestProjectManifestOfflineFlagSkipsResolution(t *testing.T) {
+	dir := t.TempDir()
+	// A module that would fail to resolve online, but --offline skips resolution.
+	sy := "name: s\nmodules:\n  - name: github.com/does/not-exist\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	err := runProjectManifestOffline(t, []string{filepath.Join(dir, "service.yaml")})
+	assert.NilError(t, err) // offline: only F1-F7 run; the module name is valid syntactically
+}
+
+func TestProjectManifestStdinForcesOffline(t *testing.T) {
+	// stdin references an unresolvable module, but '-' forces offline so no
+	// resolution occurs and the syntactically-valid manifest passes.
+	sy := "name: s\nmodules:\n  - name: github.com/does/not-exist\n"
+	err := runProjectManifest(t, []string{"-"}, strings.NewReader(sy), io.Discard)
+	assert.NilError(t, err)
+}
+
+func TestProjectManifestOnlineRequiredArgViaReplacement(t *testing.T) {
+	modDir := writeLocalModule(t,
+		"name: github.com/x/a\narguments:\n  foo:\n    required: true\n")
+	dir := t.TempDir()
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	// online (default): module resolves via file:// replacement; foo is required
+	// and unset → O3 → error.
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil)
+}
+
+func TestProjectManifestOnlineHappyViaReplacement(t *testing.T) {
+	modDir := writeLocalModule(t, "name: github.com/x/a\n")
+	dir := t.TempDir()
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	// online (default): module resolves via file:// replacement; no required
+	// args, no misuse → no findings.
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.NilError(t, err)
+}
+
+// TestAggregateOnlineServiceYamlViaReplacement proves the aggregate `lint <dir>`
+// runs the online project-manifest phase out of band: a required-but-unset arg
+// on a file://-replaced module surfaces as a run failure.
+func TestAggregateOnlineServiceYamlViaReplacement(t *testing.T) {
+	modDir := writeLocalModule(t,
+		"name: github.com/x/a\narguments:\n  foo:\n    required: true\n")
+	dir := t.TempDir()
+	sy := "name: s\n" +
+		"modules:\n  - name: github.com/x/a\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.Assert(t, err != nil)
+}
+
+// TestAggregateOfflineFlagSkipsResolution proves `lint <dir> --offline` skips
+// the online phase: an unresolvable module does not fail the run.
+func TestAggregateOfflineFlagSkipsResolution(t *testing.T) {
+	dir := t.TempDir()
+	sy := "name: s\nmodules:\n  - name: github.com/does/not-exist\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", "--offline", dir})
+	assert.NilError(t, err)
+}
+
+// TestProjectManifestOnlinePerModuleManifestFailure proves a per-module
+// manifest load failure (name mismatch: Manifest(ctx) rejects it) surfaces as
+// a non-zero run (an O1 modules.<name> error) without panicking or emitting
+// spurious argument findings. The module is a file:// replacement, so the run
+// is network-free.
+func TestProjectManifestOnlinePerModuleManifestFailure(t *testing.T) {
+	modDir := t.TempDir()
+	// name mismatch: Manifest(ctx) errors ("declares its import path as ...").
+	assert.NilError(t, os.WriteFile(filepath.Join(modDir, "manifest.yaml"),
+		[]byte("name: github.com/wrong/name\n"), 0o600))
+	dir := t.TempDir()
+	sy := "name: s\nmodules:\n  - name: github.com/x/a\n" +
+		"replacements:\n  github.com/x/a: file://" + modDir + "\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil) // O1 modules.<name> error → non-zero
+}
+
 func TestNewLintCommandHasProjectManifestSubcommand(t *testing.T) {
 	cmd := NewLintCommand()
 	assert.Assert(t, findSubcommand(cmd, "project-manifest") != nil)

@@ -22,8 +22,19 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/getoutreach/stencil/internal/lint"
+	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
+
+// ResolvedModule pairs a resolved module with its already-decoded manifest and
+// its resolved import path. The command layer decodes Manifest(ctx) and passes
+// these in, so the package performs no module resolution itself. Manifest is a
+// per-module pointer; each entry must reference its own manifest.
+type ResolvedModule struct {
+	ImportPath string
+	Module     *modules.Module
+	Manifest   *configuration.TemplateRepositoryManifest
+}
 
 // LoadResult holds the outcome of decoding a service.yaml for linting.
 type LoadResult struct {
