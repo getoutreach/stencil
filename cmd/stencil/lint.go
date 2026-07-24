@@ -27,6 +27,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/lint"
 	lintmanifest "github.com/getoutreach/stencil/internal/lint/manifest"
+	lintprojectmanifest "github.com/getoutreach/stencil/internal/lint/projectmanifest"
 	linttemplates "github.com/getoutreach/stencil/internal/lint/templates"
 )
 
@@ -48,7 +49,7 @@ func NewLintCommand() *cli.Command {
 		ArgsUsage:   "[dir]",
 		Description: "Validate a Stencil module's manifest and templates without resolving dependencies",
 		Flags:       []cli.Flag{warningsAsErrorsFlag(), fixFlag()},
-		Commands:    []*cli.Command{newLintModuleManifestCommand(), newLintTemplatesCommand()},
+		Commands:    []*cli.Command{newLintModuleManifestCommand(), newLintTemplatesCommand(), newLintProjectManifestCommand()},
 		Action:      runLintAggregate,
 	}
 }
@@ -412,6 +413,7 @@ func runLintAggregate(_ context.Context, c *cli.Command) error {
 	runners := []runner{
 		manifestRunner(filepath.Join(dir, "manifest.yaml")),
 		templateRunner(filepath.Join(dir, templatesDir)),
+		projectManifestRunner(filepath.Join(dir, "service.yaml")),
 	}
 
 	var all []lint.Finding
@@ -549,16 +551,16 @@ func resolveManifestPath(path string) (resolved string, finding *lint.Finding, e
 	return path, nil, nil
 }
 
-// resolveManifestReader resolves path to an io.Reader. If path is a directory,
-// it appends "manifest.yaml". A missing file yields a "manifest file not found"
-// finding (not an error). The returned io.Closer (when non-nil) must be closed
-// by the caller. A non-nil error is an unexpected I/O failure.
-func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+// resolveReader resolves path to an io.Reader. If path is a directory, it
+// appends defaultFile. A missing file yields a "<kind> file not found" finding
+// (not an error). The returned io.Closer (when non-nil) must be closed by the
+// caller. A non-nil error is an unexpected I/O failure.
+func resolveReader(path, defaultFile, kind string) (io.Reader, io.Closer, *lint.Finding, error) {
 	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err == nil && info.IsDir() {
-		// A directory: lint its manifest.yaml (mirrors `lint [dir]`).
-		path = filepath.Join(path, "manifest.yaml")
+		// A directory: lint its default file (mirrors `lint [dir]`).
+		path = filepath.Join(path, defaultFile)
 		_, err = os.Stat(path)
 	}
 	if err != nil {
@@ -566,7 +568,7 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 			return nil, nil, &lint.Finding{
 				Severity: lint.SeverityError,
 				Path:     path,
-				Message:  fmt.Sprintf("manifest file not found: %s", path),
+				Message:  fmt.Sprintf("%s file not found: %s", kind, path),
 			}, nil
 		}
 		return nil, nil, nil, errors.Wrapf(err, "failed to stat %q", path)
@@ -577,6 +579,12 @@ func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, er
 		return nil, nil, nil, errors.Wrapf(err, "failed to open %q", path)
 	}
 	return fh, fh, nil, nil
+}
+
+// resolveManifestReader resolves path to a manifest.yaml reader, appending
+// "manifest.yaml" for a directory. See resolveReader.
+func resolveManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+	return resolveReader(path, "manifest.yaml", "manifest")
 }
 
 // runManifestReader loads + validates one manifest from r and returns its
@@ -622,6 +630,105 @@ func logFindings(log logrus.FieldLogger, findings []lint.Finding) {
 // success line. name is the manifest identifier. Thin wrapper over failLint.
 func failManifest(log logrus.FieldLogger, name string, findings []lint.Finding, warningsAsErrors bool) error {
 	return failLint(log, fmt.Sprintf("manifest %q is", name), findings, warningsAsErrors)
+}
+
+// newLintProjectManifestCommand builds `lint project-manifest [path]` (offline).
+func newLintProjectManifestCommand() *cli.Command {
+	return &cli.Command{
+		Name:        "project-manifest",
+		Usage:       "Validate a project's service.yaml without resolving dependencies",
+		ArgsUsage:   "[path]",
+		Description: "Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.",
+		Flags:       []cli.Flag{warningsAsErrorsFlag()},
+		Action:      runLintProjectManifest,
+	}
+}
+
+// runLintProjectManifest is the `lint project-manifest [path]` action (offline).
+func runLintProjectManifest(_ context.Context, c *cli.Command) error {
+	if c.Args().Len() > 1 {
+		return errors.New("expected at most one argument, a path to service.yaml")
+	}
+	log := newLintLogger(c)
+
+	if c.Args().First() == "-" {
+		if readerIsTTY(c.Reader) {
+			return errors.New("'-' expects piped input, not an interactive terminal")
+		}
+		findings, err := runProjectManifestReader(log, stdinName, c.Reader)
+		if err != nil {
+			return errors.Wrap(err, "lint failed")
+		}
+		logFindings(log, findings)
+		return failProjectManifest(log, stdinName, findings, c.Bool("warnings-as-errors"))
+	}
+
+	path := "./service.yaml"
+	if c.Args().Len() == 1 {
+		path = c.Args().First()
+	}
+	r, closer, finding, err := resolveProjectManifestReader(path)
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	if finding != nil {
+		logFindings(log, []lint.Finding{*finding})
+		return failProjectManifest(log, path, []lint.Finding{*finding}, c.Bool("warnings-as-errors"))
+	}
+	if closer != nil {
+		defer closer.Close()
+	}
+	findings, err := runProjectManifestReader(log, path, r)
+	if err != nil {
+		return errors.Wrap(err, "lint failed")
+	}
+	logFindings(log, findings)
+	return failProjectManifest(log, path, findings, c.Bool("warnings-as-errors"))
+}
+
+// projectManifestRunner returns a runner that lints the service.yaml at path.
+// A missing file is skipped (nil, nil) so the aggregate treats a module without
+// a service.yaml as "nothing to lint" — mirroring manifestRunner.
+func projectManifestRunner(path string) runner {
+	return func(log logrus.FieldLogger) ([]lint.Finding, error) {
+		r, closer, finding, err := resolveProjectManifestReader(path)
+		if err != nil {
+			return nil, err
+		}
+		if finding != nil {
+			return nil, nil // missing service.yaml: skip in aggregate
+		}
+		if closer != nil {
+			defer closer.Close()
+		}
+		return runProjectManifestReader(log, path, r)
+	}
+}
+
+// resolveProjectManifestReader resolves path to a service.yaml reader, appending
+// "service.yaml" for a directory. See resolveReader.
+func resolveProjectManifestReader(path string) (io.Reader, io.Closer, *lint.Finding, error) {
+	return resolveReader(path, "service.yaml", "service manifest")
+}
+
+// runProjectManifestReader loads + validates one service.yaml from r. It does
+// not log; the caller logs once. name is used in the multi-doc warning.
+func runProjectManifestReader(log logrus.FieldLogger, name string, r io.Reader) ([]lint.Finding, error) {
+	res, err := lintprojectmanifest.Load(r)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read service manifest %q", name)
+	}
+	findings := lintprojectmanifest.Validate(res)
+	if res.MultiDoc {
+		log.WithField("path", name).Warn("additional YAML documents after the first are ignored")
+	}
+	return findings, nil
+}
+
+// failProjectManifest applies the warnings-as-errors policy and logs the success
+// line. Thin wrapper over failLint.
+func failProjectManifest(log logrus.FieldLogger, name string, findings []lint.Finding, warningsAsErrors bool) error {
+	return failLint(log, fmt.Sprintf("service manifest %q is", name), findings, warningsAsErrors)
 }
 
 // logApplied logs one info line per fix the fixer applied.

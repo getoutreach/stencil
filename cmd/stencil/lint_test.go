@@ -821,3 +821,80 @@ func TestRunLintAggregateFixTemplatesUnfixableFails(t *testing.T) {
 	assert.Assert(t, err != nil, "the surviving rule-1 error must fail the aggregate --fix run")
 	assert.Assert(t, strings.Contains(err.Error(), "lint failed"))
 }
+
+// runProjectManifest runs `lint project-manifest [args...]`, feeding stdin/stdout
+// on the subcommand. Mirrors runModuleManifest.
+func runProjectManifest(t *testing.T, args []string, stdin io.Reader, stdout io.Writer) error {
+	t.Helper()
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	sub := findSubcommand(root, "project-manifest")
+	assert.Assert(t, sub != nil, "project-manifest subcommand must exist")
+	if stdout != nil {
+		sub.Writer = stdout
+	}
+	if stdin != nil {
+		sub.Reader = stdin
+	}
+	full := append([]string{"lint", "project-manifest"}, args...)
+	return root.Run(context.Background(), full)
+}
+
+func TestNewLintCommandHasProjectManifestSubcommand(t *testing.T) {
+	cmd := NewLintCommand()
+	assert.Assert(t, findSubcommand(cmd, "project-manifest") != nil)
+}
+
+func TestProjectManifestValidFile(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte("name: my-service\n"), 0o600))
+	err := runProjectManifest(t, []string{p}, nil, nil)
+	assert.NilError(t, err)
+}
+
+func TestProjectManifestInvalidFile(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "service.yaml")
+	assert.NilError(t, os.WriteFile(p, []byte("name: Bad Name\n"), 0o600))
+	err := runProjectManifest(t, []string{p}, nil, nil)
+	assert.Assert(t, err != nil) // invalid name → error finding → non-zero
+}
+
+func TestProjectManifestMissingFileIsError(t *testing.T) {
+	dir := t.TempDir()
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil) // subcommand: missing file is an error (unlike aggregate)
+}
+
+func TestProjectManifestStdin(t *testing.T) {
+	err := runProjectManifest(t, []string{"-"}, strings.NewReader("name: my-service\n"), io.Discard)
+	assert.NilError(t, err)
+}
+
+func TestProjectManifestTooManyArgs(t *testing.T) {
+	err := runProjectManifest(t, []string{"a", "b"}, nil, nil)
+	assert.Assert(t, err != nil)
+}
+
+// TestAggregateLintsServiceYaml proves the aggregate `lint <dir>` also lints a
+// present service.yaml: an invalid project manifest surfaces as a run failure.
+func TestAggregateLintsServiceYaml(t *testing.T) {
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"),
+		[]byte("name: Bad Name\n"), 0o600))
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.Assert(t, err != nil) // invalid service.yaml surfaces in the aggregate
+}
+
+// TestAggregateMissingServiceYamlIsNoOp proves the aggregate treats a missing
+// service.yaml (with no manifest or templates) as a no-op, not an error.
+func TestAggregateMissingServiceYamlIsNoOp(t *testing.T) {
+	dir := t.TempDir() // no service.yaml, no manifest.yaml, no templates
+	root := NewLintCommand()
+	root.Writer = io.Discard
+	err := root.Run(context.Background(), []string{"lint", dir})
+	assert.NilError(t, err) // nothing to lint → success
+}

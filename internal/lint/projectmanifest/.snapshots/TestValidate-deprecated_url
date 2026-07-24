@@ -1,0 +1,2 @@
+warning  modules.github.com/x/y.url:4  module field 'url' is deprecated; replace it with 'name' set to the module's import path, then remove 'url' (not migrated automatically by --fix)
+

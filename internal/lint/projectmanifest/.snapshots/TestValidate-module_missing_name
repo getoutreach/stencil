@@ -1,0 +1,2 @@
+error  modules[0]:0  module name is required; set 'name' to the module's import path (e.g. 'github.com/getoutreach/stencil-base')
+

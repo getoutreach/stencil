@@ -1,0 +1,2 @@
+error  name:0  name is required; add a 'name' field matching `^[_a-z][_a-z0-9-]*$` (e.g. 'name: my-service')
+
