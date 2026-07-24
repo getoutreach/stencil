@@ -249,6 +249,66 @@ func TestCheckArgumentsHermeticExternalRef(t *testing.T) {
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
+func TestCheckSchemaConflictsNoneWhenEquivalent(t *testing.T) {
+	// Two modules declare foo with the same schema (different key order) → no O6.
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string", "minLength": 1}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"minLength": 1, "type": "string"}}},
+		},
+	}
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx)))
+}
+
+func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "integer"}}},
+		},
+	}
+	findings := checkSchemaConflicts(idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+	// names the two disagreeing modules (sorted import-path order: a before b)
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/b"))
+}
+
+func TestCheckSchemaConflictsOnePerArgForThreeModules(t *testing.T) {
+	// a≡b, c differs → exactly one O6 naming the first two disagreeing (a, c).
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "string"}}},
+			{importPath: "github.com/x/c", arg: configuration.Argument{
+				Schema: map[string]interface{}{"type": "integer"}}},
+		},
+	}
+	findings := checkSchemaConflicts(idx)
+	assert.Equal(t, 1, len(findings))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
+	assert.Assert(t, contains(findings[0].Message, "github.com/x/c"))
+}
+
+func TestCheckSchemaConflictsNilVsEmptyEquivalent(t *testing.T) {
+	idx := map[string][]declaration{
+		"foo": {
+			{importPath: "github.com/x/a", arg: configuration.Argument{Schema: nil}},
+			{importPath: "github.com/x/b", arg: configuration.Argument{
+				Schema: map[string]interface{}{}}},
+		},
+	}
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx))) // both "no schema" → equivalent
+}
+
 func TestValidateOnlineRunsOfflineFirst(t *testing.T) {
 	// An offline finding (invalid name, F2) AND an online finding (O3) both appear,
 	// offline first.
@@ -307,4 +367,150 @@ func TestValidateOnlineO2SeverityPath(t *testing.T) {
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, lint.SeverityError, findings[0].Severity)
 	assert.Equal(t, "arguments.foo", findings[0].Path)
+}
+
+func TestValidateOnlineIncludesO5throughO8(t *testing.T) {
+	// One module resolved; service.yaml has an undeclared arg (O7) and an
+	// unmatched replacement key (O5). Both appear alongside offline findings.
+	res, _ := Load(strings.NewReader(
+		"name: s\narguments:\n  typo: x\nreplacements:\n  github.com/x/nope: file:///w\n"))
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"known": {},
+	})}
+	findings := ValidateOnline(res, mods)
+	var haveO5, haveO7 bool
+	for _, f := range findings {
+		if f.Path == "replacements.github.com/x/nope" {
+			haveO5 = true
+		}
+		if f.Path == "arguments.typo" {
+			haveO7 = true
+		}
+	}
+	assert.Assert(t, haveO5, "expected O5 unmatched-replacement finding")
+	assert.Assert(t, haveO7, "expected O7 undeclared-arg finding")
+}
+
+// TestValidateOnlineO5O6O7Snapshot exercises O5 (unmatched replacement key),
+// O6 (schema conflict between modules a and b on 'shared'), and O7 (undeclared
+// arg 'ghost') together, plus the offline 'name' finding. Every message is
+// stencil-owned (no jsonschema-library text — O2 is intentionally not
+// triggered), so the golden is stable.
+func TestValidateOnlineO5O6O7Snapshot(t *testing.T) {
+	res, _ := Load(strings.NewReader(
+		"name: s\narguments:\n  ghost: x\nreplacements:\n  github.com/x/nope: https://x\n"))
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"shared": {Schema: map[string]interface{}{"type": "string"}}}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"shared": {Schema: map[string]interface{}{"type": "integer"}}}),
+	}
+	cupaloy.SnapshotT(t, renderOnlineFindings(ValidateOnline(res, mods)))
+}
+
+func TestCheckUndeclaredArgsFlagsUnknown(t *testing.T) {
+	idx := map[string][]declaration{"known": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"known": {},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"known": "v", "typo": "v"},
+	}}
+	findings := checkUndeclaredArgs(res, idx, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "arguments.typo", findings[0].Path)
+}
+
+func TestCheckUndeclaredArgsDottedNameMatches(t *testing.T) {
+	// declared name aws.IRSA; provided as nested aws: {IRSA: ...} → NOT undeclared.
+	idx := map[string][]declaration{"aws.IRSA": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"aws.IRSA": {},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{
+			"aws": map[string]interface{}{"IRSA": true},
+		},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
+func TestCheckUndeclaredArgsCarveOutSuppressesAll(t *testing.T) {
+	// a module declares a catch-all arg (open object) → O7 suppressed entirely.
+	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"catchall": {Schema: map[string]interface{}{
+			"type": "object", "additionalProperties": true}},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"anything": "v"},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
+// TestCheckUndeclaredArgsCarveOutNullAdditionalProperties pins that an object
+// schema with additionalProperties present-but-null is treated as an open
+// (catch-all) object, so O7 is suppressed — the same as absent/true/sub-schema.
+func TestCheckUndeclaredArgsCarveOutNullAdditionalProperties(t *testing.T) {
+	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"catchall": {Schema: map[string]interface{}{
+			"type": "object", "additionalProperties": nil}},
+	})}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{"anything": "v"},
+	}}
+	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
+}
+
+func TestCheckReplacementsUnmatchedKeyO5(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/nope": "file:///wherever"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
+	assert.Equal(t, "replacements.github.com/x/nope", findings[0].Path)
+}
+
+func TestCheckReplacementsMatchedLocalMissingO8(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "file:///does/not/exist/xyz"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity) // O8
+	assert.Equal(t, "replacements.github.com/x/a", findings[0].Path)
+}
+
+func TestCheckReplacementsMatchedLocalExistsNoFinding(t *testing.T) {
+	dir := t.TempDir()
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "file://" + dir},
+	}}
+	assert.Equal(t, 0, len(checkReplacements(res, mods)))
+}
+
+func TestCheckReplacementsMatchedRemoteNotChecked(t *testing.T) {
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "https://github.com/x/a"},
+	}}
+	// matched key + remote value: neither O5 (matched) nor O8 (not local) → nothing.
+	assert.Equal(t, 0, len(checkReplacements(res, mods)))
+}
+
+func TestCheckReplacementsBareLocalPath(t *testing.T) {
+	// a bare path (no scheme) is local; missing → O8.
+	mods := []ResolvedModule{mod("github.com/x/a", nil)}
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Replacements: map[string]string{"github.com/x/a": "./nope-does-not-exist-xyz"},
+	}}
+	findings := checkReplacements(res, mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
 }

@@ -9,9 +9,14 @@ package projectmanifest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
+	"os"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
@@ -21,30 +26,30 @@ import (
 )
 
 // ValidateOnline runs the offline checks (Validate) then appends the online
-// argument checks (O2–O4) against the already-resolved modules, in a
+// argument checks (O2–O8) against the already-resolved modules, in a
 // deterministic total order (offline findings first; online sorted by Path,
-// then declaring-module import path, then check ID). It executes no templates
-// and performs no module resolution — the command layer resolves each module's
-// Manifest(ctx) and passes it in via ResolvedModule. O1 (resolution / per-module
-// manifest failure) is produced by the command layer, so this is only reached
-// on a fully-resolved module set. PR 3b appends O5–O8.
+// then message). It executes no templates and performs no module resolution —
+// the command layer resolves each module's Manifest(ctx) and passes it in via
+// ResolvedModule. O1 (resolution / per-module manifest failure) is produced by
+// the command layer, so this is only reached on a fully-resolved module set.
 func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	offline := Validate(res)
 
 	idx, o4 := buildArgIndex(mods)
-	o2o3 := checkArguments(res, idx)
-	online := make([]lint.Finding, 0, len(o4)+len(o2o3))
-	online = append(online, o4...)
-	online = append(online, o2o3...)
+	var online []lint.Finding
+	online = append(online, o4...)                                  // O4
+	online = append(online, checkArguments(res, idx)...)            // O2, O3
+	online = append(online, checkReplacements(res, mods)...)        // O5, O8
+	online = append(online, checkSchemaConflicts(idx)...)           // O6
+	online = append(online, checkUndeclaredArgs(res, idx, mods)...) // O7
 	sortOnline(online)
 
 	return append(offline, online...)
 }
 
-// sortOnline sorts online findings by Path, then by the module import path
-// embedded in the message where present (a stable secondary key). Since
-// O2/O3/O4 all key on arguments.<name>, Path ordering plus the message tie-break
-// is deterministic.
+// sortOnline sorts online findings by Path, then Message (a stable secondary
+// key). Since O2/O3/O4 all key on arguments.<name>, Path ordering plus the
+// Message tie-break is deterministic.
 func sortOnline(findings []lint.Finding) {
 	sort.SliceStable(findings, func(i, j int) bool {
 		if findings[i].Path != findings[j].Path {
@@ -52,6 +57,125 @@ func sortOnline(findings []lint.Finding) {
 		}
 		return findings[i].Message < findings[j].Message
 	})
+}
+
+// uriIsLocal reports whether a replacement value is a local path (no scheme, or
+// a file:// URL), mirroring internal/modules' unexported uriIsLocal. Reimplemented
+// here to avoid exporting it from the modules package.
+func uriIsLocal(uri string) bool {
+	return !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://")
+}
+
+// checkReplacements implements O5 (a replacement key matching no resolved module
+// is inert → warning) and O8 (a replacement key that DOES match a resolved
+// module, whose value is a local path that does not exist → error). Remote
+// values on matched keys are not checked (a bad remote surfaces as O1). The two
+// checks share the matched-key computation and are the only replacement checks;
+// offline says nothing about replacements. Keys are processed in sorted order.
+func checkReplacements(res *LoadResult, mods []ResolvedModule) []lint.Finding {
+	var f lint.Findings
+	if res.Manifest == nil || len(res.Manifest.Replacements) == 0 {
+		return f.Items()
+	}
+	resolved := make(map[string]struct{}, len(mods))
+	for _, m := range mods {
+		resolved[m.ImportPath] = struct{}{}
+	}
+
+	for _, key := range slices.Sorted(maps.Keys(res.Manifest.Replacements)) {
+		value := res.Manifest.Replacements[key]
+		if _, matched := resolved[key]; !matched {
+			// O5: inert replacement key.
+			f.Warnf("replacements."+key,
+				"replacement for %q matches no module in the dependency graph and is "+
+					"ignored; remove it, or correct the import path to a resolved module", key)
+			continue
+		}
+		// Matched key: O8 checks a local path's existence.
+		if uriIsLocal(value) {
+			path := strings.TrimPrefix(value, "file://")
+			if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+				f.Errorf("replacements."+key,
+					"replacement for %q points at a local path that does not exist: %s; "+
+						"create the path, or correct the replacement", key, path)
+			}
+		}
+	}
+	return f.Items()
+}
+
+// checkUndeclaredArgs implements O7: a service.yaml argument whose key matches no
+// declared argument (from the index) is flagged as likely a typo/leftover. It is
+// suppressed entirely when any resolved module declares a dynamic/catch-all
+// argument, since then an "undeclared" key may be legitimately consumed. Matching
+// is at top-level-key granularity: a provided top-level key is undeclared iff no
+// declared name has it as its first (dot-separated) segment, so a dotted declared
+// name (e.g. aws.IRSA) matches a correctly-nested value. Provided arg keys are
+// processed in sorted order.
+func checkUndeclaredArgs(res *LoadResult, idx map[string][]declaration, mods []ResolvedModule) []lint.Finding {
+	var f lint.Findings
+	if res.Manifest == nil || len(res.Manifest.Arguments) == 0 {
+		return f.Items()
+	}
+	if hasDynamicArg(mods) {
+		return f.Items() // carve-out: catch-all arg present → suppress O7
+	}
+
+	// Build the set of top-level service.yaml keys and check each against the
+	// declared set. A provided top-level key is undeclared iff NO declared name
+	// resolves into it. Since declared names may be dotted (nested), we check
+	// whether any declared name has this top-level key as its first segment.
+	declaredTop := map[string]struct{}{}
+	for name := range idx {
+		top := name
+		if i := strings.IndexByte(name, '.'); i >= 0 {
+			top = name[:i]
+		}
+		declaredTop[top] = struct{}{}
+	}
+
+	for _, key := range slices.Sorted(maps.Keys(res.Manifest.Arguments)) {
+		if _, ok := declaredTop[key]; ok {
+			continue // this top-level key is (a prefix of) a declared name
+		}
+		f.Warnf("arguments."+key,
+			"no resolved module declares argument %q; check for a typo or remove it", key)
+	}
+	return f.Items()
+}
+
+// hasDynamicArg reports whether any resolved module declares a catch-all argument
+// — a schema that is an open object (type object with additionalProperties not
+// disabled). Such a module may legitimately consume otherwise-undeclared keys, so
+// O7 is suppressed when one is present.
+func hasDynamicArg(mods []ResolvedModule) bool {
+	for _, m := range mods {
+		if m.Manifest == nil {
+			continue
+		}
+		for _, arg := range m.Manifest.Arguments {
+			if len(arg.Schema) == 0 {
+				continue
+			}
+			t, _ := arg.Schema["type"].(string)
+			if t != "object" {
+				continue
+			}
+			// Open object: additionalProperties absent (default true), explicitly
+			// true, a sub-schema, or present-but-null (treated as open).
+			switch ap := arg.Schema["additionalProperties"].(type) {
+			case nil:
+				return true // key absent, or present-but-null → open
+			case bool:
+				if ap {
+					return true // additionalProperties: true → open
+				}
+			case map[string]interface{}:
+				return true // additionalProperties is a sub-schema → open
+			}
+		}
+	}
+	return false
 }
 
 // declaration is one module's declaration of an argument (post-from:), retained
@@ -146,6 +270,61 @@ func resolveFrom(f *lint.Findings, mods []ResolvedModule, owner ResolvedModule,
 		return configuration.Argument{}, false
 	}
 	return refArg, true
+}
+
+// checkSchemaConflicts implements O6: for each argument name declared by 2+
+// modules with NON-equivalent schemas, emit one warning naming the first two
+// declarations (in sorted import-path order) whose schemas differ. Never fatal;
+// both schemas still drive O2. Arg names processed in sorted order.
+func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
+	var f lint.Findings
+	for _, name := range slices.Sorted(maps.Keys(idx)) {
+		decls := idx[name]
+		if len(decls) < 2 {
+			continue
+		}
+		// Sort declarations by import path for a deterministic "first two disagreeing".
+		sorted := make([]declaration, len(decls))
+		copy(sorted, decls)
+		sort.Slice(sorted, func(i, j int) bool { return sorted[i].importPath < sorted[j].importPath })
+
+		found := false
+		for i := 0; i < len(sorted) && !found; i++ {
+			for j := i + 1; j < len(sorted); j++ {
+				if !schemaEquivalent(sorted[i].arg.Schema, sorted[j].arg.Schema) {
+					f.Warnf("arguments."+name,
+						"modules %q and %q disagree on the schema for argument %q; "+
+							"align their manifests", sorted[i].importPath, sorted[j].importPath, name)
+					found = true
+					break
+				}
+			}
+		}
+	}
+	return f.Items()
+}
+
+// schemaEquivalent reports whether two argument schemas are byte-equal after a
+// JSON marshal. encoding/json sorts map keys recursively and preserves slice
+// order, so the marshaled bytes are canonical and the comparison is
+// order-insensitive for keys. A nil schema and an empty schema are both treated
+// as "no schema" and are equivalent to each other. This is a conservative
+// comparison: a cosmetic difference (e.g. an added description) counts as
+// non-equivalent, which is acceptable for a warning.
+func schemaEquivalent(a, b map[string]interface{}) bool {
+	aEmpty, bEmpty := len(a) == 0, len(b) == 0
+	if aEmpty || bEmpty {
+		return aEmpty && bEmpty
+	}
+	ab, err := json.Marshal(a)
+	if err != nil {
+		return false
+	}
+	bb, err := json.Marshal(b)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(ab, bb)
 }
 
 // checkArguments implements O2 (value vs schema) and O3 (required). For each

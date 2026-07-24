@@ -954,6 +954,28 @@ func TestProjectManifestOnlinePerModuleManifestFailure(t *testing.T) {
 	assert.Assert(t, err != nil) // O1 modules.<name> error → non-zero
 }
 
+// TestProjectManifestO5UnmatchedReplacement drives O5 end-to-end: a resolved
+// module (via a file:// replacement, so the run is network-free) plus an
+// unmatched replacement key that matches no module in the graph. O5 is a
+// warning; with the default --warnings-as-errors the run exits non-zero.
+//
+// O8 (matched-key local path missing) is intentionally NOT tested at the
+// command level: a matched module whose local replacement path is missing
+// fails module resolution (O1) before O8 runs, so O8 is contradictory
+// end-to-end and is covered at the package level by
+// TestCheckReplacementsMatchedLocalMissingO8.
+func TestProjectManifestO5UnmatchedReplacement(t *testing.T) {
+	modDir := writeLocalModule(t, "name: github.com/x/a\n")
+	dir := t.TempDir()
+	sy := "name: s\nmodules:\n  - name: github.com/x/a\n" +
+		"replacements:\n" +
+		"  github.com/x/a: file://" + modDir + "\n" +
+		"  github.com/x/unused: file://" + modDir + "\n" // matches no module → O5 (warning)
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "service.yaml"), []byte(sy), 0o600))
+	err := runProjectManifest(t, []string{filepath.Join(dir, "service.yaml")}, nil, nil)
+	assert.Assert(t, err != nil)
+}
+
 func TestNewLintCommandHasProjectManifestSubcommand(t *testing.T) {
 	cmd := NewLintCommand()
 	assert.Assert(t, findSubcommand(cmd, "project-manifest") != nil)

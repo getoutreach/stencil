@@ -1,0 +1,4 @@
+warning  arguments.ghost:0                 no resolved module declares argument "ghost"; check for a typo or remove it
+warning  arguments.shared:0                modules "github.com/x/a" and "github.com/x/b" disagree on the schema for argument "shared"; align their manifests
+warning  replacements.github.com/x/nope:0  replacement for "github.com/x/nope" matches no module in the dependency graph and is ignored; remove it, or correct the import path to a resolved module
+
