@@ -5,30 +5,30 @@
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-400.woff2 as=font type=font/woff2 crossorigin>
 <link rel=preload href=https://engineering.outreach.io/stencil/fonts/muli-latin-800.woff2 as=font type=font/woff2 crossorigin>
 <meta http-equiv=x-ua-compatible content="IE=edge">
-<title>stencil lint module-manifest | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
+<title>stencil lint project-manifest | Stencil</title><meta name=viewport content="width=device-width,minimum-scale=1">
 <meta name=generator content="Hugo 0.108.0">
 <meta name=robots content="noindex, nofollow">
 <link rel=stylesheet href=/stencil/output/css/app.min.170786351ed63baba16c5826254e7d7f7bd6d5a40c0ca61e21aca189bcaaf5ea.css integrity="sha256-FweGNR7WO6uhbFgmJU59f3vW1aQMDKYeIayhibyq9eo=" crossorigin=anonymous>
-<meta name=description content="Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.">
+<meta name=description content="Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.">
 <script type=text/javascript src=/stencil/output/js/app.06223fbf8c6d524ba08cb7910ebd702a38c8d24d7dfd1e969ff396d2869282fe.js integrity="sha256-BiI/v4xtUkugjLeRDr1wKjjI0k19/R6Wn/OW0oaSgv4=" crossorigin=anonymous defer></script>
 <script async defer src=https://buttons.github.io/buttons.js></script>
 <link rel=apple-touch-icon sizes=180x180 href=/stencil/apple-touch-icon.png>
 <link rel=icon type=image/png href=/stencil/favicon-32x32.png sizes=32x32>
 <link rel=icon type=image/png href=/stencil/favicon-16x16.png sizes=16x16>
 <meta name=theme-color content="#ffffff">
-<meta property="og:title" content="stencil lint module-manifest">
-<meta property="og:description" content="Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.">
+<meta property="og:title" content="stencil lint project-manifest">
+<meta property="og:description" content="Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.">
 <meta property="og:type" content="article">
-<meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_lint_module-manifest/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_14799418763354431468.png"><meta property="article:section" content="commands">
-<meta property="article:modified_time" content="2026-07-17T04:49:34-07:00">
-<meta itemprop=name content="stencil lint module-manifest">
-<meta itemprop=description content="Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.">
-<meta itemprop=dateModified content="2026-07-17T04:49:34-07:00">
-<meta itemprop=wordCount content="144"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
+<meta property="og:url" content="https://engineering.outreach.io/stencil/commands/stencil_lint_project-manifest/"><meta property="og:image" content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_15613347160432925707.png"><meta property="article:section" content="commands">
+<meta property="article:modified_time" content="2026-07-24T08:48:17-07:00">
+<meta itemprop=name content="stencil lint project-manifest">
+<meta itemprop=description content="Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.">
+<meta itemprop=dateModified content="2026-07-24T08:48:17-07:00">
+<meta itemprop=wordCount content="124"><meta itemprop=image content="https://engineering.outreach.io/stencil/images/gohugoio-card.png">
 <meta itemprop=keywords content><meta name=twitter:card content="summary_large_image">
-<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_14799418763354431468.png">
-<meta name=twitter:title content="stencil lint module-manifest">
-<meta name=twitter:description content="Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use '-' to read from stdin.">
+<meta name=twitter:image content="https://engineering.outreach.io/stencil/opengraph/gohugoio-card-base-1_huc315cc30ecac40a3e157e01ca5659826_1652_filter_15613347160432925707.png">
+<meta name=twitter:title content="stencil lint project-manifest">
+<meta name=twitter:description content="Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use '-' to read from stdin.">
 </head><body class="ma0 sans-serif bg-primary-color-light">
 <nav class="bg-primary-color-dark pv4 w-100" role=navigation>
 <div class="center flex-ns flex-wrap items-center justify-start mw9">
@@ -59,9 +59,9 @@ GitHub
 <div class="order-2 w-100 w-20-l ph5-m ph0-l mb4 sticky">
 <aside class="fixed-lTK mw5-l right-0 f6 bl-l b--moon-gray pv4 pv0-ns ph4-l nested-list-reset nested-links nested-copy-line-height">
 <div date-pref>
-<a href=https://engineering.outreach.io/stencil/commands/stencil_lint/ class="dib f6 pl1 hover-bg-light-gray br-100" title="stencil lint "><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+<a href=https://engineering.outreach.io/stencil/commands/stencil_lint_module-manifest/ class="dib f6 pl1 hover-bg-light-gray br-100" title="stencil lint module-manifest "><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
 </a>
-<a href=https://engineering.outreach.io/stencil/commands/stencil_lint_project-manifest/ class="dib f6 pr1 hover-bg-light-gray br-100" title="stencil lint project-manifest"><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
+<a href=https://engineering.outreach.io/stencil/commands/stencil_lint_templates/ class="dib f6 pr1 hover-bg-light-gray br-100" title="stencil lint templates"><svg class="fill-current" height="30" viewBox="0 0 24 24" width="30" xmlns="http://www.w3.org/2000/svg"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/><path d="M0 0h24v24H0z" fill="none"/></svg>
 </a>
 </div></aside></div><div class="order-1 w-60-l mw7 ph0 ph5-ns mid-gray nested-copy-line-height no-underline nested-links nested-img nested-copy-seperator nested-blockquote mt0-ns" style=flex-grow:1>
 <div class="documentation-copy center measure-wide-l">
@@ -70,22 +70,21 @@ GitHub
 <a href=/categories/commands class="f6 fw8 mb0 link mid-gray dim mr3">
 COMMANDS
 </a>
-<h1 class="lh-title mb3 mv0 pt3 primary-color-dark">stencil lint module-manifest</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
+<h1 class="lh-title mb3 mv0 pt3 primary-color-dark">stencil lint project-manifest</h1></header><aside class="bt bw1 pt3 mt2 mid-gray b--mid-gray fn w-100">
 <div class="f4 fw4 lh-copy">
-Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use &lsquo;-&rsquo; to read from stdin.
+Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use &lsquo;-&rsquo; to read from stdin.
 </div></aside><div class=prose id=prose>
-<h2 id=stencil-lint-module-manifest>stencil lint module-manifest <a class=header-link href=#stencil-lint-module-manifest><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>NAME:
-</span></span><span class=line><span class=cl>   stencil lint module-manifest - Validate a module<span class=s1>&#39;s manifest.yaml without resolving dependencies
+<h2 id=stencil-lint-project-manifest>stencil lint project-manifest <a class=header-link href=#stencil-lint-project-manifest><svg class="fill-current o-60 hover-accent-color-light" height="22" viewBox="0 0 24 24" width="22" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76.0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71.0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71.0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76.0 5-2.24 5-5s-2.24-5-5-5z"/></svg></a></h2><div class=highlight><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>NAME:
+</span></span><span class=line><span class=cl>   stencil lint project-manifest - Validate a project<span class=s1>&#39;s service.yaml without resolving dependencies
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>USAGE:
-</span></span></span><span class=line><span class=cl><span class=s1>   stencil lint module-manifest [options] [path]
+</span></span></span><span class=line><span class=cl><span class=s1>   stencil lint project-manifest [options] [path]
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>DESCRIPTION:
-</span></span></span><span class=line><span class=cl><span class=s1>   Validate a single template repository manifest (manifest.yaml; defaults to ./manifest.yaml). Use &#39;</span>-<span class=s1>&#39; to read from stdin.
+</span></span></span><span class=line><span class=cl><span class=s1>   Validate a single project manifest (service.yaml; defaults to ./service.yaml). Use &#39;</span>-<span class=s1>&#39; to read from stdin.
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>OPTIONS:
 </span></span></span><span class=line><span class=cl><span class=s1>   --warnings-as-errors  treat warnings as errors (fail on any finding)
-</span></span></span><span class=line><span class=cl><span class=s1>   --fix                 automatically fix safe deprecations in place (a manifest is re-encoded at 2-space indent when fixed; re-lints after fixing)
 </span></span></span><span class=line><span class=cl><span class=s1>   --help, -h            show help
 </span></span></span><span class=line><span class=cl><span class=s1>
 </span></span></span><span class=line><span class=cl><span class=s1>GLOBAL OPTIONS:
@@ -280,11 +279,11 @@ stencil docs generate
 stencil lint
 </a>
 </li><li class="f6 fw4">
-<a href=/stencil/commands/stencil_lint_module-manifest/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 primary-color">
+<a href=/stencil/commands/stencil_lint_module-manifest/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
 stencil lint module-manifest
 </a>
 </li><li class="f6 fw4">
-<a href=/stencil/commands/stencil_lint_project-manifest/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 black">
+<a href=/stencil/commands/stencil_lint_project-manifest/ class="db link hover-bg-gray hover-white pl3 pr2 pv2 primary-color">
 stencil lint project-manifest
 </a>
 </li><li class="f6 fw4">
@@ -343,8 +342,8 @@ Documentation
 </li></ul></nav></div></div></article><div class="w-100 bg-light-gray">
 <div class="mw7 pa4 center nested-lh-copy lh-copy">
 <h6 class="f6 dark-gray mb2">
-Last updated: July 17, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/28ff426b34c0fdac6d3e42e7b7607cada083332f>feat(lint): add `stencil lint templates --fix` and unify aggregate `--fix` (#499) (28ff426)</a>
-</h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_lint_module-manifest.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
+Last updated: July 24, 2026: <a class="hide-child link primary-color" href=https://github.com/getoutreach/stencil/commit/4909e8d9ea1ea701735c0eac8cb246f373d562ad>feat(lint): add offline `stencil lint project-manifest` (#503) (4909e8d)</a>
+</h6><a href=https://github.com/getoutreach/stencil/edit/main/docs/content/en/commands/stencil_lint_project-manifest.md class="f6 ph3 pv1 br2 dib tc ttu mv3 bg-primary-color white hover-bg-green link">Improve this page</a>
 </div></div></main><footer class="bg-primary-color-dark ph4-ns pt4 relative w-100" role=contentinfo>
 <div class="center flex-ns flex-wrap justify-between mw9 w-90">
 <div class="pb3 pt4 w-100">
