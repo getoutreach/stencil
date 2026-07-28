@@ -18,6 +18,10 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// ErrManifestExists is returned when a service manifest already exists in the
+// current directory.
+var ErrManifestExists = errors.New("manifest already exists")
+
 // NewCreateModule returns a new urfave/cli.Command for the
 // create module command.
 func NewCreateModule() *cli.Command {
@@ -101,7 +105,7 @@ func NewCreateModule() *cli.Command {
 			tm.Arguments["releaseOptions"] = releaseOpts
 
 			if _, err := os.Stat(manifestFileName); err == nil {
-				return fmt.Errorf("%s already exists", manifestFileName)
+				return fmt.Errorf("%w: %s", ErrManifestExists, manifestFileName)
 			}
 
 			f, err := os.Create(manifestFileName)

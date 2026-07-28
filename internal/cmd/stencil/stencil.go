@@ -32,6 +32,15 @@ import (
 	"golang.org/x/term"
 )
 
+// ErrFrozenLockfileFileDependency is returned when a frozen lockfile references
+// a file dependency that can no longer be resolved.
+var ErrFrozenLockfileFileDependency = gerrors.New(
+	"cannot use frozen lockfile for file dependency, re-add replacement or run without --frozen-lockfile")
+
+// ErrUnsupportedMajorVersionUpgrade is returned when a module requires a major
+// version upgrade that is not supported.
+var ErrUnsupportedMajorVersionUpgrade = gerrors.New("unsupported major version upgrade for module")
+
 // Command is a thin wrapper around the codegen package that
 // implements the "stencil" command.
 type Command struct {
@@ -96,38 +105,6 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 	}
 }
 
-// validateStencilVersion ensures that the running Stencil version is
-// compatible with the given Stencil modules.
-func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Module, stencilVersion string) error {
-	// Strip the leading 'v' if it exists
-	sgv, err := msemver.StrictNewVersion(strings.TrimPrefix(stencilVersion, "v"))
-	if err != nil {
-		return err
-	}
-
-	for _, m := range mods {
-		c.log.Infof(" -> %s %s", m.Name, m.Version)
-
-		manifest, err := m.Manifest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get module manifest")
-		}
-
-		if manifest.StencilVersion != "" {
-			versionConstraint, err := msemver.NewConstraint(manifest.StencilVersion)
-			if err != nil {
-				return err
-			}
-			if validated, errs := versionConstraint.Validate(sgv); !validated {
-				return fmt.Errorf("stencil version %s does not match the version constraint (%s) for %s: %w",
-					stencilVersion, manifest.StencilVersion, m.Name, gerrors.Join(errs...))
-			}
-		}
-	}
-
-	return nil
-}
-
 // Run fetches dependencies of the root modules and builds the layered filesystem,
 // after that GenerateFiles is called to actually walk the filesystem and render
 // the templates. This step also does minimal post-processing of the dependencies
@@ -183,6 +160,38 @@ func (c *Command) Run(ctx context.Context) error {
 	}
 
 	return st.PostRun(ctx, c.log)
+}
+
+// validateStencilVersion ensures that the running Stencil version is
+// compatible with the given Stencil modules.
+func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Module, stencilVersion string) error {
+	// Strip the leading 'v' if it exists
+	sgv, err := msemver.StrictNewVersion(strings.TrimPrefix(stencilVersion, "v"))
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mods {
+		c.log.Infof(" -> %s %s", m.Name, m.Version)
+
+		manifest, err := m.Manifest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get module manifest")
+		}
+
+		if manifest.StencilVersion != "" {
+			versionConstraint, err := msemver.NewConstraint(manifest.StencilVersion)
+			if err != nil {
+				return err
+			}
+			if validated, errs := versionConstraint.Validate(sgv); !validated {
+				return fmt.Errorf("stencil version %s does not match the version constraint (%s) for %s: %w",
+					stencilVersion, manifest.StencilVersion, m.Name, gerrors.Join(errs...))
+			}
+		}
+	}
+
+	return nil
 }
 
 // useModulesFromLock uses the modules from the lockfile instead
@@ -241,7 +250,7 @@ func (c *Command) useModulesFromLock() error {
 		// ensure that a user doesn't try to frozen-lockfile a replaced
 		// module that uses a directory path, as that would be non-deterministic.
 		if strings.HasPrefix(l.URL, "file://") {
-			return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
+			return fmt.Errorf("%w: %q", ErrFrozenLockfileFileDependency, l.Name)
 		}
 
 		// set a constraint on the module that is equal
@@ -327,7 +336,7 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 
 	spl := strings.Split(m.Name, "/")
 	if len(spl) < 3 {
-		return fmt.Errorf("unsupported major version upgrade for module %q", m.Name)
+		return fmt.Errorf("%w: %q", ErrUnsupportedMajorVersionUpgrade, m.Name)
 	}
 
 	rel, _, err := gh.Repositories.GetReleaseByTag(ctx, spl[1], spl[2], m.Version)

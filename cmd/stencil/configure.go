@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// NewCreateCommand returns a new urfave/cli.Command for the
-// create command.
+// NewConfigureCommand returns a new urfave/cli.Command for the
+// configure command.
 func NewConfigureCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "module",
