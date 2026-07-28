@@ -34,13 +34,13 @@ arguments:
     prettier: "3"
     urfave-cli: "v3"
 modules:
-  - name: github.com/getoutreach/stencil-base
+  - name: github.com/getoutreach/devbase
     channel: rc
-  - name: github.com/getoutreach/stencil-golang
-    channel: unstable
   - name: github.com/getoutreach/stencil-actions
+    channel: rc
+  - name: github.com/getoutreach/stencil-base
     channel: rc
   - name: github.com/getoutreach/stencil-circleci
     channel: rc
-  - name: github.com/getoutreach/devbase
-    channel: rc
+  - name: github.com/getoutreach/stencil-golang
+    channel: unstable
