@@ -8,6 +8,9 @@ arguments:
   confluenceSpaceKey: DT
   description: microservice lifecycle manager
   designDocumentLink: https://outreachsales-my.sharepoint.com/:w:/g/personal/it_transfer_outreachsales_onmicrosoft_com/EXQdFL_8YKlZcYwIFvLgoVgBPHRhM3jLfvzqdLDQqoMy8w
+  go:
+    linters:
+      strict: true
   lintroller: platinum
   metrics: datadog
   notifications:
