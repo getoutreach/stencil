@@ -14,7 +14,7 @@ modules:
       version: v1.18.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
-      version: unstable
+      version: v1.34.0-rc.1
 files:
     - name: .circleci/config.yml
       template: .circleci/config.yml.tpl

@@ -43,4 +43,4 @@ modules:
   - name: github.com/getoutreach/stencil-circleci
     channel: rc
   - name: github.com/getoutreach/stencil-golang
-    channel: unstable
+    channel: rc
