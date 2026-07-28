@@ -19,6 +19,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrUnsupportedModuleHookData is returned when data passed to a module hook
+// is not a supported type (a slice).
+var ErrUnsupportedModuleHookData = errors.New("unsupported module block data type, supported type is slice")
+
 // TplStencil contains the global functions available to a template for
 // interacting with stencil.
 type TplStencil struct {
@@ -143,13 +147,13 @@ func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err er
 	// we only allow slices or maps to allow multiple templates to
 	// write to the same block
 	if v.Kind() != reflect.Slice {
-		err := fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
+		err := fmt.Errorf("%w: %q", ErrUnsupportedModuleHookData, v.Kind())
 		return err, err
 	}
 
 	// convert the slice into a []any
 	interfaceSlice := make([]any, v.Len())
-	for i := 0; i < v.Len(); i++ {
+	for i := range v.Len() {
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
@@ -204,21 +208,6 @@ func (s *TplStencil) Exists(name string) bool {
 		f.Close() // close the file handle, since we don't need it
 	}
 	return ok
-}
-
-// exists returns a billy.File if the file exists, and true. If it doesn't,
-// nil is returned and false.
-func (s *TplStencil) exists(name string) (billy.File, bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, false
-	}
-
-	f, err := osfs.New(cwd).Open(name)
-	if err != nil {
-		return nil, false
-	}
-	return f, true
 }
 
 // ApplyTemplate executes a template inside of the current module
@@ -306,4 +295,19 @@ func (s *TplStencil) Debug(args ...any) error {
 
 	// We have to return something...
 	return nil
+}
+
+// exists returns a billy.File if the file exists, and true. If it doesn't,
+// nil is returned and false.
+func (s *TplStencil) exists(name string) (billy.File, bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, false
+	}
+
+	f, err := osfs.New(cwd).Open(name)
+	if err != nil {
+		return nil, false
+	}
+	return f, true
 }

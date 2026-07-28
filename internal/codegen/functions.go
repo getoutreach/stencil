@@ -2,7 +2,6 @@
 
 // Description: Implements all functions provided to stencil templates.
 
-// package codegen provides funcutions to stencil templates.
 package codegen
 
 import (
@@ -124,6 +123,8 @@ func fromTOML(str string) (any, error) {
 // Default are stock template functions that don't impact
 // the generation of a file. Anything that does that should be located
 // in the scope of the file renderer function instead.
+//
+//nolint:gochecknoglobals // Why: static registry of stock template functions.
 var Default = template.FuncMap{
 	"Dereference":      dereference,
 	"QuoteJoinStrings": quotejoinstrings,

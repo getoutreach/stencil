@@ -19,6 +19,34 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
+// ErrArgNotListed is returned when an argument is not listed in the module's manifest.
+var ErrArgNotListed = errors.New("argument is not listed as an argument in the module's manifest")
+
+// ErrArgRequired is returned when a required argument is not set.
+var ErrArgRequired = errors.New("required argument is not set")
+
+// ErrArgNoTypeInfo is returned by resolveDefault when an argument has no type
+// information and therefore no default value can be determined.
+var ErrArgNoTypeInfo = errors.New("argument has no type information")
+
+// ErrArgInvalidType is returned when an argument has an invalid type.
+var ErrArgInvalidType = errors.New("argument has an invalid type")
+
+// ErrArgFromNotDependency is returned when an argument references a module via
+// "from" that is not listed as a dependency.
+var ErrArgFromNotDependency = errors.New("argument references an argument in a module not listed as a dependency")
+
+// ErrArgFromNotImported is returned when an argument references a module via
+// "from" that was not imported by stencil.
+var ErrArgFromNotImported = errors.New("argument references an argument in a module that wasn't imported by stencil (this is a bug)")
+
+// ErrArgFromNotExposed is returned when an argument references a module via
+// "from" that does not expose the referenced argument.
+var ErrArgFromNotExposed = errors.New("argument references an argument in a module that does not expose that argument")
+
+// ErrArgValidationFailed is returned when an argument fails schema validation.
+var ErrArgValidationFailed = errors.New("argument validation failed")
+
 // Arg returns the value of an argument in the service's manifest
 //
 //	{{- stencil.Arg "name" }}
@@ -45,7 +73,7 @@ func (s *TplStencil) Arg(pth string) (any, error) {
 	}
 
 	if _, ok := mf.Arguments[pth]; !ok {
-		return "", fmt.Errorf("module %q doesn't list argument %q as an argument in its manifest", s.t.Module.Name, pth)
+		return "", fmt.Errorf("%w: module %q argument %q", ErrArgNotListed, s.t.Module.Name, pth)
 	}
 	arg := mf.Arguments[pth]
 
@@ -70,6 +98,11 @@ func (s *TplStencil) Arg(pth string) (any, error) {
 	if err != nil {
 		v, err = s.resolveDefault(pth, &arg)
 		if err != nil {
+			// No type information means there is no default value to
+			// resolve; return the nil value without erroring.
+			if errors.Is(err, ErrArgNoTypeInfo) {
+				return v, nil
+			}
 			return "", err
 		}
 	}
@@ -91,7 +124,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 	}
 
 	if arg.Required {
-		return nil, fmt.Errorf("module %q requires argument %q but is not set", s.t.Module.Name, pth)
+		return nil, fmt.Errorf("%w: module %q argument %q", ErrArgRequired, s.t.Module.Name, pth)
 	}
 
 	// json schema convention is to define "type" as the top level key.
@@ -104,12 +137,12 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 		// so return nothing. This is likely problematic so a linter
 		// should warn on this.
 		if arg.Type == "" { //nolint:staticcheck // Why: Compat
-			return nil, nil
+			return nil, ErrArgNoTypeInfo
 		}
 	}
 	typs, ok := typ.(string)
 	if !ok {
-		return nil, fmt.Errorf("module %q argument %q has invalid type: %v", s.t.Module.Name, pth, typ)
+		return nil, fmt.Errorf("%w: module %q argument %q type: %v", ErrArgInvalidType, s.t.Module.Name, pth, typ)
 	}
 
 	var v any
@@ -125,7 +158,7 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 	case "string":
 		v = ""
 	default:
-		return "", fmt.Errorf("module %q argument %q has invalid type %q", s.t.Module.Name, pth, typs)
+		return "", fmt.Errorf("%w: module %q argument %q type %q", ErrArgInvalidType, s.t.Module.Name, pth, typs)
 	}
 
 	return v, nil
@@ -147,8 +180,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	}
 	if !foundModuleInDeps {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but doesn't list it as a dependency",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references an argument in module %q",
+			ErrArgFromNotDependency, s.t.Module.Name, pth, arg.From,
 		)
 	}
 
@@ -168,8 +201,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	}
 	if fromMf == nil {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but wasn't imported by stencil (this is a bug)",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references an argument in module %q",
+			ErrArgFromNotImported, s.t.Module.Name, pth, arg.From,
 		)
 	}
 
@@ -177,8 +210,8 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	fromArg, ok := fromMf.Arguments[pth]
 	if !ok {
 		return nil, fmt.Errorf(
-			"module %q argument %q references an argument in module %q, but the module does not expose that argument",
-			s.t.Module.Name, pth, arg.From,
+			"%w: module %q argument %q references an argument in module %q",
+			ErrArgFromNotExposed, s.t.Module.Name, pth, arg.From,
 		)
 	}
 	return &fromArg, nil
@@ -215,7 +248,7 @@ func (s *TplStencil) validateArg(pth string, arg *configuration.Argument, v any)
 				s.log.Errorf("Encountered a validation error for %q: %v", path, validationErr.Error)
 			}
 
-			return fmt.Errorf("module %q validation failed", s.t.Module.Name)
+			return fmt.Errorf("%w: module %q", ErrArgValidationFailed, s.t.Module.Name)
 		}
 
 		return errors.Wrapf(err, "module %q argument %q validation failed", s.t.Module.Name, pth)

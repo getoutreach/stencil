@@ -121,29 +121,6 @@ type Values struct {
 	Template stencilTemplate
 }
 
-// Copy returns a copy of the current values.
-func (v *Values) Copy() *Values {
-	nv := *v
-	return &nv
-}
-
-// WithModule returns a copy of the current values with the
-// provided module information being set.
-func (v *Values) WithModule(name, version string) *Values {
-	nv := v.Copy()
-	nv.Module.Name = name
-	nv.Module.Version = version
-	return nv
-}
-
-// WithTemplate returns a copy of the current values with the
-// provided template information being set.
-func (v *Values) WithTemplate(name string) *Values {
-	nv := v.Copy()
-	nv.Template.Name = name
-	return nv
-}
-
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
@@ -199,4 +176,27 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	return vals
+}
+
+// Copy returns a copy of the current values.
+func (v *Values) Copy() *Values {
+	nv := *v
+	return &nv
+}
+
+// WithModule returns a copy of the current values with the
+// provided module information being set.
+func (v *Values) WithModule(name, version string) *Values {
+	nv := v.Copy()
+	nv.Module.Name = name
+	nv.Module.Version = version
+	return nv
+}
+
+// WithTemplate returns a copy of the current values with the
+// provided template information being set.
+func (v *Values) WithTemplate(name string) *Values {
+	nv := v.Copy()
+	nv.Template.Name = name
+	return nv
 }
