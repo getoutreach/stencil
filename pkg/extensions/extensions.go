@@ -32,6 +32,10 @@ import (
 // to wrap the go plugin call to invoke said function.
 type generatedTemplateFunc func(...any) (any, error)
 
+// ErrTooManyArguments is returned when a template function is called
+// with more arguments than it accepts.
+var ErrTooManyArguments = errors.New("too many arguments")
+
 // Host implements an extension host that handles
 // registering extensions and executing them.
 type Host struct {
@@ -50,31 +54,6 @@ func NewHost(log logrus.FieldLogger) *Host {
 	return &Host{
 		log:        log,
 		extensions: make(map[string]extension),
-	}
-}
-
-// createFunctionFromTemplateFunction takes a given
-// TemplateFunction and turns it into a callable function.
-func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation,
-	fn *apiv1.TemplateFunction) generatedTemplateFunc {
-	extPath := extName + "." + fn.Name
-
-	return func(args ...any) (any, error) {
-		if len(args) > fn.NumberOfArguments {
-			return nil, fmt.Errorf("too many arguments, expected %d, got %d", fn.NumberOfArguments, len(args))
-		}
-
-		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
-			Name:      fn.Name,
-			Arguments: args,
-		})
-		if err != nil {
-			// return an error if the extension returns an error
-			return nil, errors.Wrapf(err, "failed to execute template function %q", extPath)
-		}
-
-		// return the response, and a nil error
-		return resp, nil
 	}
 }
 
@@ -149,15 +128,6 @@ func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 	h.extensions[name] = extension{ext, func() error { return nil }}
 }
 
-// getExtensionPath returns the path to an extension binary.
-func (h *Host) getExtensionPath(version *resolver.Version, name string) string {
-	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
-	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions",
-		name, "@"+version.Commit, filepath.Base(name))
-	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
-	return path
-}
-
 // getVersionWithCommit retrieves a new version with the commit present.
 func getVersionWithCommit(ctx context.Context, token cfg.SecretData, repoURL string,
 	version *resolver.Version) (*resolver.Version, error) {
@@ -183,6 +153,52 @@ func getVersionWithCommit(ctx context.Context, token cfg.SecretData, repoURL str
 		return nil, errors.Wrap(err, "failed to get latest version")
 	}
 	return v, nil
+}
+
+// Close terminates the extension host, which in turn stops
+// all current native extensions.
+func (h *Host) Close() error {
+	var result error
+	for _, ext := range h.extensions {
+		if err := ext.closer(); err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+	return result
+}
+
+// createFunctionFromTemplateFunction takes a given
+// TemplateFunction and turns it into a callable function.
+func (h *Host) createFunctionFromTemplateFunction(extName string, ext apiv1.Implementation,
+	fn *apiv1.TemplateFunction) generatedTemplateFunc {
+	extPath := extName + "." + fn.Name
+
+	return func(args ...any) (any, error) {
+		if len(args) > fn.NumberOfArguments {
+			return nil, fmt.Errorf("%w, expected %d, got %d", ErrTooManyArguments, fn.NumberOfArguments, len(args))
+		}
+
+		resp, err := ext.ExecuteTemplateFunction(&apiv1.TemplateFunctionExec{
+			Name:      fn.Name,
+			Arguments: args,
+		})
+		if err != nil {
+			// return an error if the extension returns an error
+			return nil, errors.Wrapf(err, "failed to execute template function %q", extPath)
+		}
+
+		// return the response, and a nil error
+		return resp, nil
+	}
+}
+
+// getExtensionPath returns the path to an extension binary.
+func (h *Host) getExtensionPath(version *resolver.Version, name string) string {
+	homeDir, _ := os.UserHomeDir() //nolint:errcheck // Why: signature doesn't allow it, yet
+	path := filepath.Join(homeDir, ".outreach", ".cache", "stencil", "extensions",
+		name, "@"+version.Commit, filepath.Base(name))
+	os.MkdirAll(filepath.Dir(path), 0o755) //nolint:errcheck // Why: signature doesn't allow it, yet
+	return path
 }
 
 // downloadFromRemote downloads a release from github and extracts it to disk
@@ -258,16 +274,4 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	}
 
 	return dlPath, nil
-}
-
-// Close terminates the extension host, which in turn stops
-// all current native extensions.
-func (h *Host) Close() error {
-	var result error
-	for _, ext := range h.extensions {
-		if err := ext.closer(); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-	return result
 }

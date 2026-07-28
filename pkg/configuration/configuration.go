@@ -7,6 +7,7 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -17,32 +18,14 @@ import (
 // ValidateNameRegexp is the regex used to validate the service's name.
 const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
 
-// NewServiceManifest reads a service manifest from disk at the
-// specified path, parses it, and returns the output.
-func NewServiceManifest(path string) (*ServiceManifest, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+// ErrInvalidName indicates that the name field in a service manifest did not
+// satisfy ValidateName.
+var ErrInvalidName = errors.New("name field was invalid")
 
-	var s *ServiceManifest
-	if err := yaml.NewDecoder(f).Decode(&s); err != nil {
-		return nil, err
-	}
-
-	if !ValidateName(s.Name) {
-		return nil, fmt.Errorf("name field in %q was invalid", path)
-	}
-
-	return s, nil
-}
-
-// NewDefaultServiceManifest returns a parsed service manifest
-// from a set default path on disk.
-func NewDefaultServiceManifest() (*ServiceManifest, error) {
-	return NewServiceManifest("service.yaml")
-}
+// ErrDeprecationMessageNotString indicates that a deprecation message was not a
+// YAML string; the legacy bool form is not supported.
+var ErrDeprecationMessageNotString = errors.New(
+	"deprecation message must be a string; the bool form is not supported — supply a migration message")
 
 // ServiceManifest is a manifest used to describe a service and impact
 // what files are included.
@@ -66,6 +49,33 @@ type ServiceManifest struct {
 	// - local file: file://path/to/module
 	// - remote file: https://github.com/getoutreach/stencil-base
 	Replacements map[string]string `yaml:"replacements,omitempty"`
+}
+
+// NewServiceManifest reads a service manifest from disk at the
+// specified path, parses it, and returns the output.
+func NewServiceManifest(path string) (*ServiceManifest, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var s *ServiceManifest
+	if err := yaml.NewDecoder(f).Decode(&s); err != nil {
+		return nil, err
+	}
+
+	if !ValidateName(s.Name) {
+		return nil, fmt.Errorf("%w: %q", ErrInvalidName, path)
+	}
+
+	return s, nil
+}
+
+// NewDefaultServiceManifest returns a parsed service manifest
+// from a set default path on disk.
+func NewDefaultServiceManifest() (*ServiceManifest, error) {
+	return NewServiceManifest("service.yaml")
 }
 
 // TemplateRepository is a repository of template files.
@@ -150,8 +160,7 @@ func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
 		*d = DeprecationMessage(value.Value)
 		return nil
 	default:
-		return fmt.Errorf("deprecation message must be a string, got %s (%q); "+
-			"the bool form is not supported — supply a migration message", value.Tag, value.Value)
+		return fmt.Errorf("%w: got %s (%q)", ErrDeprecationMessageNotString, value.Tag, value.Value)
 	}
 }
 

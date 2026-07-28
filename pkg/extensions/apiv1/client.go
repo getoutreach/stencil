@@ -16,6 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrInvalidImplementationType is returned when a dispensed plugin value
+// cannot be cast to an apiv1.Implementation transport.
+var ErrInvalidImplementationType = errors.New("failed to create apiv1.Implementation from dispensed type")
+
 // IDEA(jaredallard): Cleanup this to return a Implementation backed by a transport as well.
 
 // NewExtensionClient creates a new Implementation from a plugin.
@@ -50,7 +54,7 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 
 	ext, ok := raw.(implementationTransport)
 	if !ok {
-		return nil, func() error { return nil }, fmt.Errorf("failed to create apiv1.Implementation from type %s", reflect.TypeOf(raw).String())
+		return nil, func() error { return nil }, fmt.Errorf("%w: %s", ErrInvalidImplementationType, reflect.TypeOf(raw).String())
 	}
 
 	return newImplementationTransportToImplementation(ext), rpcClient.Close, nil
