@@ -19,7 +19,7 @@ import (
 )
 
 // NewConfigureModuleCmd returns a new urfave/cli.Command for the
-// update module command
+// update module command.
 func NewConfigureModuleCmd() *cli.Command {
 	return &cli.Command{
 		Name:        "configure",
@@ -71,7 +71,7 @@ func readAndMergeServiceYaml(path string, removeNativeExtension bool, input stri
 		return err
 	}
 
-	releaseOpts := map[string]interface{}{
+	releaseOpts := map[string]any{
 		"enablePrereleases": true,
 	}
 

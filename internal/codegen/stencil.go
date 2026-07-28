@@ -25,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// NewStencil creates a new, fully initialized Stencil renderer function
+// NewStencil creates a new, fully initialized Stencil renderer function.
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
 	return &Stencil{
 		log:         log,
@@ -38,7 +38,7 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 }
 
 // Stencil provides the basic functions for
-// stencil templates
+// stencil templates.
 type Stencil struct {
 	log logrus.FieldLogger
 	m   *configuration.ServiceManifest
@@ -68,13 +68,13 @@ func hashModuleHookValue(m any) uint64 {
 }
 
 // moduleHook is a wrapper type for module hook values that
-// contains the values for module hooks
+// contains the values for module hooks.
 type moduleHook struct {
 	// values are the values available for this module hook
 	values []any
 }
 
-// Sort sorts the module hook values by their hash
+// Sort sorts the module hook values by their hash.
 func (m *moduleHook) Sort() {
 	sort.Slice(m.values, func(i, j int) bool {
 		return hashModuleHookValue(m.values[i]) < hashModuleHookValue(m.values[j])
@@ -176,7 +176,7 @@ func (s *Stencil) GenerateLockfile(tpls []*Template) *stencil.Lockfile {
 	return l
 }
 
-// sortModuleHooks sorts the module hooks by their hash
+// sortModuleHooks sorts the module hooks by their hash.
 func (s *Stencil) sortModuleHooks() {
 	for _, m := range s.sharedData.moduleHooks {
 		m.Sort()
@@ -283,7 +283,7 @@ func (s *Stencil) deprecatedArgumentWarnings(ctx context.Context) ([]string, err
 }
 
 // PostRun runs all post run commands specified in the modules that
-// this service depends on
+// this service depends on.
 func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 	log.Info("Running post-run command(s)")
 	for _, m := range s.modules {

@@ -14,7 +14,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// ValidateNameRegexp is the regex used to validate the service's name
+// ValidateNameRegexp is the regex used to validate the service's name.
 const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
 
 // NewServiceManifest reads a service manifest from disk at the
@@ -45,13 +45,13 @@ func NewDefaultServiceManifest() (*ServiceManifest, error) {
 }
 
 // ServiceManifest is a manifest used to describe a service and impact
-// what files are included
+// what files are included.
 type ServiceManifest struct {
 	// Name is the name of the service
 	Name string `yaml:"name"`
 
 	// Arguments is a map of arbitrary arguments to pass to the generator
-	Arguments map[string]interface{} `yaml:"arguments"`
+	Arguments map[string]any `yaml:"arguments"`
 
 	// Modules are the template modules that this service depends
 	// on and utilizes
@@ -93,7 +93,7 @@ type TemplateRepository struct {
 	Version string `yaml:"version,omitempty"`
 }
 
-// TemplateRepositoryManifest is a manifest of a template repository
+// TemplateRepositoryManifest is a manifest of a template repository.
 type TemplateRepositoryManifest struct {
 	// Name is the name of this template repository.
 	// This must match the import path.
@@ -120,7 +120,7 @@ type TemplateRepositoryManifest struct {
 }
 
 // PostRunCommandSpec is the spec of a command to be ran and its
-// friendly name
+// friendly name.
 type PostRunCommandSpec struct {
 	// Name is the name of the command being ran, used for UX
 	Name string `yaml:"name"`
@@ -156,7 +156,7 @@ func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // Argument is a user-input argument that can be passed to
-// templates
+// templates.
 type Argument struct {
 	// Description is a description of this argument.
 	Description string `yaml:"description"`
@@ -166,10 +166,10 @@ type Argument struct {
 
 	// Default is the default value for this argument if it's not set.
 	// This cannot be set when required is true.
-	Default interface{} `yaml:"default"`
+	Default any `yaml:"default"`
 
 	// Schema is a JSON schema, in YAML, for the argument.
-	Schema map[string]interface{} `yaml:"schema"`
+	Schema map[string]any `yaml:"schema"`
 
 	// When non-empty, this marks the argument as deprecated and is the
 	// human-readable migration message shown to consumers. An empty or absent

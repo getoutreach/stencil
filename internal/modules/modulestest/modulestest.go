@@ -20,7 +20,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// addTemplateToFS adds a template to a billy.Filesystem
+// addTemplateToFS adds a template to a billy.Filesystem.
 func addTemplateToFS(fs billy.Filesystem, tpl string) error {
 	srcFile, err := os.Open(tpl)
 	if err != nil {

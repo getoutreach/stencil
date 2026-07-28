@@ -270,7 +270,7 @@ func templateOpenErrorFinding(path string, err error) lint.Finding {
 		return lint.Finding{
 			Severity: lint.SeverityError,
 			Path:     path,
-			Message:  fmt.Sprintf("template file not found: %s", path),
+			Message:  "template file not found: " + path,
 		}
 	}
 	return lint.Finding{
@@ -639,7 +639,7 @@ func resolveManifestPath(path string) (resolved string, finding *lint.Finding, e
 			return path, &lint.Finding{
 				Severity: lint.SeverityError,
 				Path:     path,
-				Message:  fmt.Sprintf("manifest file not found: %s", path),
+				Message:  "manifest file not found: " + path,
 			}, nil
 		}
 		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
@@ -880,7 +880,7 @@ func resolveProjectManifestPath(path string) (resolved string, finding *lint.Fin
 			return path, &lint.Finding{
 				Severity: lint.SeverityError,
 				Path:     path,
-				Message:  fmt.Sprintf("service manifest file not found: %s", path),
+				Message:  "service manifest file not found: " + path,
 			}, nil
 		}
 		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)

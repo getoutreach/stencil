@@ -17,7 +17,7 @@ import (
 )
 
 // NewDescribeCmd returns a new urfave/cli.Command for the
-// describe command
+// describe command.
 func NewDescribeCmd() *cli.Command {
 	return &cli.Command{
 		Name:        "describe",
@@ -51,7 +51,7 @@ func cleanPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// describeFile prints information about a file rendered by a template
+// describeFile prints information about a file rendered by a template.
 func describeFile(filePath string) error {
 	l, err := stencil.LoadLockfile("")
 	if err != nil {

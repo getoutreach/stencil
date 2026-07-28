@@ -25,8 +25,8 @@ type testTpl struct {
 }
 
 // fakeTemplate returns a faked struct suitable for testing
-// template functions
-func fakeTemplate(t *testing.T, args map[string]interface{},
+// template functions.
+func fakeTemplate(t *testing.T, args map[string]any,
 	requestArgs map[string]configuration.Argument) *testTpl {
 	test := &testTpl{}
 	log := logrus.New()
@@ -75,8 +75,8 @@ func fakeTemplate(t *testing.T, args map[string]interface{},
 // fakeTemplateMultipleModules returns a faked struct suitable for testing
 // that has multiple modules in the service manifest, the first arguments list
 // is for the first module, the second is for the second module, and so forth.
-// the first module will import all other modules
-func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]interface{},
+// the first module will import all other modules.
+func fakeTemplateMultipleModules(t *testing.T, serviceManifestArgs map[string]any,
 	args ...map[string]configuration.Argument) *testTpl {
 	test := &testTpl{}
 	log := logrus.New()
@@ -148,12 +148,12 @@ func TestTplStencil_Arg(t *testing.T) {
 		name    string
 		fields  *testTpl
 		args    args
-		want    interface{}
+		want    any
 		wantErr bool
 	}{
 		{
 			name: "should support basic argument",
-			fields: fakeTemplate(t, map[string]interface{}{
+			fields: fakeTemplate(t, map[string]any{
 				"hello": "world",
 			}, map[string]configuration.Argument{
 				"hello": {},
@@ -166,7 +166,7 @@ func TestTplStencil_Arg(t *testing.T) {
 		},
 		{
 			name: "should fail when an argument is not defined",
-			fields: fakeTemplate(t, map[string]interface{}{
+			fields: fakeTemplate(t, map[string]any{
 				"hello": "world",
 			}, map[string]configuration.Argument{}),
 			args: args{
@@ -177,11 +177,11 @@ func TestTplStencil_Arg(t *testing.T) {
 		},
 		{
 			name: "should support basic JSON schema",
-			fields: fakeTemplate(t, map[string]interface{}{
+			fields: fakeTemplate(t, map[string]any{
 				"hello": "world",
 			}, map[string]configuration.Argument{
 				"hello": {
-					Schema: map[string]interface{}{
+					Schema: map[string]any{
 						"type": "string",
 					},
 				},
@@ -194,11 +194,11 @@ func TestTplStencil_Arg(t *testing.T) {
 		},
 		{
 			name: "should fail when provided value doesn't match json schema",
-			fields: fakeTemplate(t, map[string]interface{}{
+			fields: fakeTemplate(t, map[string]any{
 				"hello": 1,
 			}, map[string]configuration.Argument{
 				"hello": {
-					Schema: map[string]interface{}{
+					Schema: map[string]any{
 						"type": "string",
 					},
 				},
@@ -211,21 +211,21 @@ func TestTplStencil_Arg(t *testing.T) {
 		},
 		{
 			name: "should support nested json schema",
-			fields: fakeTemplate(t, map[string]interface{}{
-				"hello": map[string]interface{}{
-					"world": map[string]interface{}{
-						"abc": []interface{}{"def"},
+			fields: fakeTemplate(t, map[string]any{
+				"hello": map[string]any{
+					"world": map[string]any{
+						"abc": []any{"def"},
 					},
 				},
 			}, map[string]configuration.Argument{
 				"hello": {
-					Schema: map[string]interface{}{
+					Schema: map[string]any{
 						"type": "object",
-						"properties": map[string]interface{}{
-							"world": map[string]interface{}{
+						"properties": map[string]any{
+							"world": map[string]any{
 								"type": "object",
-								"properties": map[string]interface{}{
-									"abc": map[string]interface{}{
+								"properties": map[string]any{
+									"abc": map[string]any{
 										"type": "array",
 									},
 								},
@@ -237,15 +237,15 @@ func TestTplStencil_Arg(t *testing.T) {
 			args: args{
 				pth: "hello",
 			},
-			want:    map[string]interface{}{"world": map[string]interface{}{"abc": []interface{}{"def"}}},
+			want:    map[string]any{"world": map[string]any{"abc": []any{"def"}}},
 			wantErr: false,
 		},
 		{
 			name: "should return default type when arg is not provided",
-			fields: fakeTemplate(t, map[string]interface{}{},
+			fields: fakeTemplate(t, map[string]any{},
 				map[string]configuration.Argument{
 					"hello": {
-						Schema: map[string]interface{}{
+						Schema: map[string]any{
 							"type": "string",
 						},
 					},
@@ -258,7 +258,7 @@ func TestTplStencil_Arg(t *testing.T) {
 		},
 		{
 			name: "should fallback to deprecated type when schema is not provided",
-			fields: fakeTemplate(t, map[string]interface{}{},
+			fields: fakeTemplate(t, map[string]any{},
 				map[string]configuration.Argument{
 					"hello": {
 						Type: "string",
@@ -273,7 +273,7 @@ func TestTplStencil_Arg(t *testing.T) {
 		{
 			name: "should support from",
 			fields: fakeTemplateMultipleModules(t,
-				map[string]interface{}{
+				map[string]any{
 					"hello": "world",
 				},
 				// test-0
@@ -285,7 +285,7 @@ func TestTplStencil_Arg(t *testing.T) {
 				// test-1
 				map[string]configuration.Argument{
 					"hello": {
-						Schema: map[string]interface{}{
+						Schema: map[string]any{
 							"type": "string",
 						},
 					},
@@ -300,7 +300,7 @@ func TestTplStencil_Arg(t *testing.T) {
 		{
 			name: "should support from schema fail",
 			fields: fakeTemplateMultipleModules(t,
-				map[string]interface{}{
+				map[string]any{
 					"hello": "world",
 				},
 				// test-0
@@ -312,7 +312,7 @@ func TestTplStencil_Arg(t *testing.T) {
 				// test-1
 				map[string]configuration.Argument{
 					"hello": {
-						Schema: map[string]interface{}{
+						Schema: map[string]any{
 							"type": "number",
 						},
 					},
@@ -353,7 +353,7 @@ func TestBuildErrorPath(t *testing.T) {
 	}{
 		{
 			name: "simple schema",
-			//nolint:lll // Why: realistic test case
+
 			absoluteKeywordLocation: "file:///home/test/getoutreach/stencil/manifest.yaml/arguments/releaseOptions.allowMajorVersions#/type",
 			expected:                "arguments.releaseOptions.allowMajorVersions",
 			expectErr:               false,

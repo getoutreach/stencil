@@ -19,7 +19,7 @@ import (
 )
 
 // NewCreateModule returns a new urfave/cli.Command for the
-// create module command
+// create module command.
 func NewCreateModule() *cli.Command {
 	return &cli.Command{
 		Name:        "module",
@@ -75,7 +75,7 @@ func NewCreateModule() *cli.Command {
 				return errors.Wrap(err, "ask for description")
 			}
 
-			releaseOpts := map[string]interface{}{
+			releaseOpts := map[string]any{
 				"enablePrereleases": true,
 			}
 
@@ -88,7 +88,7 @@ func NewCreateModule() *cli.Command {
 				}, {
 					Name: "github.com/getoutreach/stencil-circleci",
 				}},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"reportingTeam": reportingTeam,
 					"description":   description,
 				},

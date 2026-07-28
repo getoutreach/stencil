@@ -45,7 +45,7 @@ type resolvedModule struct {
 	mu sync.Mutex
 }
 
-// resolveModule is used to keep track of a module that needs to be resolved
+// resolveModule is used to keep track of a module that needs to be resolved.
 type resolveModule struct {
 	// conf is the configuration to be used to resolve the module
 	conf *configuration.TemplateRepository
@@ -54,7 +54,7 @@ type resolveModule struct {
 	parent string
 }
 
-// resolution is an entry in the resolution stack that was used to resolve a module
+// resolution is an entry in the resolution stack that was used to resolve a module.
 type resolution struct {
 	// constraint is the string representation of the constraint
 	// used by the parent module to resolve this module
@@ -67,7 +67,7 @@ type resolution struct {
 	parentModule string
 }
 
-// ModuleResolveOptions contains options for resolving modules
+// ModuleResolveOptions contains options for resolving modules.
 type ModuleResolveOptions struct {
 	// Token is the token to use to resolve modules
 	Token cfg.SecretData
@@ -99,7 +99,7 @@ type ModuleResolveOptions struct {
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
 //
-//nolint:funlen // Why: Will be refactored in the future
+
 func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
 	wl := newWorkList(opts)
 
@@ -144,7 +144,7 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 	return modules, nil
 }
 
-// work does the actual work of resolving a module
+// work does the actual work of resolving a module.
 func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *workList,
 	log logrus.FieldLogger,
 ) error {

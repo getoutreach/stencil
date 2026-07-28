@@ -19,7 +19,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// newLogger creates a new logger for testing
+// newLogger creates a new logger for testing.
 func newLogger() logrus.FieldLogger {
 	log := logrus.New()
 	log.SetLevel(logrus.DebugLevel)

@@ -1,7 +1,6 @@
 package extensions_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -12,8 +11,7 @@ import (
 )
 
 func TestCanImportNativeExtension(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	ext := extensions.NewHost(logrus.New())
 	defer ext.Close()
@@ -30,7 +28,7 @@ func TestCanImportNativeExtension(t *testing.T) {
 	resp, err := caller.Call("github.com/getoutreach/stencil-golang.ParseGoMod", "go.mod", "module test\n\ngo 1.19")
 	assert.NilError(t, err, "failed to call extension")
 
-	moduleMap := resp.(map[string]interface{})["Module"].(map[string]interface{})
+	moduleMap := resp.(map[string]any)["Module"].(map[string]any)
 	spew.Dump(moduleMap)
-	assert.Equal(t, moduleMap["Syntax"].(map[string]interface{})["Token"].([]interface{})[1], "test", "failed to parse go.mod")
+	assert.Equal(t, moduleMap["Syntax"].(map[string]any)["Token"].([]any)[1], "test", "failed to parse go.mod")
 }

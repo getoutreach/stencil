@@ -32,7 +32,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// localModuleVersion is the version string used for local modules
+// localModuleVersion is the version string used for local modules.
 const localModuleVersion = "local"
 
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
@@ -60,7 +60,7 @@ type Module struct {
 	fs billy.Filesystem
 }
 
-// uriIsLocal returns true if the URI is a local file path
+// uriIsLocal returns true if the URI is a local file path.
 func uriIsLocal(uri string) bool {
 	return !strings.Contains(uri, "://") || strings.HasPrefix(uri, "file://")
 }
@@ -108,7 +108,7 @@ func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
 	return m
 }
 
-// GetTemplate returns the go template for this module
+// GetTemplate returns the go template for this module.
 func (m *Module) GetTemplate() *template.Template {
 	return m.t
 }

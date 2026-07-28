@@ -27,12 +27,12 @@ type inprocExt struct {
 	ext apiv1.Implementation
 }
 
-// GetConfig delegates the call as is
+// GetConfig delegates the call as is.
 func (e inprocExt) GetConfig() (*apiv1.Config, error) {
 	return e.ext.GetConfig()
 }
 
-// GetTemplateFunctions delegates the calls as is
+// GetTemplateFunctions delegates the calls as is.
 func (e inprocExt) GetTemplateFunctions() ([]*apiv1.TemplateFunction, error) {
 	return e.ext.GetTemplateFunctions()
 }
@@ -40,7 +40,7 @@ func (e inprocExt) GetTemplateFunctions() ([]*apiv1.TemplateFunction, error) {
 // ExecuteTemplateFunction executes a provided template function on the target, JSONifies
 // its response and then decodes the result JSON bytes as a plain interface{}, losing the
 // source type. See docs on inprocExt for a reason.
-func (e inprocExt) ExecuteTemplateFunction(t *apiv1.TemplateFunctionExec) (interface{}, error) {
+func (e inprocExt) ExecuteTemplateFunction(t *apiv1.TemplateFunctionExec) (any, error) {
 	resp, err := e.ext.ExecuteTemplateFunction(t)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (e inprocExt) ExecuteTemplateFunction(t *apiv1.TemplateFunctionExec) (inter
 		return nil, fmt.Errorf("failed to encode extension response: %w", err)
 	}
 
-	var respVal interface{}
+	var respVal any
 	if err := json.Unmarshal(b, &respVal); err != nil {
 		return nil, errors.Wrap(err, "failed to decode etension response back into a generic interface")
 	}

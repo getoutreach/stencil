@@ -70,7 +70,7 @@ func (s *TplStencil) GetModuleHook(name string) []any {
 //
 //	{{- /* This writes a global into the current context of the template module repository */}}
 //	{{ stencil.SetGlobal "IsGeorgeCool" true }}
-func (s *TplStencil) SetGlobal(name string, data interface{}) error {
+func (s *TplStencil) SetGlobal(name string, data any) error {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return nil
@@ -94,7 +94,7 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 //
 //	{{- /* This retrieves a global from the current context of the template module repository */}}
 //	{{ $isGeorgeCool := stencil.GetGlobal "IsGeorgeCool" }}
-func (s *TplStencil) GetGlobal(name string) interface{} {
+func (s *TplStencil) GetGlobal(name string) any {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 
 	if v, ok := s.s.sharedData.globals[k]; ok {
@@ -124,7 +124,7 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 //
 //	{{- /* This writes to a module hook */}}
 //	{{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
-func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out, err error) {
+func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err error) {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return nil, nil
@@ -136,7 +136,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {
-		err := fmt.Errorf("third parameter, data, must be set")
+		err := errors.New("third parameter, data, must be set")
 		return err, err
 	}
 
@@ -172,7 +172,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 // This is deprecated and will be removed in a future release.
 //
 //	{{- (stencil.Args).name }}
-func (s *TplStencil) Args() map[string]interface{} {
+func (s *TplStencil) Args() map[string]any {
 	return s.s.m.Arguments
 }
 
@@ -237,14 +237,14 @@ func (s *TplStencil) exists(name string) (billy.File, bool) {
 //	{{- end }}
 //
 //	{{- stencil.ApplyTemplate "command" | file.SetContents }}
-func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
+func (s *TplStencil) ApplyTemplate(name string, dataSli ...any) (string, error) {
 	// We check for dataSli here because we had to set it to a range of arguments
 	// to allow it to be not set.
 	if len(dataSli) > 1 {
-		return "", fmt.Errorf("ApplyTemplate() only takes max two arguments, name and data")
+		return "", errors.New("ApplyTemplate() only takes max two arguments, name and data")
 	}
 
-	var data interface{}
+	var data any
 	if len(dataSli) == 1 {
 		data = dataSli[0]
 	} else {
@@ -301,7 +301,7 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 // Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
 //
 //	{{- $_ := stencil.Debug "I'm a log!" }}
-func (s *TplStencil) Debug(args ...interface{}) error {
+func (s *TplStencil) Debug(args ...any) error {
 	s.log.WithField("path", s.t.Path).Debug(args...)
 
 	// We have to return something...

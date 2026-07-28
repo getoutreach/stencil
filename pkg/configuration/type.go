@@ -5,6 +5,7 @@
 package configuration
 
 import (
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -13,7 +14,7 @@ import (
 // TemplateRepositoryType specifies what type of a stencil repository the current one is.
 type TemplateRepositoryType string
 
-// This block contains all of the TemplateRepositoryType values
+// This block contains all of the TemplateRepositoryType values.
 const (
 	// TemplateRepositoryTypeExt denotes a repository as being
 	// an extension repository. This means that it contains
@@ -47,7 +48,7 @@ type TemplateRepositoryTypes struct {
 }
 
 // MarshalYAML marshals TemplateRepositoryTypes as a string with comma-separated values.
-func (ts TemplateRepositoryTypes) MarshalYAML() (interface{}, error) {
+func (ts TemplateRepositoryTypes) MarshalYAML() (any, error) {
 	var csv []string
 	for _, t := range ts.types {
 		csv = append(csv, string(t))
@@ -91,10 +92,5 @@ func (ts TemplateRepositoryTypes) Contains(t TemplateRepositoryType) bool {
 		// empty types defaults to templates only (we do not support repos with no purpose)
 		return t == TemplateRepositoryTypeTemplates
 	}
-	for _, ti := range ts.types {
-		if ti == t {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ts.types, t)
 }

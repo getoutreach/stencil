@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -255,10 +256,8 @@ func findSubcommand(cmd *cli.Command, name string) *cli.Command {
 
 func flagPresent(flags []cli.Flag, name string) bool {
 	for _, fl := range flags {
-		for _, n := range fl.Names() {
-			if n == name {
-				return true
-			}
+		if slices.Contains(fl.Names(), name) {
+			return true
 		}
 	}
 	return false

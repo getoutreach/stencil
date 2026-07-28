@@ -61,7 +61,7 @@ type Command struct {
 	resolverRoutines int
 }
 
-// NewCommand creates a new stencil command
+// NewCommand creates a new stencil command.
 func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen, usePrerelease,
 	allowMajorVersionUpgrades bool, resolverRoutines int,
 ) *Command {
@@ -131,7 +131,7 @@ func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Mo
 // Run fetches dependencies of the root modules and builds the layered filesystem,
 // after that GenerateFiles is called to actually walk the filesystem and render
 // the templates. This step also does minimal post-processing of the dependencies
-// manifests
+// manifests.
 func (c *Command) Run(ctx context.Context) error {
 	if c.frozenLockfile {
 		if err := c.useModulesFromLock(); err != nil {
@@ -190,7 +190,7 @@ func (c *Command) Run(ctx context.Context) error {
 // service manifest.
 func (c *Command) useModulesFromLock() error {
 	if c.lock == nil {
-		return fmt.Errorf("frozen lockfile requires a lockfile to exist")
+		return errors.New("frozen lockfile requires a lockfile to exist")
 	}
 
 	desiredModulesHM := make(map[string]bool)
@@ -220,7 +220,7 @@ func (c *Command) useModulesFromLock() error {
 	if outOfSync {
 		c.log.WithField("reasons", outOfSyncReasons).Debug("lockfile out of sync reasons")
 		c.log.Error("Unable to use frozen lockfile, the lockfile is out of sync with the service.yaml")
-		return fmt.Errorf("lockfile out of sync")
+		return errors.New("lockfile out of sync")
 	}
 
 	// use the versions from the lockfile
@@ -306,7 +306,7 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 	return nil
 }
 
-// promptMajorVersion prompts the user to upgrade their templates
+// promptMajorVersion prompts the user to upgrade their templates.
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
 	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
 	if c.allowMajorVersionUpgrades {
@@ -317,7 +317,7 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 	// If we're not a terminal, we can't ask for consent
 	// so we error out informing the user how to fix this.
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return fmt.Errorf("unable to prompt for major version upgrade, stdin is not a terminal, pass --allow-major-version-upgrades to continue")
+		return errors.New("unable to prompt for major version upgrade, stdin is not a terminal, pass --allow-major-version-upgrades to continue")
 	}
 
 	gh, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(c.log))
@@ -359,13 +359,13 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 		return err
 	}
 	if !proceed {
-		return fmt.Errorf("Not updating, re-run with --frozen-lockfile to proceed")
+		return errors.New("Not updating, re-run with --frozen-lockfile to proceed")
 	}
 
 	return nil
 }
 
-// writeFile writes a codegen.File to disk based on its current state
+// writeFile writes a codegen.File to disk based on its current state.
 func (c *Command) writeFile(f *codegen.File) error {
 	action := "Created"
 	if f.Deleted {
@@ -403,7 +403,7 @@ func (c *Command) writeFile(f *codegen.File) error {
 	return nil
 }
 
-// writeFiles writes the files to disk
+// writeFiles writes the files to disk.
 func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) error {
 	c.log.Infof("Writing template(s) to disk")
 	for _, tpl := range tpls {
