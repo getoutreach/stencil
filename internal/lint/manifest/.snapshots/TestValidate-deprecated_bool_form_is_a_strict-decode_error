@@ -1,2 +1,2 @@
-error  manifest.yaml:0  invalid manifest: deprecation message must be a string, got !!bool ("true"); the bool form is not supported — supply a migration message; check the YAML syntax and field types near this location
+error  manifest.yaml:0  invalid manifest: deprecation message must be a string; the bool form is not supported — supply a migration message: got !!bool ("true"); check the YAML syntax and field types near this location
 

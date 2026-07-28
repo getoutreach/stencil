@@ -35,6 +35,13 @@ import (
 // localModuleVersion is the version string used for local modules.
 const localModuleVersion = "local"
 
+// ErrVersionRequired indicates a module was declared without a required version.
+var ErrVersionRequired = errors.New("version must be specified for module")
+
+// ErrImportPathMismatch indicates a module's declared import path does not match
+// the path it was imported as.
+var ErrImportPathMismatch = errors.New("module declares a different import path than it was imported as")
+
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
 const ModuleCacheTTL = 30 * time.Minute
 
@@ -90,7 +97,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		tr.Version = localModuleVersion
 	}
 	if tr.Version == "" {
-		return nil, fmt.Errorf("version must be specified for module %q", tr.Name)
+		return nil, fmt.Errorf("%w: %q", ErrVersionRequired, tr.Name)
 	}
 
 	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
@@ -166,8 +173,8 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	// ensure that the manifest name is equal to the import path
 	if manifest.Name != m.Name {
 		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
-			"module declares its import path as %q but was imported as %q",
-			manifest.Name, m.Name,
+			"%w: declared %q but imported as %q",
+			ErrImportPathMismatch, manifest.Name, m.Name,
 		)
 	}
 

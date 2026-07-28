@@ -98,8 +98,6 @@ type ModuleResolveOptions struct {
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
 // service manifest, respecting constraints and channels as needed.
-//
-
 func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*Module, error) {
 	wl := newWorkList(opts)
 

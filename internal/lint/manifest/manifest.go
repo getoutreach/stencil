@@ -27,6 +27,10 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
+// ErrExternalRef indicates a manifest schema attempted to resolve an external
+// $ref, which lint disallows because it must not read the filesystem or network.
+var ErrExternalRef = errors.New("external $ref not allowed in lint")
+
 // LoadResult holds the outcome of decoding a manifest for linting.
 type LoadResult struct {
 	// Manifest is the leniently-decoded manifest, or nil if the YAML could not
@@ -252,7 +256,7 @@ func compileSchema(name string, schema map[string]any) error {
 	// registry includes a "file" scheme loader, which would read local files for a
 	// file:// $ref; overriding LoadURL disables all external reference resolution.
 	jsc.LoadURL = func(ref string) (io.ReadCloser, error) {
-		return nil, fmt.Errorf("external $ref not allowed in lint: %s", ref)
+		return nil, fmt.Errorf("%w: %s", ErrExternalRef, ref)
 	}
 	url := "manifest.yaml/arguments/" + name
 	if err := jsc.AddResource(url, buf); err != nil {

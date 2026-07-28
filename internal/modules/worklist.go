@@ -24,6 +24,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrChannelConflict indicates a module was previously resolved with a
+// different release channel than is now required.
+var ErrChannelConflict = errors.New("unable to resolve module: channel conflict")
+
 // workList is a list of modules to resolve.
 type workList struct {
 	tasks []*resolveModule
@@ -68,9 +72,7 @@ func newWorkList(opts *ModuleResolveOptions) workList {
 		}
 
 		// add the replacements to the string list of replacements
-		for k, v := range sm.Replacements {
-			strReplacements[k] = v
-		}
+		maps.Copy(strReplacements, sm.Replacements)
 	} else if opts.Module != nil {
 		if opts.Replacements == nil {
 			opts.Replacements = make(map[string]*Module)
@@ -272,9 +274,9 @@ func resolveChannel(moduleName, current string, history []resolution) (string, e
 		//
 		// If it doesn't match, we don't know how to resolve the module, so we error.
 		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return "", fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				moduleName, r.channel, r.parentModule, channel)
+			return "", fmt.Errorf("%w: module %s was previously resolved with channel %s "+
+				"(parent: %s), but now requires channel %s",
+				ErrChannelConflict, moduleName, r.channel, r.parentModule, channel)
 		}
 
 		// use the first history entry that has a channel since we can't have multiple channels

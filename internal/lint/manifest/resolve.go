@@ -68,6 +68,8 @@ func resolvePath(root *yaml.Node, path string) int {
 // They form a closed set, so a finding path "arguments.NAME.FIELD" can be split
 // unambiguously even when NAME itself contains dots: the trailing FIELD is one
 // of these, and everything between "arguments." and it is the (flat) NAME.
+//
+//nolint:gochecknoglobals // Why: static set of recognized argument field names.
 var argumentFields = []string{"type", "values", "schema"}
 
 // resolveArgumentPath resolves "arguments.NAME" and "arguments.NAME.FIELD"
