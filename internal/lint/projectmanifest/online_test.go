@@ -180,6 +180,36 @@ func TestCheckArgumentsO2Violation(t *testing.T) {
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
 
+func TestCheckArgumentsO2EnumViolationMessageIsReadable(t *testing.T) {
+	// Regression test: the raw jsonschema library error reads as
+	// `jsonschema: '' does not validate with file:///.../arguments/coverage.provider#/enum: ...`,
+	// which misleads a reader into thinking '' is the offending value and
+	// that the file:// URL is where the schema lives. The finding message
+	// should instead name the actual value, the actual declaring module,
+	// and the schema rule that fired ("enum") without the raw pointer/URL.
+	mods := []ResolvedModule{mod("github.com/getoutreach/stencil-circleci", map[string]configuration.Argument{
+		"coverage.provider": {Schema: map[string]interface{}{
+			"type": "string",
+			"enum": []interface{}{"codecov", "coveralls"},
+		}},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]interface{}{
+			"coverage": map[string]interface{}{"provider": "coverbot"},
+		},
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings))
+	msg := findings[0].Message
+	assert.Assert(t, contains(msg, `"coverbot"`), msg)                              // the actual offending value
+	assert.Assert(t, contains(msg, "github.com/getoutreach/stencil-circleci"), msg) // the declaring module
+	assert.Assert(t, contains(msg, `value must be one of "codecov", "coveralls"`), msg)
+	assert.Assert(t, contains(msg, "schema rule: enum"), msg) // which keyword fired
+	assert.Assert(t, !contains(msg, "jsonschema: ''"), msg)   // no raw library preamble
+	assert.Assert(t, !contains(msg, "file://"), msg)          // no misleading synthetic URL
+}
+
 func TestCheckArgumentsO3RequiredMissing(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
 		"foo": {Required: true},

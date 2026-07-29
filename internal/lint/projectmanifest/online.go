@@ -351,8 +351,8 @@ func checkArguments(res *LoadResult, idx map[string][]declaration) []lint.Findin
 				if len(d.arg.Schema) > 0 {
 					if err := validateValue(name, d.arg.Schema, value); err != nil {
 						f.Errorf("arguments."+name,
-							"argument %q does not satisfy the schema declared by module %q: %v",
-							name, d.importPath, err)
+							"argument %q is set to %s, which does not satisfy the schema declared by module %q: %v",
+							name, formatArgValue(value), d.importPath, err)
 					}
 				}
 			} else {
@@ -414,5 +414,55 @@ func validateValue(name string, schema map[string]interface{}, v interface{}) er
 	if err != nil {
 		return err
 	}
-	return compiled.Validate(v)
+	if err := compiled.Validate(v); err != nil {
+		return simplifyValidationError(err)
+	}
+	return nil
+}
+
+// simplifyValidationError rewrites a *jsonschema.ValidationError into a plain
+// sentence. The library's own Error() reads like:
+//
+//	jsonschema: (empty quotes) does not validate with
+//	file:///.../arguments/coverage.provider#/enum: value must be one of ...
+//
+// Two parts of that are actively misleading rather than just terse: the
+// leading empty quotes is a JSON Pointer into the *value* being checked,
+// empty because the value itself is the whole document (not the value
+// itself, and not an indication anything was blank); and the file:// URL is
+// built from the caller's cwd plus a synthetic path ("service.yaml/arguments/
+// <name>") that AddResource used as a compilation key, not the manifest that
+// actually declares the schema (that's already named separately as the
+// "declared by module" module). We drop both. The one part worth keeping is
+// the schema keyword that rejected the value (e.g. "enum"): for schemas with
+// several rules per argument it says which one fired, so we surface that via
+// KeywordLocation instead — a relative pointer within the schema itself, not
+// tied to the misleading absolute URL.
+func simplifyValidationError(err error) error {
+	ve, ok := err.(*jsonschema.ValidationError)
+	if !ok {
+		return err
+	}
+	leaf := ve
+	for len(leaf.Causes) > 0 {
+		leaf = leaf.Causes[0]
+	}
+	msg := leaf.Message
+	if leaf.InstanceLocation != "" {
+		msg = fmt.Sprintf("%s: %s", leaf.InstanceLocation, msg)
+	}
+	if keyword := strings.TrimPrefix(leaf.KeywordLocation, "/"); keyword != "" {
+		return fmt.Errorf("%s (schema rule: %s)", msg, keyword)
+	}
+	return errors.New(msg)
+}
+
+// formatArgValue renders an argument's value for an error message, quoting
+// strings so e.g. an empty string and a missing value aren't visually
+// identical.
+func formatArgValue(v interface{}) string {
+	if s, ok := v.(string); ok {
+		return fmt.Sprintf("%q", s)
+	}
+	return fmt.Sprintf("%v", v)
 }
