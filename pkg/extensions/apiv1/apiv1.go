@@ -9,20 +9,20 @@ package apiv1
 
 import "encoding/gob"
 
-// init registers known types
+// init registers known types.
 func init() { //nolint:gochecknoinits // Why: see comment
-	gob.Register([]interface{}{})
-	gob.Register(map[string]interface{}{})
-	gob.Register(map[interface{}]interface{}{})
+	gob.Register([]any{})
+	gob.Register(map[string]any{})
+	gob.Register(map[any]any{})
 }
 
 // This block contains the constants for the go-plugin
 // implementation.
 const (
-	// Version that this extension API implements
+	// Version that this extension API implements.
 	Version = 1
 
-	// Name is the plugin name that is served by go-plugin
+	// Name is the plugin name that is served by go-plugin.
 	Name = "extension"
 
 	// CookieKey is a basic UX feature for ensuring that
@@ -46,20 +46,20 @@ type TemplateFunction struct {
 	NumberOfArguments int
 }
 
-// TemplateFunctionExec executes a template function
+// TemplateFunctionExec executes a template function.
 type TemplateFunctionExec struct {
 	// Name is the name of the template function to execute.
 	Name string
 
 	// Arguments are the arbitrary arguments that were passed to this function
-	Arguments []interface{}
+	Arguments []any
 }
 
 // Config is configuration returned by an extension
 // to the extension host.
 type Config struct{}
 
-// Implementation is a plugin implementation
+// Implementation is a plugin implementation.
 type Implementation interface {
 	// GetConfig returns the configuration of this extension.
 	GetConfig() (*Config, error)
@@ -72,5 +72,5 @@ type Implementation interface {
 
 	// ExecuteTemplateFunction executes a provided template function
 	// and returns its response.
-	ExecuteTemplateFunction(t *TemplateFunctionExec) (interface{}, error)
+	ExecuteTemplateFunction(t *TemplateFunctionExec) (any, error)
 }

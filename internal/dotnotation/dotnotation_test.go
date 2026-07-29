@@ -1,10 +1,7 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
-// Description: This file implements a dotnotation parser for
-// accessing a map[string]interface{}
+// Description: This file implements tests for the dotnotation package.
 
-// Package dotnotation implements a dotnotation (hello.world) for
-// accessing fields within a map[string]interface{}
 package dotnotation
 
 import (
@@ -14,21 +11,21 @@ import (
 
 func TestGet(t *testing.T) {
 	type args struct {
-		data interface{}
+		data any
 		key  string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    interface{}
+		want    any
 		wantErr bool
 	}{
 		{
 			name: "should handle basic depths",
 			args: args{
 				key: "hello.world",
-				data: map[interface{}]interface{}{
-					"hello": map[interface{}]interface{}{
+				data: map[any]any{
+					"hello": map[any]any{
 						"world": "hello, world!",
 					},
 				},
@@ -40,7 +37,7 @@ func TestGet(t *testing.T) {
 			name: "should fail on invalid keys",
 			args: args{
 				key:  "hello.world",
-				data: map[interface{}]interface{}{},
+				data: map[any]any{},
 			},
 			want:    nil,
 			wantErr: true,
@@ -49,9 +46,9 @@ func TestGet(t *testing.T) {
 			name: "should support map[int]",
 			args: args{
 				key: "1.2.3",
-				data: map[int]interface{}{
-					1: map[int]interface{}{
-						2: map[int]interface{}{
+				data: map[int]any{
+					1: map[int]any{
+						2: map[int]any{
 							3: 4,
 						},
 					},
@@ -64,9 +61,9 @@ func TestGet(t *testing.T) {
 			name: "should support nested maps",
 			args: args{
 				key: "1.2.3",
-				data: map[string]interface{}{
-					"1": map[int]interface{}{
-						2: map[int]interface{}{
+				data: map[string]any{
+					"1": map[int]any{
+						2: map[int]any{
 							3: 4,
 						},
 					},

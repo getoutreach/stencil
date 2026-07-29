@@ -58,7 +58,7 @@ func TestArgs(t *testing.T) {
 		persist: false,
 		log:     logrus.New(),
 	}
-	st.Args(map[string]interface{}{"hello": "world"})
+	st.Args(map[string]any{"hello": "world"})
 	st.Run(false)
 }
 

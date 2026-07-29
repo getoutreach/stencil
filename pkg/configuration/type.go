@@ -5,6 +5,7 @@
 package configuration
 
 import (
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -13,7 +14,7 @@ import (
 // TemplateRepositoryType specifies what type of a stencil repository the current one is.
 type TemplateRepositoryType string
 
-// This block contains all of the TemplateRepositoryType values
+// This block contains all of the TemplateRepositoryType values.
 const (
 	// TemplateRepositoryTypeExt denotes a repository as being
 	// an extension repository. This means that it contains
@@ -47,8 +48,8 @@ type TemplateRepositoryTypes struct {
 }
 
 // MarshalYAML marshals TemplateRepositoryTypes as a string with comma-separated values.
-func (ts TemplateRepositoryTypes) MarshalYAML() (interface{}, error) {
-	var csv []string
+func (ts *TemplateRepositoryTypes) MarshalYAML() (any, error) {
+	csv := make([]string, 0, len(ts.types))
 	for _, t := range ts.types {
 		csv = append(csv, string(t))
 	}
@@ -80,21 +81,16 @@ func (ts *TemplateRepositoryTypes) UnmarshalYAML(value *yaml.Node) error {
 
 // Types returns the parsed template repository types in declaration order.
 // An empty result means the implicit templates-only default (see Contains).
-func (ts TemplateRepositoryTypes) Types() []TemplateRepositoryType {
+func (ts *TemplateRepositoryTypes) Types() []TemplateRepositoryType {
 	return ts.types
 }
 
 // Contains returns true if current repo needs to serve inpt type, with default assumed
 // to be a templates-only repo (we do not support repos with no purpose).
-func (ts TemplateRepositoryTypes) Contains(t TemplateRepositoryType) bool {
+func (ts *TemplateRepositoryTypes) Contains(t TemplateRepositoryType) bool {
 	if len(ts.types) == 0 {
 		// empty types defaults to templates only (we do not support repos with no purpose)
 		return t == TemplateRepositoryTypeTemplates
 	}
-	for _, ti := range ts.types {
-		if ti == t {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ts.types, t)
 }

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	// We're using embed
+	// We're using embed.
 	_ "embed"
 
 	"github.com/pkg/errors"

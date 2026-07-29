@@ -32,6 +32,15 @@ import (
 	"golang.org/x/term"
 )
 
+// ErrFrozenLockfileFileDependency is returned when a frozen lockfile references
+// a file dependency that can no longer be resolved.
+var ErrFrozenLockfileFileDependency = gerrors.New(
+	"cannot use frozen lockfile for file dependency, re-add replacement or run without --frozen-lockfile")
+
+// ErrUnsupportedMajorVersionUpgrade is returned when a module requires a major
+// version upgrade that is not supported.
+var ErrUnsupportedMajorVersionUpgrade = gerrors.New("unsupported major version upgrade for module")
+
 // Command is a thin wrapper around the codegen package that
 // implements the "stencil" command.
 type Command struct {
@@ -61,7 +70,7 @@ type Command struct {
 	resolverRoutines int
 }
 
-// NewCommand creates a new stencil command
+// NewCommand creates a new stencil command.
 func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun, frozen, usePrerelease,
 	allowMajorVersionUpgrades bool, resolverRoutines int,
 ) *Command {
@@ -96,42 +105,10 @@ func NewCommand(log logrus.FieldLogger, s *configuration.ServiceManifest, dryRun
 	}
 }
 
-// validateStencilVersion ensures that the running Stencil version is
-// compatible with the given Stencil modules.
-func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Module, stencilVersion string) error {
-	// Strip the leading 'v' if it exists
-	sgv, err := msemver.StrictNewVersion(strings.TrimPrefix(stencilVersion, "v"))
-	if err != nil {
-		return err
-	}
-
-	for _, m := range mods {
-		c.log.Infof(" -> %s %s", m.Name, m.Version)
-
-		manifest, err := m.Manifest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get module manifest")
-		}
-
-		if manifest.StencilVersion != "" {
-			versionConstraint, err := msemver.NewConstraint(manifest.StencilVersion)
-			if err != nil {
-				return err
-			}
-			if validated, errs := versionConstraint.Validate(sgv); !validated {
-				return fmt.Errorf("stencil version %s does not match the version constraint (%s) for %s: %w",
-					stencilVersion, manifest.StencilVersion, m.Name, gerrors.Join(errs...))
-			}
-		}
-	}
-
-	return nil
-}
-
 // Run fetches dependencies of the root modules and builds the layered filesystem,
 // after that GenerateFiles is called to actually walk the filesystem and render
 // the templates. This step also does minimal post-processing of the dependencies
-// manifests
+// manifests.
 func (c *Command) Run(ctx context.Context) error {
 	if c.frozenLockfile {
 		if err := c.useModulesFromLock(); err != nil {
@@ -185,12 +162,44 @@ func (c *Command) Run(ctx context.Context) error {
 	return st.PostRun(ctx, c.log)
 }
 
+// validateStencilVersion ensures that the running Stencil version is
+// compatible with the given Stencil modules.
+func (c *Command) validateStencilVersion(ctx context.Context, mods []*modules.Module, stencilVersion string) error {
+	// Strip the leading 'v' if it exists
+	sgv, err := msemver.StrictNewVersion(strings.TrimPrefix(stencilVersion, "v"))
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mods {
+		c.log.Infof(" -> %s %s", m.Name, m.Version)
+
+		manifest, err := m.Manifest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get module manifest")
+		}
+
+		if manifest.StencilVersion != "" {
+			versionConstraint, err := msemver.NewConstraint(manifest.StencilVersion)
+			if err != nil {
+				return err
+			}
+			if validated, errs := versionConstraint.Validate(sgv); !validated {
+				return fmt.Errorf("stencil version %s does not match the version constraint (%s) for %s: %w",
+					stencilVersion, manifest.StencilVersion, m.Name, gerrors.Join(errs...))
+			}
+		}
+	}
+
+	return nil
+}
+
 // useModulesFromLock uses the modules from the lockfile instead
 // of the latest versions, or manually supplied versions in the
 // service manifest.
 func (c *Command) useModulesFromLock() error {
 	if c.lock == nil {
-		return fmt.Errorf("frozen lockfile requires a lockfile to exist")
+		return errors.New("frozen lockfile requires a lockfile to exist")
 	}
 
 	desiredModulesHM := make(map[string]bool)
@@ -220,7 +229,7 @@ func (c *Command) useModulesFromLock() error {
 	if outOfSync {
 		c.log.WithField("reasons", outOfSyncReasons).Debug("lockfile out of sync reasons")
 		c.log.Error("Unable to use frozen lockfile, the lockfile is out of sync with the service.yaml")
-		return fmt.Errorf("lockfile out of sync")
+		return errors.New("lockfile out of sync")
 	}
 
 	// use the versions from the lockfile
@@ -241,7 +250,7 @@ func (c *Command) useModulesFromLock() error {
 		// ensure that a user doesn't try to frozen-lockfile a replaced
 		// module that uses a directory path, as that would be non-deterministic.
 		if strings.HasPrefix(l.URL, "file://") {
-			return fmt.Errorf("cannot use frozen lockfile for file dependency %q, re-add replacement or run without --frozen-lockfile", l.Name)
+			return fmt.Errorf("%w: %q", ErrFrozenLockfileFileDependency, l.Name)
 		}
 
 		// set a constraint on the module that is equal
@@ -306,7 +315,7 @@ func (c *Command) checkForMajorVersions(ctx context.Context, mods []*modules.Mod
 	return nil
 }
 
-// promptMajorVersion prompts the user to upgrade their templates
+// promptMajorVersion prompts the user to upgrade their templates.
 func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, lastm *stencil.LockfileModuleEntry) error {
 	c.log.Infof("Major version bump detected for %q (%s -> %s)", m.Name, lastm.Version, m.Version)
 	if c.allowMajorVersionUpgrades {
@@ -317,7 +326,7 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 	// If we're not a terminal, we can't ask for consent
 	// so we error out informing the user how to fix this.
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return fmt.Errorf("unable to prompt for major version upgrade, stdin is not a terminal, pass --allow-major-version-upgrades to continue")
+		return errors.New("unable to prompt for major version upgrade, stdin is not a terminal, pass --allow-major-version-upgrades to continue")
 	}
 
 	gh, err := github.NewClient(github.WithAllowUnauthenticated(), github.WithLogger(c.log))
@@ -327,7 +336,7 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 
 	spl := strings.Split(m.Name, "/")
 	if len(spl) < 3 {
-		return fmt.Errorf("unsupported major version upgrade for module %q", m.Name)
+		return fmt.Errorf("%w: %q", ErrUnsupportedMajorVersionUpgrade, m.Name)
 	}
 
 	rel, _, err := gh.Repositories.GetReleaseByTag(ctx, spl[1], spl[2], m.Version)
@@ -359,13 +368,13 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 		return err
 	}
 	if !proceed {
-		return fmt.Errorf("Not updating, re-run with --frozen-lockfile to proceed")
+		return errors.New("Not updating, re-run with --frozen-lockfile to proceed")
 	}
 
 	return nil
 }
 
-// writeFile writes a codegen.File to disk based on its current state
+// writeFile writes a codegen.File to disk based on its current state.
 func (c *Command) writeFile(f *codegen.File) error {
 	action := "Created"
 	if f.Deleted {
@@ -403,7 +412,7 @@ func (c *Command) writeFile(f *codegen.File) error {
 	return nil
 }
 
-// writeFiles writes the files to disk
+// writeFiles writes the files to disk.
 func (c *Command) writeFiles(st *codegen.Stencil, tpls []*codegen.Template) error {
 	c.log.Infof("Writing template(s) to disk")
 	for _, tpl := range tpls {

@@ -18,8 +18,12 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// ErrManifestExists is returned when a service manifest already exists in the
+// current directory.
+var ErrManifestExists = errors.New("manifest already exists")
+
 // NewCreateModule returns a new urfave/cli.Command for the
-// create module command
+// create module command.
 func NewCreateModule() *cli.Command {
 	return &cli.Command{
 		Name:        "module",
@@ -75,7 +79,7 @@ func NewCreateModule() *cli.Command {
 				return errors.Wrap(err, "ask for description")
 			}
 
-			releaseOpts := map[string]interface{}{
+			releaseOpts := map[string]any{
 				"enablePrereleases": true,
 			}
 
@@ -88,7 +92,7 @@ func NewCreateModule() *cli.Command {
 				}, {
 					Name: "github.com/getoutreach/stencil-circleci",
 				}},
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"reportingTeam": reportingTeam,
 					"description":   description,
 				},
@@ -101,7 +105,7 @@ func NewCreateModule() *cli.Command {
 			tm.Arguments["releaseOptions"] = releaseOpts
 
 			if _, err := os.Stat(manifestFileName); err == nil {
-				return fmt.Errorf("%s already exists", manifestFileName)
+				return fmt.Errorf("%w: %s", ErrManifestExists, manifestFileName)
 			}
 
 			f, err := os.Create(manifestFileName)

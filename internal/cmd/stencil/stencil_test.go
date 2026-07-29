@@ -1,10 +1,7 @@
 // Copyright 2022 Outreach Corporation. All Rights Reserved.
 
-// Description: See package description
+// Description: This file implements tests for the stencil command.
 
-// Package stencil implements the stencil command, which is
-// essentially a thing wrapper around the codegen package
-// which does most of the heavy lifting.
 package stencil
 
 import (

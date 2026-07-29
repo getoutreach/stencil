@@ -50,7 +50,7 @@ func resolvePath(root *yaml.Node, path string) int {
 	// General dotted mapping walk.
 	cur := top
 	lastKeyLine := 0
-	for _, seg := range strings.Split(path, ".") {
+	for seg := range strings.SplitSeq(path, ".") {
 		if cur == nil || cur.Kind != yaml.MappingNode {
 			return 0
 		}
@@ -68,6 +68,8 @@ func resolvePath(root *yaml.Node, path string) int {
 // They form a closed set, so a finding path "arguments.NAME.FIELD" can be split
 // unambiguously even when NAME itself contains dots: the trailing FIELD is one
 // of these, and everything between "arguments." and it is the (flat) NAME.
+//
+//nolint:gochecknoglobals // Why: static set of recognized argument field names.
 var argumentFields = []string{"type", "values", "schema"}
 
 // resolveArgumentPath resolves "arguments.NAME" and "arguments.NAME.FIELD"
@@ -86,8 +88,8 @@ func resolveArgumentPath(top *yaml.Node, path string) int {
 	// the (bare) argument name.
 	name, field := rest, ""
 	for _, fld := range argumentFields {
-		if strings.HasSuffix(rest, "."+fld) {
-			name = strings.TrimSuffix(rest, "."+fld)
+		if before, ok := strings.CutSuffix(rest, "."+fld); ok {
+			name = before
 			field = fld
 			break
 		}

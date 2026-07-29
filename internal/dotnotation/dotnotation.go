@@ -8,22 +8,32 @@
 package dotnotation
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
+// ErrNotAMap is returned when the provided data is not a map.
+var ErrNotAMap = errors.New("data is not a map")
+
+// ErrKeyNotFound is returned when a key is not found in the map.
+var ErrKeyNotFound = errors.New("key not found")
+
+// ErrKeyNotAMap is returned when an intermediate key is not a map.
+var ErrKeyNotAMap = errors.New("key is not a map")
+
 // Get looks up an entry in data by parsing the "key" into deeply nested keys, traversing it by "dots" in the key name.
-func Get(data interface{}, key string) (interface{}, error) {
+func Get(data any, key string) (any, error) {
 	return get(data, key)
 }
 
-// getFieldOnMap returns a field on a given map
-func getFieldOnMap(data interface{}, key string) (interface{}, error) {
+// getFieldOnMap returns a field on a given map.
+func getFieldOnMap(data any, key string) (any, error) {
 	dataVal := reflect.ValueOf(data)
 	dataTyp := dataVal.Type()
 	if dataTyp.Kind() != reflect.Map {
-		return nil, fmt.Errorf("data is not a map")
+		return nil, ErrNotAMap
 	}
 
 	// iterate over the keys of the map
@@ -47,14 +57,14 @@ func getFieldOnMap(data interface{}, key string) (interface{}, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("key %q not found", key)
+	return nil, fmt.Errorf("%w: %q", ErrKeyNotFound, key)
 }
 
 // get is a recursive function to get a field from a map[interface{}]interface{}
 // this is done by splitting the key on "." and using the first part of the
 // split, if there is anymore parts of the key then get() is called with
-// the non processed part
-func get(data interface{}, key string) (interface{}, error) {
+// the non processed part.
+func get(data any, key string) (any, error) {
 	spl := strings.Split(key, ".")
 
 	v, err := getFieldOnMap(data, spl[0])
@@ -69,7 +79,7 @@ func get(data interface{}, key string) (interface{}, error) {
 		nextKey := spl[1:][0]
 		nextDataTyp := reflect.TypeOf(v)
 		if nextDataTyp == nil || nextDataTyp.Kind() != reflect.Map {
-			return nil, fmt.Errorf("key %q is not a map, got %v on %q", nextKey, nextDataTyp, reflect.TypeOf(data))
+			return nil, fmt.Errorf("%w: key %q got %v on %q", ErrKeyNotAMap, nextKey, nextDataTyp, reflect.TypeOf(data))
 		}
 
 		// pop the first key, and call get() again

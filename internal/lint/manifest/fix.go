@@ -32,6 +32,8 @@ func scalarsEqual(a, b *yaml.Node) bool {
 // decoder drops it, and the strict lint decoder rejects it. The legacy `type:`
 // form placed JSON-Schema keywords (properties, items, …) here as siblings, so
 // these are the keys the fixer consolidates into `schema` when migrating `type`.
+//
+//nolint:gochecknoglobals // Why: static lookup table of known argument fields.
 var knownArgFields = map[string]bool{
 	"description": true,
 	"required":    true,
@@ -156,7 +158,7 @@ func Fix(doc *yaml.Node) []Applied {
 		return nil
 	}
 
-	var applied []Applied
+	applied := make([]Applied, 0, len(root.Content)/2)
 	fixArguments(root, &applied)
 	applied = append(applied, modulefix.FixModules(root)...)
 	return applied

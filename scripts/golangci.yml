@@ -33,9 +33,53 @@ linters:
     - revive
     - staticcheck
     - unconvert
-    # - unparam # Previously suppressed by --fast in v1, disabling for now to avoid noise
-    # - unused # Previously suppressed by --fast in v1, disabling for now to avoid noise
     - whitespace
+    - asciicheck # Flags non-ASCII identifiers (guards against homoglyph/confusable-character tricks).
+    - bidichk # Flags dangerous unicode bidi control characters (Trojan Source-style attacks).
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - dupl
+    - durationcheck
+    - embeddedstructfieldcheck
+    - err113
+    - errname
+    - exptostd
+    - fatcontext
+    - funcorder
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecksumtype
+    - godoclint
+    - godot
+    - gomoddirectives
+    - importas
+    - intrange
+    - iotamixing
+    - makezero
+    - mirror
+    - modernize
+    - musttag
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - perfsprint
+    - prealloc
+    - predeclared
+    - protogetter
+    - recvcheck
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - thelper
+    - unparam
+    - unqueryvet
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - zerologlint
   settings:
     dupl:
       threshold: 100
@@ -60,6 +104,10 @@ linters:
         - style
     gocyclo:
       min-complexity: 25
+    godot:
+      exclude:
+        - "^\\s*<<Stencil::Block\\(.+\\)>>$"
+        - "^\\s*<</Stencil::Block>>$"
     govet:
       enable:
         - shadow
@@ -92,18 +140,12 @@ linters:
         - name: range
         - name: receiver-naming
         - name: time-naming
-        - name: unexported-return
-          disabled: true # Previously suppressed by --fast in v1, disabling for now to avoid noise
         - name: indent-error-flow
         - name: errorf
         - name: empty-block
         - name: superfluous-else
         - name: unreachable-code
         - name: redefines-builtin-id
-        # While we agree with this rule, right now it would break too many
-        # projects. So, we disable it by default.
-        - name: unused-parameter
-          disabled: true
     staticcheck:
       checks:
         [

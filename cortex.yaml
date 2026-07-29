@@ -34,6 +34,9 @@ info:
     ## type: Choose one type from (dashboard,documentation,healthcheck,logs,metrics,runbook)
     ## url: The link url
     ## description(optional): Description to this link
+    - name: Design Document
+      type: documentation
+      url: https://outreachsales-my.sharepoint.com/:w:/g/personal/it_transfer_outreachsales_onmicrosoft_com/EXQdFL_8YKlZcYwIFvLgoVgBPHRhM3jLfvzqdLDQqoMy8w
     - name: API Docs
       type: api_documentation
       url: https://pkg.go.dev/github.com/getoutreach/stencil#section-readme
@@ -43,6 +46,7 @@ info:
     app: stencil
     name: stencil
     repo: https://github.com/getoutreach/stencil
+    tier: tier_2
     framework: stencil
     language: Golang
     stencil_version: v1.44.0
@@ -52,12 +56,15 @@ info:
     product: Outreach
     lifecycle: in_development
     ## <<Stencil::Block(extraAliases)>>
+
     ## <</Stencil::Block>>
     reporting_team: fnd-dt
     lintroller: platinum
   x-cortex-groups:
     - lifecycle:in_development
+    - tier:tier_2
     - product:Outreach
     - language:Golang
     - framework:stencil
+    - type:cli
     - engOrg:fnd

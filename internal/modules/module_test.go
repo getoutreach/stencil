@@ -19,7 +19,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// newLogger creates a new logger for testing
+// newLogger creates a new logger for testing.
 func newLogger() logrus.FieldLogger {
 	log := logrus.New()
 	log.SetLevel(logrus.DebugLevel)
@@ -479,12 +479,11 @@ func TestCanHandleDuplicateConstraints(t *testing.T) {
 		ServiceManifest: &configuration.ServiceManifest{
 			Name: "test-cache-timeout",
 			Modules: func() []*configuration.TemplateRepository {
-				bulkModules := []*configuration.TemplateRepository{
-					{
-						Name:    "github.com/getoutreach/stencil-base",
-						Channel: "stable",
-					},
-				}
+				bulkModules := make([]*configuration.TemplateRepository, 0, 61)
+				bulkModules = append(bulkModules, &configuration.TemplateRepository{
+					Name:    "github.com/getoutreach/stencil-base",
+					Channel: "stable",
+				})
 				for range 30 {
 					bulkModules = append(bulkModules, &configuration.TemplateRepository{
 						Name:    "github.com/getoutreach/stencil-base",

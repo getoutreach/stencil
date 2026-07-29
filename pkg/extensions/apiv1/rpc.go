@@ -12,18 +12,18 @@ import (
 )
 
 // ExtensionPlugin is the high level plugin used by go-plugin
-// it stores both the server and client implementation
+// it stores both the server and client implementation.
 type ExtensionPlugin struct {
 	log  logrus.FieldLogger
 	impl implementationTransport
 }
 
-// Server serves a implementationTransport over net/rpc
-func (p *ExtensionPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+// Server serves a implementationTransport over net/rpc.
+func (p *ExtensionPlugin) Server(*plugin.MuxBroker) (any, error) {
 	return &rpcTransportServer{p.log, p.impl}, nil
 }
 
-// Client serves a Implementation over net/rpc
-func (p *ExtensionPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+// Client serves a Implementation over net/rpc.
+func (p *ExtensionPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &rpcTransportClient{p.log, c}, nil
 }
