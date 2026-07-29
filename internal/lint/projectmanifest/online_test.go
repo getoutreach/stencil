@@ -184,14 +184,14 @@ func TestCheckArgumentsO2EnumViolationMessageIsReadable(t *testing.T) {
 	// Regression test for simplifyValidationError: the finding must name the
 	// real value and module, not jsonschema's raw pointer/URL.
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{
+		"foo": {Schema: map[string]any{
 			"type": "string",
-			"enum": []interface{}{"one", "two"},
+			"enum": []any{"one", "two"},
 		}},
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": "three"},
+		Arguments: map[string]any{"foo": "three"},
 	}}
 	findings := checkArguments(res, idx)
 	assert.Equal(t, 1, len(findings))
