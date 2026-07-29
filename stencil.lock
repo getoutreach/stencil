@@ -12,9 +12,18 @@ modules:
     - name: github.com/getoutreach/stencil-circleci
       url: https://github.com/getoutreach/stencil-circleci
       version: v1.18.0
+    - name: github.com/getoutreach/stencil-discovery
+      url: https://github.com/getoutreach/stencil-discovery
+      version: v1.9.0
     - name: github.com/getoutreach/stencil-golang
       url: https://github.com/getoutreach/stencil-golang
       version: v1.34.0-rc.1
+    - name: github.com/getoutreach/stencil-outreach
+      url: https://github.com/getoutreach/stencil-outreach
+      version: v0.31.1-rc.1
+    - name: github.com/getoutreach/stencil-pipeline
+      url: https://github.com/getoutreach/stencil-pipeline
+      version: v1.2.9
 files:
     - name: .circleci/config.yml
       template: .circleci/config.yml.tpl
@@ -61,6 +70,9 @@ files:
     - name: .vscode/launch.json
       template: .vscode/launch.json.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: .vscode/outreach.code-snippets
+      template: .vscode/outreach.code-snippets.tpl
+      module: github.com/getoutreach/stencil-outreach
     - name: .vscode/private.env
       template: .vscode/private.env.tpl
       module: github.com/getoutreach/stencil-golang
@@ -82,6 +94,9 @@ files:
     - name: cmd/stencil/stencil.go
       template: cmd/main_cli.go.tpl
       module: github.com/getoutreach/stencil-golang
+    - name: cortex.yaml
+      template: cortex.yaml.tpl
+      module: github.com/getoutreach/stencil-outreach
     - name: docs/agents/stencil-commands.md
       template: docs/agents/stencil-commands.md.tpl
       module: github.com/getoutreach/stencil-base
