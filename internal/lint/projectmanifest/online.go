@@ -424,6 +424,11 @@ func validateValue(name string, schema map[string]any, v any) error {
 	return nil
 }
 
+// errSchemaRule is the static root wrapped by simplifyValidationError, so a
+// simplified validation failure stays a stable, comparable error instead of
+// a fresh one on every call (err113).
+var errSchemaRule = errors.New("schema rule failed")
+
 // simplifyValidationError replaces a *jsonschema.ValidationError's own
 // message — which reports an empty JSON pointer as if it were the offending
 // value, and a cwd-based file:// URL as if it were the schema's real
@@ -443,9 +448,9 @@ func simplifyValidationError(err error) error {
 		msg = fmt.Sprintf("%s: %s", leaf.InstanceLocation, msg)
 	}
 	if keyword := strings.TrimPrefix(leaf.KeywordLocation, "/"); keyword != "" {
-		return fmt.Errorf("%s (schema rule: %s)", msg, keyword)
+		return fmt.Errorf("%w %q: %s", errSchemaRule, keyword, msg)
 	}
-	return errors.New(msg)
+	return fmt.Errorf("%w: %s", errSchemaRule, msg)
 }
 
 // formatArgValue quotes string values so an error message can't confuse an

@@ -199,7 +199,7 @@ func TestCheckArgumentsO2EnumViolationMessageIsReadable(t *testing.T) {
 	assert.Assert(t, contains(msg, `"three"`), msg)
 	assert.Assert(t, contains(msg, "github.com/x/a"), msg)
 	assert.Assert(t, contains(msg, `value must be one of "one", "two"`), msg)
-	assert.Assert(t, contains(msg, "schema rule: enum"), msg)
+	assert.Assert(t, contains(msg, `schema rule failed "enum"`), msg)
 	assert.Assert(t, !contains(msg, "jsonschema: ''"), msg)
 	assert.Assert(t, !contains(msg, "file://"), msg)
 }
