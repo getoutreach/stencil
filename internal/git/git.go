@@ -14,17 +14,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-// This block contains errors and regexes
+// This block contains errors and regexes.
 var (
 	// ErrNoHeadBranch is returned when a repository's HEAD (aka default) branch cannot
-	// be determine
+	// be determine.
 	ErrNoHeadBranch = errors.New("failed to find a head branch, does one exist?")
 
 	// ErrNoRemoteHeadBranch is returned when a repository's remote  default/HEAD branch
 	// cannot be determined.
 	ErrNoRemoteHeadBranch = errors.New("failed to get head branch from remote origin")
 
-	// headPattern is used to parse git output to determine the head branch
+	// headPattern is used to parse git output to determine the head branch.
 	headPattern = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
 )
 

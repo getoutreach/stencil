@@ -19,6 +19,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ErrUnsupportedModuleHookData is returned when data passed to a module hook
+// is not a supported type (a slice).
+var ErrUnsupportedModuleHookData = errors.New("unsupported module block data type, supported type is slice")
+
 // TplStencil contains the global functions available to a template for
 // interacting with stencil.
 type TplStencil struct {
@@ -70,7 +74,7 @@ func (s *TplStencil) GetModuleHook(name string) []any {
 //
 //	{{- /* This writes a global into the current context of the template module repository */}}
 //	{{ stencil.SetGlobal "IsGeorgeCool" true }}
-func (s *TplStencil) SetGlobal(name string, data interface{}) error {
+func (s *TplStencil) SetGlobal(name string, data any) error {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return nil
@@ -94,7 +98,7 @@ func (s *TplStencil) SetGlobal(name string, data interface{}) error {
 //
 //	{{- /* This retrieves a global from the current context of the template module repository */}}
 //	{{ $isGeorgeCool := stencil.GetGlobal "IsGeorgeCool" }}
-func (s *TplStencil) GetGlobal(name string) interface{} {
+func (s *TplStencil) GetGlobal(name string) any {
 	k := s.s.sharedData.key(s.t.Module.Name, name)
 
 	if v, ok := s.s.sharedData.globals[k]; ok {
@@ -124,7 +128,7 @@ func (s *TplStencil) GetGlobal(name string) interface{} {
 //
 //	{{- /* This writes to a module hook */}}
 //	{{ stencil.AddToModuleHook "github.com/myorg/repo" "myModuleHook" (list "myData") }}
-func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out, err error) {
+func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err error) {
 	// Only modify on first pass
 	if !s.s.isFirstPass {
 		return nil, nil
@@ -136,20 +140,20 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 
 	v := reflect.ValueOf(data)
 	if !v.IsValid() {
-		err := fmt.Errorf("third parameter, data, must be set")
+		err := errors.New("third parameter, data, must be set")
 		return err, err
 	}
 
 	// we only allow slices or maps to allow multiple templates to
 	// write to the same block
 	if v.Kind() != reflect.Slice {
-		err := fmt.Errorf("unsupported module block data type %q, supported type is slice", v.Kind())
+		err := fmt.Errorf("%w: %q", ErrUnsupportedModuleHookData, v.Kind())
 		return err, err
 	}
 
 	// convert the slice into a []any
 	interfaceSlice := make([]any, v.Len())
-	for i := 0; i < v.Len(); i++ {
+	for i := range v.Len() {
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
@@ -172,7 +176,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data interface{}) (out
 // This is deprecated and will be removed in a future release.
 //
 //	{{- (stencil.Args).name }}
-func (s *TplStencil) Args() map[string]interface{} {
+func (s *TplStencil) Args() map[string]any {
 	return s.s.m.Arguments
 }
 
@@ -206,21 +210,6 @@ func (s *TplStencil) Exists(name string) bool {
 	return ok
 }
 
-// exists returns a billy.File if the file exists, and true. If it doesn't,
-// nil is returned and false.
-func (s *TplStencil) exists(name string) (billy.File, bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, false
-	}
-
-	f, err := osfs.New(cwd).Open(name)
-	if err != nil {
-		return nil, false
-	}
-	return f, true
-}
-
 // ApplyTemplate executes a template inside of the current module
 //
 // This function does not support rendering a template from another module.
@@ -237,14 +226,14 @@ func (s *TplStencil) exists(name string) (billy.File, bool) {
 //	{{- end }}
 //
 //	{{- stencil.ApplyTemplate "command" | file.SetContents }}
-func (s *TplStencil) ApplyTemplate(name string, dataSli ...interface{}) (string, error) {
+func (s *TplStencil) ApplyTemplate(name string, dataSli ...any) (string, error) {
 	// We check for dataSli here because we had to set it to a range of arguments
 	// to allow it to be not set.
 	if len(dataSli) > 1 {
-		return "", fmt.Errorf("ApplyTemplate() only takes max two arguments, name and data")
+		return "", errors.New("ApplyTemplate() only takes max two arguments, name and data")
 	}
 
-	var data interface{}
+	var data any
 	if len(dataSli) == 1 {
 		data = dataSli[0]
 	} else {
@@ -301,9 +290,24 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 // Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
 //
 //	{{- $_ := stencil.Debug "I'm a log!" }}
-func (s *TplStencil) Debug(args ...interface{}) error {
+func (s *TplStencil) Debug(args ...any) error {
 	s.log.WithField("path", s.t.Path).Debug(args...)
 
 	// We have to return something...
 	return nil
+}
+
+// exists returns a billy.File if the file exists, and true. If it doesn't,
+// nil is returned and false.
+func (s *TplStencil) exists(name string) (billy.File, bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, false
+	}
+
+	f, err := osfs.New(cwd).Open(name)
+	if err != nil {
+		return nil, false
+	}
+	return f, true
 }

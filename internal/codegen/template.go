@@ -2,6 +2,7 @@
 
 // Description: This file contains the logic and type for a template
 // that is being rendered by stencil.
+
 package codegen
 
 import (
@@ -15,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Template is a file that has been processed by stencil
+// Template is a file that has been processed by stencil.
 type Template struct {
 	// parsed denotes if this template has been parsed or not
 	parsed bool
@@ -62,7 +63,7 @@ func NewTemplate(m *modules.Module, fpath string, mode os.FileMode,
 }
 
 // ImportPath returns the path to this template, this is meant to denote
-// which module this template is attached to
+// which module this template is attached to.
 func (t *Template) ImportPath() string {
 	return path.Join(t.Module.Name, t.Path)
 }

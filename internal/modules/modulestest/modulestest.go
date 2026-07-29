@@ -20,7 +20,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// addTemplateToFS adds a template to a billy.Filesystem
+// addTemplateToFS adds a template to a billy.Filesystem.
 func addTemplateToFS(fs billy.Filesystem, tpl string) error {
 	srcFile, err := os.Open(tpl)
 	if err != nil {
@@ -39,8 +39,8 @@ func addTemplateToFS(fs billy.Filesystem, tpl string) error {
 	return errors.Wrapf(err, "failed to copy template %q to memfs", tpl)
 }
 
-// NewModuleFromTemplate creates a module with the provided template
-// being the only file in the module.
+// NewModuleFromTemplates creates a module with the provided templates
+// being the only files in the module.
 func NewModuleFromTemplates(manifest *configuration.TemplateRepositoryManifest,
 	templates ...string) (*modules.Module, error) {
 	fs := memfs.New()

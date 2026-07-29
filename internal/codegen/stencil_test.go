@@ -30,7 +30,7 @@ func TestBasicE2ERender(t *testing.T) {
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
-		Arguments: map[string]interface{}{},
+		Arguments: map[string]any{},
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
 	}, logrus.New())
@@ -82,7 +82,7 @@ func TestModuleHookRender(t *testing.T) {
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
-		Arguments: map[string]interface{}{},
+		Arguments: map[string]any{},
 	}, []*modules.Module{m1, m2}, logrus.New())
 
 	tpls, err := st.Render(ctx, logrus.New())
@@ -106,7 +106,7 @@ func ExampleStencil_PostRun() {
 
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
-		Arguments: map[string]interface{}{},
+		Arguments: map[string]any{},
 	}, []*modules.Module{
 		modules.NewWithFS(ctx, "testing", fs),
 	}, logrus.New())

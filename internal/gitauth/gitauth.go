@@ -14,21 +14,21 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 )
 
-// protocol is a protocol for Git
+// protocol is a protocol for Git.
 type protocol string
 
-// This block contains valid protocols
+// This block contains valid protocols.
 const (
-	// protocolSSH is for accessing over SSH
+	// protocolSSH is for accessing over SSH.
 	protocolSSH protocol = "SSH"
 
-	// protocolHTTPS is for accessing over HTTPS
+	// protocolHTTPS is for accessing over HTTPS.
 	protocolHTTPS protocol = "HTTPS"
 )
 
 // ensureURLIsValidForProtocol ensures that a provided gitUrl is valid for the given
 // protocol by parsing it into a URL and then returning a valid URL for the provided
-// protocol
+// protocol.
 func ensureURLIsValidForProtocol(opts *git.CloneOptions, expectedProtocol protocol) error {
 	u, err := giturls.Parse(opts.URL)
 	if err != nil {
@@ -47,7 +47,7 @@ func ensureURLIsValidForProtocol(opts *git.CloneOptions, expectedProtocol protoc
 	return nil
 }
 
-// configureAccessTokenAuth sets up Github access token authentication
+// configureAccessTokenAuth sets up Github access token authentication.
 func configureAccessTokenAuth(token cfg.SecretData, opts *git.CloneOptions) error {
 	opts.Auth = &githttp.BasicAuth{
 		Username: "x-access-token",
@@ -58,7 +58,7 @@ func configureAccessTokenAuth(token cfg.SecretData, opts *git.CloneOptions) erro
 }
 
 // ConfigureAuth configures the provided git.CloneOptions to be authenticated for
-// Github repository clones
+// Github repository clones.
 func ConfigureAuth(accessToken cfg.SecretData, opts *git.CloneOptions) error {
 	// Don't setup auth if no auth token is set
 	if accessToken == "" {

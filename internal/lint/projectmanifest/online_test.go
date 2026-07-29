@@ -56,7 +56,7 @@ func mod(importPath string, args map[string]configuration.Argument, deps ...stri
 func TestBuildArgIndexSimple(t *testing.T) {
 	mods := []ResolvedModule{
 		mod("github.com/x/a", map[string]configuration.Argument{
-			"foo": {Schema: map[string]interface{}{"type": "string"}},
+			"foo": {Schema: map[string]any{"type": "string"}},
 		}),
 	}
 	idx, findings := buildArgIndex(mods)
@@ -69,7 +69,7 @@ func TestBuildArgIndexFromRedirect(t *testing.T) {
 	// module b's arg 'foo' has from: a; a declares foo; b lists a as a dep.
 	mods := []ResolvedModule{
 		mod("github.com/x/a", map[string]configuration.Argument{
-			"foo": {Schema: map[string]interface{}{"type": "string"}},
+			"foo": {Schema: map[string]any{"type": "string"}},
 		}),
 		mod("github.com/x/b", map[string]configuration.Argument{
 			"foo": {From: "github.com/x/a"},
@@ -92,7 +92,7 @@ func TestBuildArgIndexFromMissingDependency(t *testing.T) {
 	// b's foo has from: a, but b does NOT list a as a dependency → O4 error.
 	mods := []ResolvedModule{
 		mod("github.com/x/a", map[string]configuration.Argument{
-			"foo": {Schema: map[string]interface{}{"type": "string"}},
+			"foo": {Schema: map[string]any{"type": "string"}},
 		}),
 		mod("github.com/x/b", map[string]configuration.Argument{
 			"foo": {From: "github.com/x/a"},
@@ -138,8 +138,8 @@ func TestBuildArgIndexFromUnexposedArgument(t *testing.T) {
 func TestBuildArgIndexOwnerNotAliased(t *testing.T) {
 	mods := []ResolvedModule{
 		mod("github.com/x/a", map[string]configuration.Argument{
-			"foo": {Schema: map[string]interface{}{"type": "string"}},
-			"bar": {Schema: map[string]interface{}{"type": "string"}},
+			"foo": {Schema: map[string]any{"type": "string"}},
+			"bar": {Schema: map[string]any{"type": "string"}},
 		}),
 		mod("github.com/x/b", map[string]configuration.Argument{
 			"foo": {From: "github.com/x/a"},
@@ -156,11 +156,11 @@ func TestBuildArgIndexOwnerNotAliased(t *testing.T) {
 
 func TestCheckArgumentsO2Pass(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{"type": "string"}},
+		"foo": {Schema: map[string]any{"type": "string"}},
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": "hello"},
+		Arguments: map[string]any{"foo": "hello"},
 	}}
 	findings := checkArguments(res, idx)
 	assert.Equal(t, 0, len(findings))
@@ -168,11 +168,11 @@ func TestCheckArgumentsO2Pass(t *testing.T) {
 
 func TestCheckArgumentsO2Violation(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{"type": "string"}},
+		"foo": {Schema: map[string]any{"type": "string"}},
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": 123}, // number, want string
+		Arguments: map[string]any{"foo": 123}, // number, want string
 	}}
 	findings := checkArguments(res, idx)
 	assert.Equal(t, 1, len(findings))
@@ -222,7 +222,7 @@ func TestCheckArgumentsO3RequiredSatisfiedByValue(t *testing.T) {
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": "x"},
+		Arguments: map[string]any{"foo": "x"},
 	}}
 	assert.Equal(t, 0, len(checkArguments(res, idx)))
 }
@@ -243,7 +243,7 @@ func TestCheckArgumentsExplicitNullIsNotProvided(t *testing.T) {
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": nil},
+		Arguments: map[string]any{"foo": nil},
 	}}
 	findings := checkArguments(res, idx)
 	assert.Equal(t, 1, len(findings)) // O3 fires
@@ -251,7 +251,7 @@ func TestCheckArgumentsExplicitNullIsNotProvided(t *testing.T) {
 
 func TestCheckArgumentsOptionalOmittedNoFindings(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{"type": "string"}}, // optional
+		"foo": {Schema: map[string]any{"type": "string"}}, // optional
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{Arguments: nil}}
@@ -260,11 +260,11 @@ func TestCheckArgumentsOptionalOmittedNoFindings(t *testing.T) {
 
 func TestCheckArgumentsHermeticExternalRef(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{"$ref": "https://example.com/s.json"}},
+		"foo": {Schema: map[string]any{"$ref": "https://example.com/s.json"}},
 	})}
 	idx, _ := buildArgIndex(mods)
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"foo": "x"},
+		Arguments: map[string]any{"foo": "x"},
 	}}
 	findings := checkArguments(res, idx)
 	assert.Equal(t, 1, len(findings)) // external $ref rejected → O2 error, no fetch
@@ -278,9 +278,9 @@ func TestCheckSchemaConflictsNoneWhenEquivalent(t *testing.T) {
 	idx := map[string][]declaration{
 		"foo": {
 			{importPath: "github.com/x/a", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "string", "minLength": 1}}},
+				Schema: map[string]any{"type": "string", "minLength": 1}}},
 			{importPath: "github.com/x/b", arg: configuration.Argument{
-				Schema: map[string]interface{}{"minLength": 1, "type": "string"}}},
+				Schema: map[string]any{"minLength": 1, "type": "string"}}},
 		},
 	}
 	assert.Equal(t, 0, len(checkSchemaConflicts(idx)))
@@ -290,9 +290,9 @@ func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
 	idx := map[string][]declaration{
 		"foo": {
 			{importPath: "github.com/x/a", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "string"}}},
+				Schema: map[string]any{"type": "string"}}},
 			{importPath: "github.com/x/b", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "integer"}}},
+				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
 	findings := checkSchemaConflicts(idx)
@@ -309,11 +309,11 @@ func TestCheckSchemaConflictsOnePerArgForThreeModules(t *testing.T) {
 	idx := map[string][]declaration{
 		"foo": {
 			{importPath: "github.com/x/a", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "string"}}},
+				Schema: map[string]any{"type": "string"}}},
 			{importPath: "github.com/x/b", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "string"}}},
+				Schema: map[string]any{"type": "string"}}},
 			{importPath: "github.com/x/c", arg: configuration.Argument{
-				Schema: map[string]interface{}{"type": "integer"}}},
+				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
 	findings := checkSchemaConflicts(idx)
@@ -327,7 +327,7 @@ func TestCheckSchemaConflictsNilVsEmptyEquivalent(t *testing.T) {
 		"foo": {
 			{importPath: "github.com/x/a", arg: configuration.Argument{Schema: nil}},
 			{importPath: "github.com/x/b", arg: configuration.Argument{
-				Schema: map[string]interface{}{}}},
+				Schema: map[string]any{}}},
 		},
 	}
 	assert.Equal(t, 0, len(checkSchemaConflicts(idx))) // both "no schema" → equivalent
@@ -385,7 +385,7 @@ func TestValidateOnlineSnapshot(t *testing.T) {
 func TestValidateOnlineO2SeverityPath(t *testing.T) {
 	res, _ := Load(strings.NewReader("name: s\narguments:\n  foo: 123\n"))
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"foo": {Schema: map[string]interface{}{"type": "string"}},
+		"foo": {Schema: map[string]any{"type": "string"}},
 	})}
 	findings := ValidateOnline(res, mods)
 	assert.Equal(t, 1, len(findings))
@@ -425,9 +425,9 @@ func TestValidateOnlineO5O6O7Snapshot(t *testing.T) {
 		"name: s\narguments:\n  ghost: x\nreplacements:\n  github.com/x/nope: https://x\n"))
 	mods := []ResolvedModule{
 		mod("github.com/x/a", map[string]configuration.Argument{
-			"shared": {Schema: map[string]interface{}{"type": "string"}}}),
+			"shared": {Schema: map[string]any{"type": "string"}}}),
 		mod("github.com/x/b", map[string]configuration.Argument{
-			"shared": {Schema: map[string]interface{}{"type": "integer"}}}),
+			"shared": {Schema: map[string]any{"type": "integer"}}}),
 	}
 	cupaloy.SnapshotT(t, renderOnlineFindings(ValidateOnline(res, mods)))
 }
@@ -438,7 +438,7 @@ func TestCheckUndeclaredArgsFlagsUnknown(t *testing.T) {
 		"known": {},
 	})}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"known": "v", "typo": "v"},
+		Arguments: map[string]any{"known": "v", "typo": "v"},
 	}}
 	findings := checkUndeclaredArgs(res, idx, mods)
 	assert.Equal(t, 1, len(findings))
@@ -453,8 +453,8 @@ func TestCheckUndeclaredArgsDottedNameMatches(t *testing.T) {
 		"aws.IRSA": {},
 	})}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{
-			"aws": map[string]interface{}{"IRSA": true},
+		Arguments: map[string]any{
+			"aws": map[string]any{"IRSA": true},
 		},
 	}}
 	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
@@ -464,11 +464,11 @@ func TestCheckUndeclaredArgsCarveOutSuppressesAll(t *testing.T) {
 	// a module declares a catch-all arg (open object) → O7 suppressed entirely.
 	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"catchall": {Schema: map[string]interface{}{
+		"catchall": {Schema: map[string]any{
 			"type": "object", "additionalProperties": true}},
 	})}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"anything": "v"},
+		Arguments: map[string]any{"anything": "v"},
 	}}
 	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
 }
@@ -479,11 +479,11 @@ func TestCheckUndeclaredArgsCarveOutSuppressesAll(t *testing.T) {
 func TestCheckUndeclaredArgsCarveOutNullAdditionalProperties(t *testing.T) {
 	idx := map[string][]declaration{"catchall": {{importPath: "github.com/x/a"}}}
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
-		"catchall": {Schema: map[string]interface{}{
+		"catchall": {Schema: map[string]any{
 			"type": "object", "additionalProperties": nil}},
 	})}
 	res := &LoadResult{Manifest: &configuration.ServiceManifest{
-		Arguments: map[string]interface{}{"anything": "v"},
+		Arguments: map[string]any{"anything": "v"},
 	}}
 	assert.Equal(t, 0, len(checkUndeclaredArgs(res, idx, mods)))
 }

@@ -7,6 +7,7 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,8 +15,41 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// ValidateNameRegexp is the regex used to validate the service's name
+// ValidateNameRegexp is the regex used to validate the service's name.
 const ValidateNameRegexp = `^[_a-z][_a-z0-9-]*$`
+
+// ErrInvalidName indicates that the name field in a service manifest did not
+// satisfy ValidateName.
+var ErrInvalidName = errors.New("name field was invalid")
+
+// ErrDeprecationMessageNotString indicates that a deprecation message was not a
+// YAML string; the legacy bool form is not supported.
+var ErrDeprecationMessageNotString = errors.New(
+	"deprecation message must be a string; the bool form is not supported — supply a migration message")
+
+// ServiceManifest is a manifest used to describe a service and impact
+// what files are included.
+type ServiceManifest struct {
+	// Name is the name of the service
+	Name string `yaml:"name"`
+
+	// Arguments is a map of arbitrary arguments to pass to the generator
+	Arguments map[string]any `yaml:"arguments"`
+
+	// Modules are the template modules that this service depends
+	// on and utilizes
+	Modules []*TemplateRepository `yaml:"modules,omitempty"`
+
+	// Versions is a map of versions of certain tools, this is used by templates
+	// and will likely be replaced with something better in the future.
+	Versions map[string]string `yaml:"versions,omitempty"`
+
+	// Replacements is a list of module names to replace their URI.
+	// Expected format:
+	// - local file: file://path/to/module
+	// - remote file: https://github.com/getoutreach/stencil-base
+	Replacements map[string]string `yaml:"replacements,omitempty"`
+}
 
 // NewServiceManifest reads a service manifest from disk at the
 // specified path, parses it, and returns the output.
@@ -32,7 +66,7 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 	}
 
 	if !ValidateName(s.Name) {
-		return nil, fmt.Errorf("name field in %q was invalid", path)
+		return nil, fmt.Errorf("%w: %q", ErrInvalidName, path)
 	}
 
 	return s, nil
@@ -42,30 +76,6 @@ func NewServiceManifest(path string) (*ServiceManifest, error) {
 // from a set default path on disk.
 func NewDefaultServiceManifest() (*ServiceManifest, error) {
 	return NewServiceManifest("service.yaml")
-}
-
-// ServiceManifest is a manifest used to describe a service and impact
-// what files are included
-type ServiceManifest struct {
-	// Name is the name of the service
-	Name string `yaml:"name"`
-
-	// Arguments is a map of arbitrary arguments to pass to the generator
-	Arguments map[string]interface{} `yaml:"arguments"`
-
-	// Modules are the template modules that this service depends
-	// on and utilizes
-	Modules []*TemplateRepository `yaml:"modules,omitempty"`
-
-	// Versions is a map of versions of certain tools, this is used by templates
-	// and will likely be replaced with something better in the future.
-	Versions map[string]string `yaml:"versions,omitempty"`
-
-	// Replacements is a list of module names to replace their URI.
-	// Expected format:
-	// - local file: file://path/to/module
-	// - remote file: https://github.com/getoutreach/stencil-base
-	Replacements map[string]string `yaml:"replacements,omitempty"`
 }
 
 // TemplateRepository is a repository of template files.
@@ -93,7 +103,7 @@ type TemplateRepository struct {
 	Version string `yaml:"version,omitempty"`
 }
 
-// TemplateRepositoryManifest is a manifest of a template repository
+// TemplateRepositoryManifest is a manifest of a template repository.
 type TemplateRepositoryManifest struct {
 	// Name is the name of this template repository.
 	// This must match the import path.
@@ -120,7 +130,7 @@ type TemplateRepositoryManifest struct {
 }
 
 // PostRunCommandSpec is the spec of a command to be ran and its
-// friendly name
+// friendly name.
 type PostRunCommandSpec struct {
 	// Name is the name of the command being ran, used for UX
 	Name string `yaml:"name"`
@@ -150,13 +160,12 @@ func (d *DeprecationMessage) UnmarshalYAML(value *yaml.Node) error {
 		*d = DeprecationMessage(value.Value)
 		return nil
 	default:
-		return fmt.Errorf("deprecation message must be a string, got %s (%q); "+
-			"the bool form is not supported — supply a migration message", value.Tag, value.Value)
+		return fmt.Errorf("%w: got %s (%q)", ErrDeprecationMessageNotString, value.Tag, value.Value)
 	}
 }
 
 // Argument is a user-input argument that can be passed to
-// templates
+// templates.
 type Argument struct {
 	// Description is a description of this argument.
 	Description string `yaml:"description"`
@@ -166,10 +175,10 @@ type Argument struct {
 
 	// Default is the default value for this argument if it's not set.
 	// This cannot be set when required is true.
-	Default interface{} `yaml:"default"`
+	Default any `yaml:"default"`
 
 	// Schema is a JSON schema, in YAML, for the argument.
-	Schema map[string]interface{} `yaml:"schema"`
+	Schema map[string]any `yaml:"schema"`
 
 	// When non-empty, this marks the argument as deprecated and is the
 	// human-readable migration message shown to consumers. An empty or absent

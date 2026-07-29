@@ -24,7 +24,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// workList is a list of modules to resolve
+// ErrChannelConflict indicates a module was previously resolved with a
+// different release channel than is now required.
+var ErrChannelConflict = errors.New("unable to resolve module: channel conflict")
+
+// workList is a list of modules to resolve.
 type workList struct {
 	tasks []*resolveModule
 	// replacements replace the URL for a module's
@@ -40,7 +44,7 @@ type workList struct {
 	log logrus.FieldLogger
 }
 
-// workItem is a single item in the work list
+// workItem is a single item in the work list.
 type workItem struct {
 	importPath           string
 	inProgressResolution *resolvedModule
@@ -48,7 +52,7 @@ type workItem struct {
 	uri                  string
 }
 
-// newWorkList constructs a list of modules to resolve and a map of string replacements
+// newWorkList constructs a list of modules to resolve and a map of string replacements.
 func newWorkList(opts *ModuleResolveOptions) workList {
 	// start resolving the top-level modules
 	modulesToResolve := make([]*resolveModule, 0)
@@ -68,9 +72,7 @@ func newWorkList(opts *ModuleResolveOptions) workList {
 		}
 
 		// add the replacements to the string list of replacements
-		for k, v := range sm.Replacements {
-			strReplacements[k] = v
-		}
+		maps.Copy(strReplacements, sm.Replacements)
 	} else if opts.Module != nil {
 		if opts.Replacements == nil {
 			opts.Replacements = make(map[string]*Module)
@@ -96,7 +98,7 @@ func newWorkList(opts *ModuleResolveOptions) workList {
 	}
 }
 
-// pop removes and returns the first item in the work list
+// pop removes and returns the first item in the work list.
 func (list *workList) pop() *workItem {
 	list.mu.Lock()
 	defer list.mu.Unlock()
@@ -157,7 +159,7 @@ func (list *workList) pop() *workItem {
 	return &workItem{importPath: importPath, inProgressResolution: rm, spec: resolv, uri: uri}
 }
 
-// push adds a module to the work list
+// push adds a module to the work list.
 func (list *workList) push(task *resolveModule) {
 	list.mu.Lock()
 	defer list.mu.Unlock()
@@ -165,7 +167,7 @@ func (list *workList) push(task *resolveModule) {
 	list.tasks = append(list.tasks, task)
 }
 
-// getLatestModuleForConstraints returns the latest module that satisfies the provided constraints
+// getLatestModuleForConstraints returns the latest module that satisfies the provided constraints.
 func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *workItem, token cfg.SecretData) (*resolver.Version, error) {
 	m := item.spec
 	module := item.inProgressResolution
@@ -223,9 +225,10 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	if err != nil {
 		errorString := ""
 
+		var errorStringSb226 strings.Builder
 		for i := range history {
 			h := &history[i]
-			errorString += strings.Repeat(" ", i*2) + "└─ "
+			errorStringSb226.WriteString(strings.Repeat(" ", i*2) + "└─ ")
 
 			wants := "*"
 			if h.constraint != "" {
@@ -234,8 +237,9 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 				wants = "(channel) " + h.channel
 			}
 
-			errorString += fmt.Sprintln(history[i].parentModule, "wants", wants)
+			errorStringSb226.WriteString(fmt.Sprintln(history[i].parentModule, "wants", wants))
 		}
+		errorString += errorStringSb226.String()
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)
 	}
 
@@ -270,9 +274,9 @@ func resolveChannel(moduleName, current string, history []resolution) (string, e
 		//
 		// If it doesn't match, we don't know how to resolve the module, so we error.
 		if channel != "" && channel != resolver.StableChannel && r.channel != channel {
-			return "", fmt.Errorf("unable to resolve module %s: "+
-				"module was previously resolved with channel %s (parent: %s), but now requires channel %s",
-				moduleName, r.channel, r.parentModule, channel)
+			return "", fmt.Errorf("%w: module %s was previously resolved with channel %s "+
+				"(parent: %s), but now requires channel %s",
+				ErrChannelConflict, moduleName, r.channel, r.parentModule, channel)
 		}
 
 		// use the first history entry that has a channel since we can't have multiple channels

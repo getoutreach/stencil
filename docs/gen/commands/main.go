@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"strings"
 	"text/template"
 
-	// We're using embed
+	// We're using embed.
 	_ "embed"
 
 	"github.com/pkg/errors"
@@ -67,7 +68,7 @@ func generateMarkdown() ([]file, error) {
 		fmt.Println("Generating documentation for command:", strings.Join(cmdArgs, " "))
 		fullArgs := slices.Concat(base[1:], cmdArgs)
 		//nolint:gosec // Why: dev-only generator; the only variable arg is the trusted STENCIL_ROOT path.
-		b, err := exec.Command(base[0], fullArgs...).CombinedOutput()
+		b, err := exec.CommandContext(context.Background(), base[0], fullArgs...).CombinedOutput()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to generate docs for command %q", strings.Join(args, " "))
 		}
@@ -76,7 +77,7 @@ func generateMarkdown() ([]file, error) {
 		parsingCommands := false
 		parsingDocumentation := false
 		documentation := []string{}
-		for _, line := range strings.Split(string(b), "\n") {
+		for line := range strings.SplitSeq(string(b), "\n") {
 			if parsingCommands || parsingDocumentation {
 				// Stop parsing once we get whitespace
 				if strings.TrimSpace(line) == "" {

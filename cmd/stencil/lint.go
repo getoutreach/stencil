@@ -37,6 +37,9 @@ import (
 // templatesDir is the conventional subdirectory holding a module's *.tpl files.
 const templatesDir = "templates"
 
+// ErrLintFailed is returned when lint findings fail the configured policy.
+var ErrLintFailed = errors.New("lint failed")
+
 // stdinName is the placeholder name/path used for stdin ('-') input across
 // both the manifest and templates lint/fix paths, so a finding, log line, or
 // Applied entry sourced from stdin always reads the same way.
@@ -270,7 +273,7 @@ func templateOpenErrorFinding(path string, err error) lint.Finding {
 		return lint.Finding{
 			Severity: lint.SeverityError,
 			Path:     path,
-			Message:  fmt.Sprintf("template file not found: %s", path),
+			Message:  "template file not found: " + path,
 		}
 	}
 	return lint.Finding{
@@ -623,15 +626,15 @@ func manifestRunner(path string) runner {
 	}
 }
 
-// resolveManifestPath resolves path to the manifest file to operate on. If path
-// is a directory, it appends "manifest.yaml". A missing file yields a "manifest
-// file not found" finding (not an error), mirroring resolveManifestReader so the
-// --fix and non-fix paths agree on target location and absence reporting.
-func resolveManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+// resolveManifestPathWithDefault resolves path to a manifest file to operate
+// on. If path is a directory, it appends defaultFilename. A missing file yields
+// a not-found finding (using notFoundMsg) rather than an error, so the --fix and
+// non-fix paths agree on target location and absence reporting.
+func resolveManifestPathWithDefault(path, defaultFilename, notFoundMsg string) (resolved string, finding *lint.Finding, err error) {
 	path = filepath.Clean(path)
 	info, statErr := os.Stat(path)
 	if statErr == nil && info.IsDir() {
-		path = filepath.Join(path, "manifest.yaml")
+		path = filepath.Join(path, defaultFilename)
 		_, statErr = os.Stat(path)
 	}
 	if statErr != nil {
@@ -639,12 +642,20 @@ func resolveManifestPath(path string) (resolved string, finding *lint.Finding, e
 			return path, &lint.Finding{
 				Severity: lint.SeverityError,
 				Path:     path,
-				Message:  fmt.Sprintf("manifest file not found: %s", path),
+				Message:  notFoundMsg + ": " + path,
 			}, nil
 		}
 		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
 	}
 	return path, nil, nil
+}
+
+// resolveManifestPath resolves path to the manifest file to operate on. If path
+// is a directory, it appends "manifest.yaml". A missing file yields a "manifest
+// file not found" finding (not an error), mirroring resolveManifestReader so the
+// --fix and non-fix paths agree on target location and absence reporting.
+func resolveManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
+	return resolveManifestPathWithDefault(path, "manifest.yaml", "manifest file not found")
 }
 
 // resolveReader resolves path to an io.Reader. If path is a directory, it
@@ -869,23 +880,7 @@ func resolveAndValidateProjectManifest(ctx context.Context, log logrus.FieldLogg
 // directory arg has "service.yaml" appended; a missing file yields a
 // not-found finding (not an error), mirroring resolveManifestPath.
 func resolveProjectManifestPath(path string) (resolved string, finding *lint.Finding, err error) {
-	path = filepath.Clean(path)
-	info, statErr := os.Stat(path)
-	if statErr == nil && info.IsDir() {
-		path = filepath.Join(path, "service.yaml")
-		_, statErr = os.Stat(path)
-	}
-	if statErr != nil {
-		if os.IsNotExist(statErr) {
-			return path, &lint.Finding{
-				Severity: lint.SeverityError,
-				Path:     path,
-				Message:  fmt.Sprintf("service manifest file not found: %s", path),
-			}, nil
-		}
-		return path, nil, errors.Wrapf(statErr, "failed to stat %q", path)
-	}
-	return path, nil, nil
+	return resolveManifestPathWithDefault(path, "service.yaml", "service manifest file not found")
 }
 
 // fixProjectManifestBytes applies the project-manifest fixes to raw, writes the
@@ -1049,7 +1044,7 @@ func failIfFindings(findings []lint.Finding, warningsAsErrors bool) error {
 	if !fail {
 		return nil
 	}
-	return fmt.Errorf("lint failed: %d error(s), %d warning(s)", errs, warns)
+	return fmt.Errorf("%w: %d error(s), %d warning(s)", ErrLintFailed, errs, warns)
 }
 
 // stdinIsPipe reports whether stdin is a pipe or a regular-file redirect (i.e.

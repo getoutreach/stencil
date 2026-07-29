@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-// _ ensures that we implement the os.FileInfo interface
+// _ ensures that we implement the os.FileInfo interface.
 var _ os.FileInfo = &File{}
 
-// File is a file that was created by a rendered template
+// File is a file that was created by a rendered template.
 type File struct {
 	// blocks is the contents of all known blocks. Blocks are arbitrary
 	// comments that encompass data that is persisted across runs of stencil. These
@@ -70,7 +70,7 @@ func (f *File) Block(name string) string {
 	return f.blocks[name]
 }
 
-// AddDeprecationNotice adds a deprecation notice to a file
+// AddDeprecationNotice adds a deprecation notice to a file.
 func (f *File) AddDeprecationNotice(msg string) {
 	if f.Warnings == nil {
 		f.Warnings = []string{msg}
@@ -93,22 +93,22 @@ func (f *File) SetPath(path string) error {
 	return nil
 }
 
-// SetMode updates the mode of the file
+// SetMode updates the mode of the file.
 func (f *File) SetMode(mode os.FileMode) {
 	f.mode = mode
 }
 
-// SetContents updates the contents of the current file
+// SetContents updates the contents of the current file.
 func (f *File) SetContents(contents string) {
 	f.contents = []byte(contents)
 }
 
-// Bytes returns the contents of this file as bytes
+// Bytes returns the contents of this file as bytes.
 func (f *File) Bytes() []byte {
 	return f.contents
 }
 
-// String returns the contents of this file as a string
+// String returns the contents of this file as a string.
 func (f *File) String() string {
 	return string(f.Bytes())
 }
@@ -116,34 +116,34 @@ func (f *File) String() string {
 // The below functions implement the os.FileInfo
 // interface
 
-// Name returns the name of the file
+// Name returns the name of the file.
 func (f *File) Name() string {
 	return f.path
 }
 
 // IsDir returns if this is file is a directory or not
-// Note: We only support rendering files currently
+// Note: We only support rendering files currently.
 func (f *File) IsDir() bool {
 	return false
 }
 
-// ModTime returns the last modification time for the file
+// ModTime returns the last modification time for the file.
 func (f *File) ModTime() time.Time {
 	return f.modTime
 }
 
-// Mode returns the file mode
+// Mode returns the file mode.
 func (f *File) Mode() os.FileMode {
 	return f.mode
 }
 
-// Size returns the size of the file
+// Size returns the size of the file.
 func (f *File) Size() int64 {
 	return int64(len(f.contents))
 }
 
 // Sys implements the os.FileInfo.Sys method. This does
 // not do anything.
-func (f *File) Sys() interface{} {
+func (f *File) Sys() any {
 	return nil
 }

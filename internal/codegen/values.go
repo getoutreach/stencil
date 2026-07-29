@@ -40,7 +40,7 @@ type runtime struct {
 }
 
 // git contains information about the current git repository
-// that is being ran in
+// that is being ran in.
 type git struct {
 	// Ref is the current ref of the Git repository, this
 	// is in the refs/<type>/<name> format
@@ -82,16 +82,16 @@ type module struct {
 	Version string
 }
 
-// stencilTemplate contains information about the current template
+// stencilTemplate contains information about the current template.
 type stencilTemplate struct {
 	// Name is the name of the template
 	Name string
 }
 
-// modulesSlice is a list of modules with helpers on top of it
+// modulesSlice is a list of modules with helpers on top of it.
 type modulesSlice []module
 
-// ByName returns a module by name
+// ByName returns a module by name.
 func (m modulesSlice) ByName(name string) module {
 	for _, mod := range m {
 		if mod.Name == name {
@@ -119,29 +119,6 @@ type Values struct {
 
 	// Template is the name of the template being rendered
 	Template stencilTemplate
-}
-
-// Copy returns a copy of the current values
-func (v *Values) Copy() *Values {
-	nv := *v
-	return &nv
-}
-
-// WithModule returns a copy of the current values with the
-// provided module information being set.
-func (v *Values) WithModule(name, version string) *Values {
-	nv := v.Copy()
-	nv.Module.Name = name
-	nv.Module.Version = version
-	return nv
-}
-
-// WithTemplate returns a copy of the current values with the
-// provided template information being set.
-func (v *Values) WithTemplate(name string) *Values {
-	nv := v.Copy()
-	nv.Template.Name = name
-	return nv
 }
 
 // NewValues returns a fully initialized Values
@@ -199,4 +176,27 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	return vals
+}
+
+// Copy returns a copy of the current values.
+func (v *Values) Copy() *Values {
+	nv := *v
+	return &nv
+}
+
+// WithModule returns a copy of the current values with the
+// provided module information being set.
+func (v *Values) WithModule(name, version string) *Values {
+	nv := v.Copy()
+	nv.Module.Name = name
+	nv.Module.Version = version
+	return nv
+}
+
+// WithTemplate returns a copy of the current values with the
+// provided template information being set.
+func (v *Values) WithTemplate(name string) *Values {
+	nv := v.Copy()
+	nv.Template.Name = name
+	return nv
 }

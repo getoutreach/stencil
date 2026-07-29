@@ -17,6 +17,8 @@ import (
 // opaqueLeafPrefixes are the top-level keys whose entries are opaque flat leaf
 // keys: their sub-keys may contain dots (e.g. import paths) but their values are
 // scalars, so a matching finding path has no trailing field to walk into.
+//
+//nolint:gochecknoglobals // Why: static list of opaque-leaf key prefixes.
 var opaqueLeafPrefixes = []string{"arguments.", "versions.", "replacements."}
 
 // resolvePath returns the 1-based line of the key identified by a dotted finding

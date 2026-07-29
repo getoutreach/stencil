@@ -25,6 +25,10 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 )
 
+// ErrExternalRef indicates a schema attempted to resolve an external $ref,
+// which lint disallows because it must not read the filesystem or network.
+var ErrExternalRef = errors.New("external $ref not allowed in lint")
+
 // ValidateOnline runs the offline checks (Validate) then appends the online
 // argument checks (O2–O8) against the already-resolved modules, in a
 // deterministic total order (offline findings first; online sorted by Path,
@@ -36,7 +40,7 @@ func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	offline := Validate(res)
 
 	idx, o4 := buildArgIndex(mods)
-	var online []lint.Finding
+	online := make([]lint.Finding, 0, len(o4))
 	online = append(online, o4...)                                  // O4
 	online = append(online, checkArguments(res, idx)...)            // O2, O3
 	online = append(online, checkReplacements(res, mods)...)        // O5, O8
@@ -128,8 +132,8 @@ func checkUndeclaredArgs(res *LoadResult, idx map[string][]declaration, mods []R
 	declaredTop := map[string]struct{}{}
 	for name := range idx {
 		top := name
-		if i := strings.IndexByte(name, '.'); i >= 0 {
-			top = name[:i]
+		if before, _, ok := strings.Cut(name, "."); ok {
+			top = before
 		}
 		declaredTop[top] = struct{}{}
 	}
@@ -170,7 +174,7 @@ func hasDynamicArg(mods []ResolvedModule) bool {
 				if ap {
 					return true // additionalProperties: true → open
 				}
-			case map[string]interface{}:
+			case map[string]any:
 				return true // additionalProperties is a sub-schema → open
 			}
 		}
@@ -311,7 +315,7 @@ func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
 // as "no schema" and are equivalent to each other. This is a conservative
 // comparison: a cosmetic difference (e.g. an added description) counts as
 // non-equivalent, which is acceptable for a warning.
-func schemaEquivalent(a, b map[string]interface{}) bool {
+func schemaEquivalent(a, b map[string]any) bool {
 	aEmpty, bEmpty := len(a) == 0, len(b) == 0
 	if aEmpty || bEmpty {
 		return aEmpty && bEmpty
@@ -374,11 +378,11 @@ func checkArguments(res *LoadResult, idx map[string][]declaration) []lint.Findin
 // dotted argument names); an absent key returns an error (not provided), a
 // present key returns (value, nil) — including (nil, nil) for an explicit null,
 // which we treat as not provided.
-func providedValue(args map[string]interface{}, name string) (interface{}, bool) {
+func providedValue(args map[string]any, name string) (any, bool) {
 	if args == nil {
 		return nil, false
 	}
-	mapInf := make(map[interface{}]interface{}, len(args))
+	mapInf := make(map[any]any, len(args))
 	for k, v := range args {
 		mapInf[k] = v
 	}
@@ -396,7 +400,7 @@ func providedValue(args map[string]interface{}, name string) (interface{}, bool)
 // (external $ref rejected — no filesystem/network) and validates v against it.
 // Mirrors internal/lint/manifest/compileSchema, extended to also validate a
 // value. It intentionally diverges from render's non-hermetic validateArg.
-func validateValue(name string, schema map[string]interface{}, v interface{}) error {
+func validateValue(name string, schema map[string]any, v any) error {
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(schema); err != nil {
 		return err
@@ -404,7 +408,7 @@ func validateValue(name string, schema map[string]interface{}, v interface{}) er
 	jsc := jsonschema.NewCompiler()
 	jsc.Draft = jsonschema.Draft2020
 	jsc.LoadURL = func(ref string) (io.ReadCloser, error) {
-		return nil, fmt.Errorf("external $ref not allowed in lint: %s", ref)
+		return nil, fmt.Errorf("%w: %s", ErrExternalRef, ref)
 	}
 	url := "service.yaml/arguments/" + name
 	if err := jsc.AddResource(url, buf); err != nil {

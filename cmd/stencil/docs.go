@@ -9,7 +9,7 @@ import (
 )
 
 // NewDocsCommand returns a new urfave/cli.Command for the
-// docs command
+// docs command.
 func NewDocsCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "docs",

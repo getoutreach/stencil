@@ -60,7 +60,7 @@ func TestMultiFileRender(t *testing.T) {
 		time.Now(), []byte(multiFileTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
-	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
+	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]any{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
@@ -82,7 +82,7 @@ func TestMultiFileWithInputRender(t *testing.T) {
 		time.Now(), []byte(multiFileInputTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
-	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
+	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]any{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
@@ -106,7 +106,7 @@ func TestApplyTemplateArgumentPassthrough(t *testing.T) {
 		time.Now(), []byte(applyTemplatePassthroughTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
-	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{
+	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]any{
 		"commands": []string{"hello", "world", "command"},
 	}}
 
@@ -122,7 +122,7 @@ func TestGeneratedBlock(t *testing.T) {
 	tempDir := t.TempDir()
 	fakeFilePath := filepath.Join(tempDir, "generated-block.txt")
 	fs := createFakeModuleFSWithManifest(t, "name: testing\n")
-	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]interface{}{}}
+	sm := &configuration.ServiceManifest{Name: "testing", Arguments: map[string]any{}}
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
 	log := logrus.New()

@@ -28,6 +28,8 @@ type Applied struct {
 // entry here (only reachable if BlockPattern's alternation is ever extended
 // without updating this map) is left unfixed rather than guessed at, so that
 // case fails safe instead of emitting a tag with no comment prefix.
+//
+//nolint:gochecknoglobals // Why: static lookup table mapping legacy prefixes to v2.
 var legacyToV2Prefix = map[string]string{
 	"###":   "##",
 	"///":   "//",
