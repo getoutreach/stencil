@@ -426,8 +426,8 @@ func validateValue(name string, schema map[string]interface{}, v interface{}) er
 // location — with the schema keyword that actually rejected the value (e.g.
 // "enum").
 func simplifyValidationError(err error) error {
-	ve, ok := err.(*jsonschema.ValidationError)
-	if !ok {
+	var ve *jsonschema.ValidationError
+	if !errors.As(err, &ve) {
 		return err
 	}
 	leaf := ve
@@ -446,7 +446,7 @@ func simplifyValidationError(err error) error {
 
 // formatArgValue quotes string values so an error message can't confuse an
 // empty string with a missing one.
-func formatArgValue(v interface{}) string {
+func formatArgValue(v any) string {
 	if s, ok := v.(string); ok {
 		return fmt.Sprintf("%q", s)
 	}
