@@ -420,24 +420,11 @@ func validateValue(name string, schema map[string]interface{}, v interface{}) er
 	return nil
 }
 
-// simplifyValidationError rewrites a *jsonschema.ValidationError into a plain
-// sentence. The library's own Error() reads like:
-//
-//	jsonschema: (empty quotes) does not validate with
-//	file:///.../arguments/coverage.provider#/enum: value must be one of ...
-//
-// Two parts of that are actively misleading rather than just terse: the
-// leading empty quotes is a JSON Pointer into the *value* being checked,
-// empty because the value itself is the whole document (not the value
-// itself, and not an indication anything was blank); and the file:// URL is
-// built from the caller's cwd plus a synthetic path ("service.yaml/arguments/
-// <name>") that AddResource used as a compilation key, not the manifest that
-// actually declares the schema (that's already named separately as the
-// "declared by module" module). We drop both. The one part worth keeping is
-// the schema keyword that rejected the value (e.g. "enum"): for schemas with
-// several rules per argument it says which one fired, so we surface that via
-// KeywordLocation instead — a relative pointer within the schema itself, not
-// tied to the misleading absolute URL.
+// simplifyValidationError replaces a *jsonschema.ValidationError's own
+// message — which reports an empty JSON pointer as if it were the offending
+// value, and a cwd-based file:// URL as if it were the schema's real
+// location — with the schema keyword that actually rejected the value (e.g.
+// "enum").
 func simplifyValidationError(err error) error {
 	ve, ok := err.(*jsonschema.ValidationError)
 	if !ok {
@@ -457,9 +444,8 @@ func simplifyValidationError(err error) error {
 	return errors.New(msg)
 }
 
-// formatArgValue renders an argument's value for an error message, quoting
-// strings so e.g. an empty string and a missing value aren't visually
-// identical.
+// formatArgValue quotes string values so an error message can't confuse an
+// empty string with a missing one.
 func formatArgValue(v interface{}) string {
 	if s, ok := v.(string); ok {
 		return fmt.Sprintf("%q", s)
