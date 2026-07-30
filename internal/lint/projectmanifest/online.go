@@ -355,8 +355,8 @@ func checkArguments(res *LoadResult, idx map[string][]declaration) []lint.Findin
 				if len(d.arg.Schema) > 0 {
 					if err := validateValue(name, d.arg.Schema, value); err != nil {
 						f.Errorf("arguments."+name,
-							"argument %q does not satisfy the schema declared by module %q: %v",
-							name, d.importPath, err)
+							"argument %q is set to %s, which does not satisfy the schema declared by module %q: %v",
+							name, formatArgValue(value), d.importPath, err)
 					}
 				}
 			} else {
@@ -418,5 +418,46 @@ func validateValue(name string, schema map[string]any, v any) error {
 	if err != nil {
 		return err
 	}
-	return compiled.Validate(v)
+	if err := compiled.Validate(v); err != nil {
+		return simplifyValidationError(err)
+	}
+	return nil
+}
+
+// errSchemaRule is the static root wrapped by simplifyValidationError, so a
+// simplified validation failure stays a stable, comparable error instead of
+// a fresh one on every call (err113).
+var errSchemaRule = errors.New("schema rule failed")
+
+// simplifyValidationError replaces a *jsonschema.ValidationError's own
+// message — which reports an empty JSON pointer as if it were the offending
+// value, and a cwd-based file:// URL as if it were the schema's real
+// location — with the schema keyword that actually rejected the value (e.g.
+// "enum").
+func simplifyValidationError(err error) error {
+	var ve *jsonschema.ValidationError
+	if !errors.As(err, &ve) {
+		return err
+	}
+	leaf := ve
+	for len(leaf.Causes) > 0 {
+		leaf = leaf.Causes[0]
+	}
+	msg := leaf.Message
+	if leaf.InstanceLocation != "" {
+		msg = fmt.Sprintf("%s: %s", leaf.InstanceLocation, msg)
+	}
+	if keyword := strings.TrimPrefix(leaf.KeywordLocation, "/"); keyword != "" {
+		return fmt.Errorf("%w %q: %s", errSchemaRule, keyword, msg)
+	}
+	return fmt.Errorf("%w: %s", errSchemaRule, msg)
+}
+
+// formatArgValue quotes string values so an error message can't confuse an
+// empty string with a missing one.
+func formatArgValue(v any) string {
+	if s, ok := v.(string); ok {
+		return fmt.Sprintf("%q", s)
+	}
+	return fmt.Sprintf("%v", v)
 }

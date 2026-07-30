@@ -180,6 +180,30 @@ func TestCheckArgumentsO2Violation(t *testing.T) {
 	assert.Equal(t, "arguments.foo", findings[0].Path)
 }
 
+func TestCheckArgumentsO2EnumViolationMessageIsReadable(t *testing.T) {
+	// Regression test for simplifyValidationError: the finding must name the
+	// real value and module, not jsonschema's raw pointer/URL.
+	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]any{
+			"type": "string",
+			"enum": []any{"one", "two"},
+		}},
+	})}
+	idx, _ := buildArgIndex(mods)
+	res := &LoadResult{Manifest: &configuration.ServiceManifest{
+		Arguments: map[string]any{"foo": "three"},
+	}}
+	findings := checkArguments(res, idx)
+	assert.Equal(t, 1, len(findings))
+	msg := findings[0].Message
+	assert.Assert(t, contains(msg, `"three"`), msg)
+	assert.Assert(t, contains(msg, "github.com/x/a"), msg)
+	assert.Assert(t, contains(msg, `value must be one of "one", "two"`), msg)
+	assert.Assert(t, contains(msg, `schema rule failed "enum"`), msg)
+	assert.Assert(t, !contains(msg, "jsonschema: ''"), msg)
+	assert.Assert(t, !contains(msg, "file://"), msg)
+}
+
 func TestCheckArgumentsO3RequiredMissing(t *testing.T) {
 	mods := []ResolvedModule{mod("github.com/x/a", map[string]configuration.Argument{
 		"foo": {Required: true},
