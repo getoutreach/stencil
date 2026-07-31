@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/AlecAivazis/survey/v2"
+	"github.com/getoutreach/gobox/pkg/cli/prompt"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v3"
@@ -65,17 +65,17 @@ func NewCreateModule() *cli.Command {
 				}
 			}
 
-			var reportingTeam string
-			if err := survey.AskOne(&survey.Input{
+			reportingTeam, err := prompt.Ask(ctx, prompt.Config{
 				Message: "What is the reporting team for this module in the form of a GitHub slug (used in CODEOWNERS)?",
-			}, &reportingTeam); err != nil {
+			})
+			if err != nil {
 				return errors.Wrap(err, "ask for reporting team")
 			}
 
-			var description string
-			if err := survey.AskOne(&survey.Input{
+			description, err := prompt.Ask(ctx, prompt.Config{
 				Message: "Enter a description for the module.",
-			}, &description); err != nil {
+			})
+			if err != nil {
 				return errors.Wrap(err, "ask for description")
 			}
 

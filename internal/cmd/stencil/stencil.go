@@ -15,13 +15,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AlecAivazis/survey/v2"
 	msemver "github.com/Masterminds/semver/v3"
 	bsemver "github.com/blang/semver/v4"
 	"github.com/charmbracelet/glamour"
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/github"
+	"github.com/getoutreach/gobox/pkg/cli/prompt"
 	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -357,14 +357,11 @@ func (c *Command) promptMajorVersion(ctx context.Context, m *modules.Module, las
 
 	fmt.Println(out)
 
-	var proceed bool
-	if err := survey.Ask([]*survey.Question{{
-		Name: "proceed",
-		Prompt: &survey.Confirm{
-			Message: fmt.Sprintf("Proceed with upgrade for module %q (%s -> %s)?", m.Name, lastm.Version, m.Version),
-			Default: true,
-		},
-	}}, &proceed); err != nil {
+	proceed, err := prompt.Confirm(ctx, prompt.ConfirmConfig{
+		Message: fmt.Sprintf("Proceed with upgrade for module %q (%s -> %s)?", m.Name, lastm.Version, m.Version),
+		Default: true,
+	})
+	if err != nil {
 		return err
 	}
 	if !proceed {
