@@ -538,3 +538,29 @@ func TestCheckReplacementsBareLocalPath(t *testing.T) {
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, lint.SeverityError, findings[0].Severity)
 }
+
+func TestBuildArgIndexFromAndRefinesConflict(t *testing.T) {
+	// b's 'foo' sets BOTH from: a and refines: a, with a a resolvable dependency.
+	// Gate 0 must fire BEFORE the from: branch, so the conflict is reported and
+	// the declaration is not indexed via the from: path.
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"foo": {Schema: map[string]any{"type": "string"}},
+		}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"foo": {
+				From:    "github.com/x/a",
+				Refines: "github.com/x/a",
+				Schema:  map[string]any{"type": "string"},
+			},
+		}, "github.com/x/a"),
+	}
+	idx, findings := buildArgIndex(mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+	assert.Assert(t, contains(findings[0].Message, "mutually exclusive"))
+	// Only a's declaration is indexed; b's both-set declaration is skipped.
+	assert.Equal(t, 1, len(idx["foo"]))
+	assert.Equal(t, "github.com/x/a", idx["foo"][0].importPath)
+}

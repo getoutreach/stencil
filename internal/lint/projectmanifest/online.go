@@ -214,6 +214,16 @@ func buildArgIndex(mods []ResolvedModule) (map[string][]declaration, []lint.Find
 		sort.Strings(names)
 		for _, name := range names {
 			arg := rm.Manifest.Arguments[name]
+			// Gate 0: from: and refines: are mutually exclusive. This runs BEFORE
+			// the from: branch below so a both-set declaration cannot silently take
+			// the from: path; it is reported and skipped entirely.
+			if arg.From != "" && arg.Refines != "" {
+				f.Errorf("arguments."+name,
+					"argument %q sets both 'from:' and 'refines:', which are mutually "+
+						"exclusive; use 'from:' to re-export a dependency's argument, or "+
+						"'refines:' to narrow it", name)
+				continue
+			}
 			if arg.From != "" {
 				resolved, ok := resolveFrom(&f, sorted, rm, name, &arg)
 				if !ok {
