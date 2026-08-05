@@ -283,7 +283,7 @@ func TestCheckSchemaConflictsNoneWhenEquivalent(t *testing.T) {
 				Schema: map[string]any{"minLength": 1, "type": "string"}}},
 		},
 	}
-	assert.Equal(t, 0, len(checkSchemaConflicts(idx)))
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, nil)))
 }
 
 func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
@@ -295,7 +295,7 @@ func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
 				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
-	findings := checkSchemaConflicts(idx)
+	findings := checkSchemaConflicts(idx, nil)
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
 	assert.Equal(t, "arguments.foo", findings[0].Path)
@@ -316,7 +316,7 @@ func TestCheckSchemaConflictsOnePerArgForThreeModules(t *testing.T) {
 				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
-	findings := checkSchemaConflicts(idx)
+	findings := checkSchemaConflicts(idx, nil)
 	assert.Equal(t, 1, len(findings))
 	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
 	assert.Assert(t, contains(findings[0].Message, "github.com/x/c"))
@@ -330,7 +330,7 @@ func TestCheckSchemaConflictsNilVsEmptyEquivalent(t *testing.T) {
 				Schema: map[string]any{}}},
 		},
 	}
-	assert.Equal(t, 0, len(checkSchemaConflicts(idx))) // both "no schema" → equivalent
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, nil))) // both "no schema" → equivalent
 }
 
 func TestValidateOnlineRunsOfflineFirst(t *testing.T) {
@@ -563,4 +563,100 @@ func TestBuildArgIndexFromAndRefinesConflict(t *testing.T) {
 	// Only a's declaration is indexed; b's both-set declaration is skipped.
 	assert.Equal(t, 1, len(idx["foo"]))
 	assert.Equal(t, "github.com/x/a", idx["foo"][0].importPath)
+}
+
+func TestCheckRefinesValidSuppressesDeclaredPairOnly(t *testing.T) {
+	base := mod("github.com/getoutreach/stencil-base", map[string]configuration.Argument{
+		"serviceActivities": {Schema: map[string]any{
+			"type": "array", "items": map[string]any{"type": "string"},
+		}},
+	})
+	golang := mod("github.com/getoutreach/stencil-golang", map[string]configuration.Argument{
+		"serviceActivities": {
+			Refines: "github.com/getoutreach/stencil-base",
+			Schema: map[string]any{"type": "array", "items": map[string]any{
+				"type": "string", "enum": []any{"http", "grpc", "temporal", "python"},
+			}},
+		},
+	}, "github.com/getoutreach/stencil-base")
+	// A third module whose schema genuinely disagrees with both.
+	other := mod("github.com/getoutreach/stencil-zzz", map[string]configuration.Argument{
+		"serviceActivities": {Schema: map[string]any{"type": "string"}},
+	})
+	mods := []ResolvedModule{base, golang, other}
+	idx, o4 := buildArgIndex(mods)
+	assert.Equal(t, 0, len(o4))
+	rf, suppressed := checkRefines(idx, mods)
+	assert.Equal(t, 0, len(rf)) // valid narrowing -> no findings
+	o6 := checkSchemaConflicts(idx, suppressed)
+	// base<->golang suppressed; the other module still disagrees -> exactly one O6.
+	assert.Equal(t, 1, len(o6))
+	assert.Equal(t, lint.SeverityWarning, o6[0].Severity)
+}
+
+func TestCheckRefinesInvalidErrorsAndSuppressesO6(t *testing.T) {
+	base := mod("github.com/getoutreach/stencil-base", map[string]configuration.Argument{
+		"commands": {Schema: map[string]any{"type": "string"}},
+	})
+	golang := mod("github.com/getoutreach/stencil-golang", map[string]configuration.Argument{
+		"commands": {
+			Refines: "github.com/getoutreach/stencil-base",
+			Schema:  map[string]any{"type": "number"}, // loosening -> invalid
+		},
+	}, "github.com/getoutreach/stencil-base")
+	mods := []ResolvedModule{base, golang}
+	idx, _ := buildArgIndex(mods)
+	rf, suppressed := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Equal(t, lint.SeverityError, rf[0].Severity)
+	assert.Equal(t, "arguments.commands", rf[0].Path)
+	assert.Assert(t, contains(rf[0].Message, "not a valid narrowing"))
+	// The error replaces the O6 warning for that pair.
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, suppressed)))
+}
+
+func TestCheckRefinesTargetNotADependency(t *testing.T) {
+	base := mod("github.com/getoutreach/stencil-base", map[string]configuration.Argument{
+		"commands": {Schema: map[string]any{"type": "string"}},
+	})
+	// golang refines base but does NOT list base as a dependency.
+	golang := mod("github.com/getoutreach/stencil-golang", map[string]configuration.Argument{
+		"commands": {Refines: "github.com/getoutreach/stencil-base",
+			Schema: map[string]any{"type": "string"}},
+	})
+	mods := []ResolvedModule{base, golang}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Equal(t, lint.SeverityError, rf[0].Severity)
+	assert.Assert(t, contains(rf[0].Message, "does not list"))
+}
+
+func TestCheckRefinesTargetUnresolved(t *testing.T) {
+	// golang lists base as a dep, but base is not in the resolved module set.
+	golang := mod("github.com/getoutreach/stencil-golang", map[string]configuration.Argument{
+		"commands": {Refines: "github.com/getoutreach/stencil-base",
+			Schema: map[string]any{"type": "string"}},
+	}, "github.com/getoutreach/stencil-base")
+	mods := []ResolvedModule{golang}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Assert(t, contains(rf[0].Message, "not in the resolved dependency graph"))
+}
+
+func TestCheckRefinesTargetLacksArgOrSchema(t *testing.T) {
+	// base is present and a dependency, but does not declare 'commands'.
+	base := mod("github.com/getoutreach/stencil-base", map[string]configuration.Argument{
+		"other": {Schema: map[string]any{"type": "string"}},
+	})
+	golang := mod("github.com/getoutreach/stencil-golang", map[string]configuration.Argument{
+		"commands": {Refines: "github.com/getoutreach/stencil-base",
+			Schema: map[string]any{"type": "string"}},
+	}, "github.com/getoutreach/stencil-base")
+	mods := []ResolvedModule{base, golang}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Assert(t, contains(rf[0].Message, "does not declare argument"))
 }
