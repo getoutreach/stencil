@@ -43,6 +43,7 @@ var knownArgFields = map[string]bool{
 	"type":        true,
 	"values":      true,
 	"from":        true,
+	"refines":     true,
 }
 
 // consolidateSchemaSiblings moves every argument sibling key that is not a
