@@ -206,6 +206,15 @@ type Argument struct {
 	// field's are used instead. The name of the argument, the key in the map,
 	// must be the same across both modules.
 	From string `yaml:"from"`
+
+	// Refines names another module (which this module MUST list in `modules:`)
+	// that declares an argument of the same name. Unlike `from:`, the local
+	// schema is KEPT; `refines:` asserts that the local schema is a valid
+	// narrowing (subschema) of the referenced module's schema for the same
+	// argument. The project-manifest linter verifies this and fails (error
+	// severity) if it does not hold. `refines:` and `from:` are mutually
+	// exclusive.
+	Refines string `yaml:"refines,omitempty"`
 }
 
 // ValidateName ensures that the name of a service in the manifest
