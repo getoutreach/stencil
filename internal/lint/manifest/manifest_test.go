@@ -323,6 +323,52 @@ func TestValidateWholeDocumentFindingHasNoLine(t *testing.T) {
 	assert.Equal(t, 0, got[0].Line) // whole-document: no resolvable line
 }
 
+// hasFinding reports whether findings contains a finding at path whose message
+// contains substr.
+func hasFinding(findings []lint.Finding, path, substr string) bool {
+	for _, fnd := range findings {
+		if fnd.Path == path && strings.Contains(fnd.Message, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCheckArgumentsRefinesSchemaStillValidated(t *testing.T) {
+	// A refines: argument keeps its local schema, so an invalid schema must still
+	// be reported (unlike from:, which is skipped).
+	const y = `
+name: github.com/getoutreach/stencil-golang
+modules:
+  - name: github.com/getoutreach/stencil-base
+arguments:
+  commands:
+    refines: github.com/getoutreach/stencil-base
+    schema:
+      type: 123
+`
+	res, err := lintmanifest.Load(strings.NewReader(y))
+	assert.NilError(t, err)
+	findings := lintmanifest.Validate(res)
+	assert.Assert(t, hasFinding(findings, "arguments.commands.schema", "invalid JSON schema"))
+}
+
+func TestCheckArgumentsFromAndRefinesConflict(t *testing.T) {
+	const y = `
+name: github.com/getoutreach/stencil-golang
+modules:
+  - name: github.com/getoutreach/stencil-base
+arguments:
+  commands:
+    from: github.com/getoutreach/stencil-base
+    refines: github.com/getoutreach/stencil-base
+`
+	res, err := lintmanifest.Load(strings.NewReader(y))
+	assert.NilError(t, err)
+	findings := lintmanifest.Validate(res)
+	assert.Assert(t, hasFinding(findings, "arguments.commands", "mutually exclusive"))
+}
+
 // findingLine returns the Line of the first finding at path, failing the test
 // if no such finding exists.
 func findingLine(t *testing.T, findings []lint.Finding, path string) int {
