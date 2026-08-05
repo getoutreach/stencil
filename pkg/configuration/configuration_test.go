@@ -6,6 +6,7 @@ package configuration_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"go.yaml.in/yaml/v3"
@@ -79,4 +80,20 @@ func TestArgumentDeprecatedDecode(t *testing.T) {
 			assert.Equal(t, tt.want != "", arg.Deprecated != "")
 		})
 	}
+}
+
+func TestArgumentRefinesStrictDecode(t *testing.T) {
+	const y = `
+name: github.com/getoutreach/stencil-golang
+arguments:
+  commands:
+    schema:
+      type: array
+    refines: github.com/getoutreach/stencil-base
+`
+	dec := yaml.NewDecoder(strings.NewReader(y))
+	dec.KnownFields(true) // mirror manifest.Load's strict decode
+	var mf configuration.TemplateRepositoryManifest
+	assert.NilError(t, dec.Decode(&mf))
+	assert.Equal(t, "github.com/getoutreach/stencil-base", mf.Arguments["commands"].Refines)
 }
