@@ -182,9 +182,15 @@ func checkArguments(f *lint.Findings, mf *configuration.TemplateRepositoryManife
 
 	for _, name := range names {
 		arg := mf.Arguments[name]
+		if arg.From != "" && arg.Refines != "" {
+			f.Errorf("arguments."+name, "argument sets both 'from:' and 'refines:', which "+
+				"are mutually exclusive; keep 'from:' to re-export the argument or 'refines:' "+
+				"to narrow it")
+		}
 		if arg.From != "" {
 			// from: arguments ignore all other fields at render time; skip
-			// field-level checks to avoid false positives.
+			// field-level checks to avoid false positives. (refines: arguments keep
+			// their local schema and fall through to the checks below.)
 			continue
 		}
 		if arg.Schema != nil {
