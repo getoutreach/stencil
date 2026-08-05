@@ -111,11 +111,17 @@ func enumRefines(child, parent map[string]any) (ok bool, reason string) {
 // propertiesRefines checks object properties: every property the parent declares
 // must be defined and refined by the child.
 func propertiesRefines(child, parent map[string]any) (ok bool, reason string) {
-	// object properties: every parent property must be defined and refined by child.
+	// object properties: every parent property must be defined and refined by
+	// child. Requiring the child to define every parent property can false-reject
+	// a valid narrowing (a closed parent's optional property omitted by a closed
+	// child); this is an accepted conservative false-negative, not a bug.
 	if pp, ok := parent["properties"].(map[string]any); ok {
 		cp, _ := child["properties"].(map[string]any)
 		for _, k := range sortedKeys(pp) {
-			pcs, _ := pp[k].(map[string]any)
+			pcs, ok := pp[k].(map[string]any)
+			if !ok {
+				return false, fmt.Sprintf("parent property %q is not an object schema; cannot verify", k)
+			}
 			ccs, ok := cp[k].(map[string]any)
 			if !ok {
 				return false, fmt.Sprintf("child does not define property %q declared by parent", k)
@@ -196,6 +202,8 @@ func additionalPropertiesRefines(child, parent map[string]any) (ok bool, reason 
 					return false, fmt.Sprintf("property %q must refine the parent's additionalProperties schema: %s", k, reason)
 				}
 			}
+		default:
+			return false, `parent additionalProperties is not a boolean or object schema; cannot verify`
 		}
 	}
 	return true, ""
@@ -248,27 +256,17 @@ func hasBranches(s map[string]any) bool {
 	return ok
 }
 
-// branchesOf returns the schema's anyOf (or oneOf) branch list, or nil when the
-// schema uses neither.
-func branchesOf(s map[string]any) []map[string]any {
-	raw, ok := s["anyOf"]
-	if !ok {
-		raw, ok = s["oneOf"]
+// rawBranches returns the schema's anyOf (or oneOf) value and whether either
+// keyword is present. Presence is reported independently of the value's type so
+// a malformed branch keyword can be told apart from a plain schema.
+func rawBranches(s map[string]any) (raw any, present bool) {
+	if v, ok := s["anyOf"]; ok {
+		return v, true
 	}
-	if !ok {
-		return nil
+	if v, ok := s["oneOf"]; ok {
+		return v, true
 	}
-	list, ok := raw.([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]map[string]any, 0, len(list))
-	for _, b := range list {
-		if m, ok := b.(map[string]any); ok {
-			out = append(out, m)
-		}
-	}
-	return out
+	return nil, false
 }
 
 // withoutBranchKeywords returns a shallow copy of s with anyOf/oneOf removed, so
@@ -291,13 +289,21 @@ func withoutBranchKeywords(s map[string]any) map[string]any {
 // anyOf is not dropped. oneOf is treated like anyOf, which is conservative for a
 // subset check.
 func branchRefines(child, parent map[string]any) (ok bool, reason string) {
+	// oneOf means "exactly one branch matches", so a value matching two parent
+	// branches is rejected by the parent. The branch loop below only proves
+	// child is a subset of the UNION of parent branches (anyOf semantics), which
+	// does not imply child is a subset of an exclusive parent oneOf. Fail closed
+	// rather than model oneOf branch disjointness.
+	if _, parentHasOneOf := parent["oneOf"]; parentHasOneOf {
+		return false, "cannot verify refinement against a parent oneOf (branches may overlap)"
+	}
 	childBranches, ok := effectiveBranches(child)
 	if !ok {
-		return false, "child combines anyOf/oneOf with a conflicting sibling keyword; refinement cannot be verified"
+		return false, "child uses a non-object or malformed anyOf/oneOf branch, or a conflicting sibling keyword; cannot verify refinement"
 	}
 	parentBranches, ok := effectiveBranches(parent)
 	if !ok {
-		return false, "parent combines anyOf/oneOf with a conflicting sibling keyword; refinement cannot be verified"
+		return false, "parent uses a non-object or malformed anyOf/oneOf branch, or a conflicting sibling keyword; cannot verify refinement"
 	}
 	for i, cb := range childBranches {
 		matched := false
@@ -316,18 +322,30 @@ func branchRefines(child, parent map[string]any) (ok bool, reason string) {
 
 // effectiveBranches expands a schema into its anyOf/oneOf branches with the
 // schema's non-branch (sibling) keywords merged into each branch. A schema
-// without branches is a single branch (itself). It reports ok=false when a
-// sibling and a branch constrain the same keyword with different values, since a
-// single map cannot represent that AND; the caller then fails conservatively.
+// without a branch keyword is a single branch (itself).
+//
+// It reports ok=false, so the caller fails conservatively, when the schema
+// cannot be modeled soundly: the branch keyword is present but not a list, a
+// branch element is not an object schema (e.g. a boolean subschema, which may
+// accept all values), or a sibling and a branch constrain the same keyword with
+// different values (a single map cannot represent that AND).
 func effectiveBranches(s map[string]any) ([]map[string]any, bool) {
 	siblings := withoutBranchKeywords(s)
-	branches := branchesOf(s)
-	if branches == nil {
+	raw, present := rawBranches(s)
+	if !present {
 		return []map[string]any{siblings}, true
 	}
-	out := make([]map[string]any, 0, len(branches))
-	for _, b := range branches {
-		merged, ok := mergeSchemas(siblings, b)
+	list, ok := raw.([]any)
+	if !ok {
+		return nil, false // branch keyword present but not a list of schemas
+	}
+	out := make([]map[string]any, 0, len(list))
+	for _, b := range list {
+		bm, ok := b.(map[string]any)
+		if !ok {
+			return nil, false // non-object branch (e.g. a boolean subschema)
+		}
+		merged, ok := mergeSchemas(siblings, bm)
 		if !ok {
 			return nil, false
 		}
@@ -412,27 +430,51 @@ func itemsRefines(child, parent map[string]any) (ok bool, reason string) {
 	if !ok {
 		return false, `child does not constrain "items" as parent does`
 	}
-	if pm, ok := pit.(map[string]any); ok {
-		cm, ok := cit.(map[string]any)
+	switch pm := pit.(type) {
+	case map[string]any:
+		return singleItemsRefines(cit, pm)
+	case []any:
+		return tupleItemsRefines(cit, pm)
+	default:
+		// A boolean or otherwise non-schema items value cannot be modeled soundly
+		// (e.g. items:false forbids any element); fail closed.
+		return false, `parent "items" is not an object or tuple schema; cannot verify`
+	}
+}
+
+// singleItemsRefines handles the single-schema items form: the child's items
+// must itself be a schema that refines the parent's.
+func singleItemsRefines(childItems any, parentItems map[string]any) (ok bool, reason string) {
+	cm, ok := childItems.(map[string]any)
+	if !ok {
+		return false, `child "items" shape does not match parent's`
+	}
+	if ok, reason := refines(cm, parentItems); !ok {
+		return false, "items: " + reason
+	}
+	return true, ""
+}
+
+// tupleItemsRefines handles the tuple items form: the child must be a tuple of
+// the same length, and each element must be an object schema that refines the
+// matching parent element. A non-object element on either side cannot be
+// modeled soundly, so it fails closed.
+func tupleItemsRefines(childItems any, parentItems []any) (ok bool, reason string) {
+	cl, ok := childItems.([]any)
+	if !ok || len(cl) != len(parentItems) {
+		return false, `child "items" tuple does not match parent's length`
+	}
+	for i := range parentItems {
+		pm, ok := parentItems[i].(map[string]any)
 		if !ok {
-			return false, `child "items" shape does not match parent's`
+			return false, fmt.Sprintf("items[%d]: parent element is not an object schema; cannot verify", i)
+		}
+		cm, ok := cl[i].(map[string]any)
+		if !ok {
+			return false, fmt.Sprintf("items[%d]: child element is not an object schema; cannot verify", i)
 		}
 		if ok, reason := refines(cm, pm); !ok {
-			return false, "items: " + reason
-		}
-		return true, ""
-	}
-	if pl, ok := pit.([]any); ok {
-		cl, ok := cit.([]any)
-		if !ok || len(cl) != len(pl) {
-			return false, `child "items" tuple does not match parent's length`
-		}
-		for i := range pl {
-			pm, _ := pl[i].(map[string]any)
-			cm, _ := cl[i].(map[string]any)
-			if ok, reason := refines(cm, pm); !ok {
-				return false, fmt.Sprintf("items[%d]: %s", i, reason)
-			}
+			return false, fmt.Sprintf("items[%d]: %s", i, reason)
 		}
 	}
 	return true, ""

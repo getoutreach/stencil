@@ -110,6 +110,30 @@ func TestRefines(t *testing.T) {
 			map[string]any{"type": "object",
 				"properties":           map[string]any{"x": map[string]any{"type": "string"}},
 				"additionalProperties": map[string]any{"type": "string"}}, true},
+		{"parent oneOf may overlap (cannot verify)",
+			map[string]any{"const": "a"},
+			map[string]any{"oneOf": []any{
+				map[string]any{"type": "string"},
+				map[string]any{"enum": []any{"a"}},
+			}}, false},
+		{"child anyOf boolean branch accepts anything (cannot verify)",
+			map[string]any{"anyOf": []any{map[string]any{"type": "string"}, true}},
+			map[string]any{"type": "string"}, false},
+		{"child anyOf is not a list (cannot verify)",
+			map[string]any{"anyOf": "nonsense"},
+			map[string]any{"type": "string"}, false},
+		{"parent items is a bool (cannot verify)",
+			map[string]any{"type": "array"},
+			map[string]any{"type": "array", "items": true}, false},
+		{"parent property is a bool (cannot verify)",
+			map[string]any{"type": "object", "properties": map[string]any{"x": map[string]any{"type": "string"}}},
+			map[string]any{"type": "object", "properties": map[string]any{"x": true}}, false},
+		{"child oneOf narrows an anyOf parent (valid)",
+			map[string]any{"oneOf": []any{map[string]any{"type": "string"}}},
+			map[string]any{"anyOf": []any{
+				map[string]any{"type": "string"},
+				map[string]any{"type": "integer"},
+			}}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
