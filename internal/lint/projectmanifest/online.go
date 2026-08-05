@@ -40,12 +40,14 @@ func ValidateOnline(res *LoadResult, mods []ResolvedModule) []lint.Finding {
 	offline := Validate(res)
 
 	idx, o4 := buildArgIndex(mods)
+	refinesFindings, suppressed := checkRefines(idx, mods)
 	online := make([]lint.Finding, 0, len(o4))
-	online = append(online, o4...)                                  // O4
-	online = append(online, checkArguments(res, idx)...)            // O2, O3
-	online = append(online, checkReplacements(res, mods)...)        // O5, O8
-	online = append(online, checkSchemaConflicts(idx)...)           // O6
-	online = append(online, checkUndeclaredArgs(res, idx, mods)...) // O7
+	online = append(online, o4...)                                    // O4
+	online = append(online, checkArguments(res, idx)...)              // O2, O3
+	online = append(online, checkReplacements(res, mods)...)          // O5, O8
+	online = append(online, refinesFindings...)                       // refines: preconditions + narrowing
+	online = append(online, checkSchemaConflicts(idx, suppressed)...) // O6
+	online = append(online, checkUndeclaredArgs(res, idx, mods)...)   // O7
 	sortOnline(online)
 
 	return append(offline, online...)
@@ -286,11 +288,108 @@ func resolveFrom(f *lint.Findings, mods []ResolvedModule, owner ResolvedModule,
 	return refArg, true
 }
 
+// refinePair identifies an unordered child<->parent declaration pair for one
+// argument name whose O6 comparison checkSchemaConflicts must skip because a
+// refines: assertion covers it (validated or reported by checkRefines).
+type refinePair struct {
+	name string
+	a, b string // import paths, sorted ascending
+}
+
+// makeRefinePair builds a refinePair with its import paths in a canonical order,
+// so the pair is order-insensitive.
+func makeRefinePair(name, x, y string) refinePair {
+	if x > y {
+		x, y = y, x
+	}
+	return refinePair{name: name, a: x, b: y}
+}
+
+// checkRefines implements the refines: assertion. For every declaration that
+// sets refines:, it validates the preconditions (target listed as a dependency,
+// target resolved, target declares the same argument with a schema) and, when
+// they pass, checks that the local schema is a valid narrowing of the target's.
+// It returns precondition/invalid-narrowing errors plus the set of child<->parent
+// pairs whose O6 warning must be suppressed. Argument names and declarations are
+// processed in sorted order for determinism.
+func checkRefines(idx map[string][]declaration, mods []ResolvedModule) ([]lint.Finding, map[refinePair]struct{}) {
+	var f lint.Findings
+	suppressed := map[refinePair]struct{}{}
+
+	resolved := make(map[string]struct{}, len(mods))
+	for _, m := range mods {
+		resolved[m.ImportPath] = struct{}{}
+	}
+
+	for _, name := range slices.Sorted(maps.Keys(idx)) {
+		decls := idx[name]
+		sorted := make([]declaration, len(decls))
+		copy(sorted, decls)
+		sort.Slice(sorted, func(i, j int) bool { return sorted[i].importPath < sorted[j].importPath })
+
+		for _, d := range sorted {
+			if d.arg.Refines == "" {
+				continue
+			}
+			target := d.arg.Refines
+
+			// Precondition 1: target listed as a dependency of the refining module.
+			listed := false
+			for _, m := range d.owner.Modules {
+				if m.Name == target {
+					listed = true
+					break
+				}
+			}
+			if !listed {
+				f.Errorf("arguments."+name,
+					"argument %q uses 'refines: %s' but module %q does not list %q in its "+
+						"'modules'; add it as a dependency", name, target, d.importPath, target)
+				continue
+			}
+
+			// Precondition 2: target module resolved.
+			if _, ok := resolved[target]; !ok {
+				f.Errorf("arguments."+name,
+					"argument %q refines module %q, but it is not in the resolved dependency "+
+						"graph", name, target)
+				continue
+			}
+
+			// Precondition 3: target declares this argument with a schema.
+			var parent *declaration
+			for i := range decls {
+				if decls[i].importPath == target {
+					parent = &decls[i]
+					break
+				}
+			}
+			if parent == nil || len(parent.arg.Schema) == 0 {
+				f.Errorf("arguments."+name,
+					"argument %q refines module %q, but %q does not declare argument %q with "+
+						"a schema", name, target, target, name)
+				continue
+			}
+
+			// Preconditions pass: the pair is handled here, so O6 must not also warn.
+			suppressed[makeRefinePair(name, d.importPath, target)] = struct{}{}
+			if ok, reason := refines(d.arg.Schema, parent.arg.Schema); !ok {
+				f.Errorf("arguments."+name,
+					"argument %q declares refines %q but its schema is not a valid narrowing: "+
+						"%s", name, target, reason)
+			}
+		}
+	}
+	return f.Items(), suppressed
+}
+
 // checkSchemaConflicts implements O6: for each argument name declared by 2+
 // modules with NON-equivalent schemas, emit one warning naming the first two
-// declarations (in sorted import-path order) whose schemas differ. Never fatal;
-// both schemas still drive O2. Arg names processed in sorted order.
-func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
+// declarations (in sorted import-path order) whose schemas differ. Pairs covered
+// by a refines: assertion (in suppressed) are skipped — they are handled by
+// checkRefines. Never fatal; both schemas still drive O2. Arg names processed in
+// sorted order.
+func checkSchemaConflicts(idx map[string][]declaration, suppressed map[refinePair]struct{}) []lint.Finding {
 	var f lint.Findings
 	for _, name := range slices.Sorted(maps.Keys(idx)) {
 		decls := idx[name]
@@ -305,6 +404,9 @@ func checkSchemaConflicts(idx map[string][]declaration) []lint.Finding {
 		found := false
 		for i := 0; i < len(sorted) && !found; i++ {
 			for j := i + 1; j < len(sorted); j++ {
+				if _, skip := suppressed[makeRefinePair(name, sorted[i].importPath, sorted[j].importPath)]; skip {
+					continue
+				}
 				if !schemaEquivalent(sorted[i].arg.Schema, sorted[j].arg.Schema) {
 					f.Warnf("arguments."+name,
 						"modules %q and %q disagree on the schema for argument %q; "+
