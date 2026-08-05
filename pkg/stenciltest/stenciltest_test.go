@@ -62,6 +62,11 @@ func TestArgs(t *testing.T) {
 	st.Run(false)
 }
 
+func TestModuleHookNotDuplicated(t *testing.T) {
+	st := New(t, "testdata/module-hook-self/consumer.tpl", "testdata/module-hook-self/contributor.tpl")
+	st.Run(true)
+}
+
 // Doing this just to bump up coverage numbers, we essentially test this w/ the Template
 // constructors in each test.
 func TestCoverageHack(t *testing.T) {

@@ -144,7 +144,6 @@ func (t *Template) Run(save bool) {
 		if err != nil {
 			got.Fatalf("could not get modules: %v ", err)
 		}
-		mods = append(mods, m)
 
 		// Reconcile any declared modules with the found module dependencies.
 		for _, m := range mods {
