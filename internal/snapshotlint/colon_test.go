@@ -73,6 +73,7 @@ func TestSnapshotFilenamesAreZipSafe(t *testing.T) {
 // location (internal/snapshotlint/colon_test.go is two directories below
 // the root).
 func findRepoRoot(t *testing.T) string {
+	t.Helper()
 	_, thisFile, _, ok := runtime.Caller(0)
 	assert.Assert(t, ok, "failed to determine the location of this test file")
 	return filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
