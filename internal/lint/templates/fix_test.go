@@ -79,7 +79,7 @@ func TestFixBytes(t *testing.T) {
 			in:   "###Block(x)\n###EndBlock(x)\n",
 		},
 		{
-			name: "mixed legacy and v2 blocks: only the legacy one changes",
+			name: "mixed legacy and v2 blocks - only the legacy one changes",
 			in: "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n## <</Stencil::Block>>\n" +
 				"###Block(b)\n{{ file.Block \"b\" }}\n###EndBlock(b)\n",
 		},
