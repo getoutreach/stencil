@@ -169,7 +169,7 @@ func TestValidate(t *testing.T) {
 			in:   "name: testing\narguments:\n  oldArg:\n    deprecated: true\n",
 		},
 		{
-			name: "from: arg with deprecated produces no info finding",
+			name: "from arg with deprecated produces no info finding",
 			in: "name: testing\nmodules:\n  - name: github.com/getoutreach/stencil-base\n" +
 				"arguments:\n  shared:\n    from: github.com/getoutreach/stencil-base\n    deprecated: ignored\n",
 		},
