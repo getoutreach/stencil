@@ -19,18 +19,15 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// allowedFileNamePunctuation are the ASCII punctuation characters, plus the
-// space character, that golang.org/x/mod/module's (unexported) fileNameOK
-// allows in a module zip file path element, on top of ASCII letters and
-// digits. Every other ASCII character - including `" ' * / : ; < > ? \` |`
-// and all ASCII control characters - is rejected. This must track
-// fileNameOK in golang.org/x/mod/module/module.go exactly; it is not a
+// allowedFileNamePunctuation lists the ASCII punctuation, plus space, that
+// golang.org/x/mod/module's fileNameOK allows in a zip path element, on top
+// of ASCII letters and digits. Must track fileNameOK exactly; this is not a
 // "known bad characters" blocklist.
 const allowedFileNamePunctuation = "!#$%&()+,-.=@[]^_{}~ "
 
-// windowsReservedNames are the path element base names (the portion before
-// the first dot, matched case-insensitively) that Windows reserves as
-// device names, per golang.org/x/mod/module's badWindowsNames.
+// windowsReservedNames are Windows-reserved device names, matched
+// case-insensitively against a path element's portion before its first
+// dot, per golang.org/x/mod/module's badWindowsNames.
 var windowsReservedNames = map[string]bool{
 	"CON": true, "PRN": true, "AUX": true, "NUL": true,
 	"COM1": true, "COM2": true, "COM3": true, "COM4": true, "COM5": true,
@@ -39,20 +36,17 @@ var windowsReservedNames = map[string]bool{
 	"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
 }
 
-// TestSnapshotFilenamesAreZipSafe walks every directory named ".snapshots"
-// in the repository and fails if any file within it has a name that would
-// be rejected by golang.org/x/mod/module.CheckFilePath. Go runs that check
-// when `go get`/`go mod download` packages the module as a zip, so a
-// violation here breaks installing the module - as happened with colons
-// (#514), and, undetected by that fix, semicolons. cupaloy writes a
-// snapshot's filename verbatim from the enclosing test's t.Name(), so any
-// illegal character or reserved name in a subtest name produces a broken
-// snapshot file.
+// TestSnapshotFilenamesAreZipSafe walks every ".snapshots" directory in the
+// repository and fails if a file name would be rejected by
+// golang.org/x/mod/module.CheckFilePath. Go runs that check when `go
+// get`/`go mod download` packages the module as a zip, so a violation here
+// breaks installing the module. cupaloy writes a snapshot's filename
+// verbatim from the enclosing test's t.Name(), so an illegal character or
+// reserved name in a subtest name produces a broken snapshot file.
 //
-// This checks the committed snapshot files directly, rather than parsing Go
-// test sources for how the underlying subtest name was constructed
-// (literal, table-driven struct field, fmt.Sprintf, etc.), since the
-// filename on disk is the actual artifact that breaks `go get`.
+// This checks the committed files directly, rather than parsing test
+// sources for how each subtest name was built, since the filename on disk
+// is the actual artifact that breaks `go get`.
 func TestSnapshotFilenamesAreZipSafe(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 
