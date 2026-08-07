@@ -158,7 +158,7 @@ func TestLint(t *testing.T) {
 			// misuse consumes the outstanding nested credit (innermost scope
 			// first), leaving the outer block "a" open so it later dangles as
 			// rule 2 ("block never closed").
-			name: "misuse consumes nested credit_ outer block still dangles",
+			name: "misuse consumes nested credit - outer block still dangles",
 			in: "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n" +
 				"## <<Stencil::Block(b)>>\n## <</Stencil::EndBlock>>\n",
 		},
@@ -167,7 +167,7 @@ func TestLint(t *testing.T) {
 			// real end tags. The misuse must recover the innermost scope (the
 			// nested credit) first; the SECOND end tag must be flagged as a bare
 			// end tag (rule 3), proving the leftover credit did not swallow it.
-			name: "misuse recovers innermost scope_ trailing end tag is bare",
+			name: "misuse recovers innermost scope - trailing end tag is bare",
 			in: "## <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n" +
 				"## <<Stencil::Block(b)>>\n## <</Stencil::EndBlock>>\n" +
 				"## <</Stencil::Block>>\n## <</Stencil::Block>>\n",
