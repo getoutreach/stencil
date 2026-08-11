@@ -214,7 +214,7 @@ type Argument struct {
 	// argument. The project-manifest linter verifies this and fails (error
 	// severity) if it does not hold. `refines:` and `from:` are mutually
 	// exclusive.
-	Refines string `yaml:"refines,omitempty"`
+	Refines string `yaml:"refines"`
 }
 
 // ValidateName ensures that the name of a service in the manifest
