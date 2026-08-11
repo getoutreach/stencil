@@ -312,9 +312,9 @@ func makeRefinePair(name, x, y string) refinePair {
 // It returns precondition/invalid-narrowing errors plus the set of child<->parent
 // pairs whose O6 warning must be suppressed. Argument names and declarations are
 // processed in sorted order for determinism.
-func checkRefines(idx map[string][]declaration, mods []ResolvedModule) ([]lint.Finding, map[refinePair]struct{}) {
+func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings []lint.Finding, suppressed map[refinePair]struct{}) {
 	var f lint.Findings
-	suppressed := map[refinePair]struct{}{}
+	suppressed = map[refinePair]struct{}{}
 
 	resolved := make(map[string]struct{}, len(mods))
 	for _, m := range mods {
