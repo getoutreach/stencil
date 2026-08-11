@@ -13,29 +13,29 @@ import (
 	"maps"
 	"math"
 	"slices"
+
+	"github.com/getoutreach/gobox/pkg/set"
 )
 
 // metadataKeywords do not constrain values and are ignored when comparing a
 // child schema against its parent.
 //
 //nolint:gochecknoglobals // Why: static set of metadata keywords ignored during refinement.
-var metadataKeywords = map[string]struct{}{
-	"description": {}, "title": {}, "examples": {}, "default": {}, "$comment": {},
-}
+var metadataKeywords = set.Of("description", "title", "examples", "default", "$comment")
 
 // handledKeywords are the keywords refines() compares with a dedicated rule.
 // Any parent keyword outside this set (and outside metadataKeywords) falls back
 // to an equality check.
 //
 //nolint:gochecknoglobals // Why: static set of keywords with a dedicated refinement rule.
-var handledKeywords = map[string]struct{}{
-	"type": {}, "enum": {}, "const": {},
-	"properties": {}, "required": {}, "additionalProperties": {},
-	"items": {}, "anyOf": {}, "oneOf": {},
-	"minimum": {}, "maximum": {}, "minLength": {}, "maxLength": {},
-	"minItems": {}, "maxItems": {}, "multipleOf": {},
-	"pattern": {}, "format": {},
-}
+var handledKeywords = set.Of(
+	"type", "enum", "const",
+	"properties", "required", "additionalProperties",
+	"items", "anyOf", "oneOf",
+	"minimum", "maximum", "minLength", "maxLength",
+	"minItems", "maxItems", "multipleOf",
+	"pattern", "format",
+)
 
 // refines reports whether child is a valid narrowing (subschema) of parent:
 // every value accepted by child is also accepted by parent. On false it returns
@@ -117,7 +117,7 @@ func propertiesRefines(child, parent map[string]any) (ok bool, reason string) {
 	// child); this is an accepted conservative false-negative, not a bug.
 	if pp, ok := parent["properties"].(map[string]any); ok {
 		cp, _ := child["properties"].(map[string]any)
-		for _, k := range sortedKeys(pp) {
+		for _, k := range slices.Sorted(maps.Keys(pp)) {
 			pcs, ok := pp[k].(map[string]any)
 			if !ok {
 				return false, fmt.Sprintf("parent property %q is not an object schema; cannot verify", k)
@@ -138,13 +138,13 @@ func propertiesRefines(child, parent map[string]any) (ok bool, reason string) {
 // parent requires.
 func requiredRefines(child, parent map[string]any) (ok bool, reason string) {
 	// required: child must require at least everything parent requires.
-	if pr := toStringSet(parent["required"]); len(pr) > 0 {
-		cr := toStringSet(child["required"])
-		for _, k := range sortedStringSet(pr) {
-			if _, ok := cr[k]; !ok {
-				return false, fmt.Sprintf("child does not require property %q that parent requires", k)
-			}
-		}
+	pr := toStringSet(parent["required"])
+	if pr.Len() == 0 {
+		return true, ""
+	}
+	cr := toStringSet(child["required"])
+	if missing := set.Sorted(pr.Difference(cr)); len(missing) > 0 {
+		return false, fmt.Sprintf("child does not require property %q that parent requires", missing[0])
 	}
 	return true, ""
 }
@@ -166,10 +166,9 @@ func additionalPropertiesRefines(child, parent map[string]any) (ok bool, reason 
 				}
 				pp, _ := parent["properties"].(map[string]any)
 				cp, _ := child["properties"].(map[string]any)
-				for _, k := range sortedKeys(cp) {
-					if _, allowed := pp[k]; !allowed {
-						return false, fmt.Sprintf("parent forbids additional properties but child adds %q", k)
-					}
+				extra := set.Sorted(set.Collect(maps.Keys(cp)).Difference(set.Collect(maps.Keys(pp))))
+				if len(extra) > 0 {
+					return false, fmt.Sprintf("parent forbids additional properties but child adds %q", extra[0])
 				}
 			}
 			// additionalProperties:true (or absent) imposes no constraint.
@@ -193,10 +192,8 @@ func additionalPropertiesRefines(child, parent map[string]any) (ok bool, reason 
 			// child's schema for it must refine that sub-schema.
 			pp, _ := parent["properties"].(map[string]any)
 			cp, _ := child["properties"].(map[string]any)
-			for _, k := range sortedKeys(cp) {
-				if _, named := pp[k]; named {
-					continue
-				}
+			extra := set.Sorted(set.Collect(maps.Keys(cp)).Difference(set.Collect(maps.Keys(pp))))
+			for _, k := range extra {
 				ccs, _ := cp[k].(map[string]any)
 				if ok, reason := refines(ccs, p); !ok {
 					return false, fmt.Sprintf("property %q must refine the parent's additionalProperties schema: %s", k, reason)
@@ -233,11 +230,8 @@ func patternFormatRefines(child, parent map[string]any) (ok bool, reason string)
 // keyword refines() does not model specially is never treated as a loosening.
 func fallbackRefines(child, parent map[string]any) (ok bool, reason string) {
 	// equality fallback for any other parent keyword.
-	for _, k := range sortedKeys(parent) {
-		if _, meta := metadataKeywords[k]; meta {
-			continue
-		}
-		if _, handled := handledKeywords[k]; handled {
+	for _, k := range slices.Sorted(maps.Keys(parent)) {
+		if metadataKeywords.Contains(k) || handledKeywords.Contains(k) {
 			continue
 		}
 		if canon(child[k]) != canon(parent[k]) {
@@ -372,14 +366,12 @@ func mergeSchemas(a, b map[string]any) (map[string]any, bool) {
 // typeSubset reports whether child's declared type(s) are all within parent's.
 func typeSubset(childType, parentType any) (ok bool, reason string) {
 	cs := toStringSet(childType)
-	if len(cs) == 0 {
+	if cs.Len() == 0 {
 		return false, `child "type" is not a string or list of strings`
 	}
 	ps := toStringSet(parentType)
-	for _, t := range sortedStringSet(cs) {
-		if _, ok := ps[t]; !ok {
-			return false, fmt.Sprintf("type %q is not within parent type %s", t, renderType(parentType))
-		}
+	if extra := set.Sorted(cs.Difference(ps)); len(extra) > 0 {
+		return false, fmt.Sprintf("type %q is not within parent type %s", extra[0], renderType(parentType))
 	}
 	return true, ""
 }
@@ -546,20 +538,20 @@ func asFloat(v any) (float64, bool) {
 }
 
 // toStringSet coerces a string or list-of-strings schema value to a set.
-func toStringSet(v any) map[string]struct{} {
-	out := map[string]struct{}{}
+func toStringSet(v any) set.Set[string] {
+	out := make(set.Set[string])
 	switch t := v.(type) {
 	case string:
-		out[t] = struct{}{}
+		out.Insert(t)
 	case []any:
 		for _, e := range t {
 			if s, ok := e.(string); ok {
-				out[s] = struct{}{}
+				out.Insert(s)
 			}
 		}
 	case []string:
 		for _, s := range t {
-			out[s] = struct{}{}
+			out.Insert(s)
 		}
 	}
 	return out
@@ -572,24 +564,4 @@ func canon(v any) string {
 		return fmt.Sprintf("%v", v)
 	}
 	return string(b)
-}
-
-// sortedKeys returns a schema map's keys in sorted order.
-func sortedKeys(m map[string]any) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
-}
-
-// sortedStringSet returns a string set's members in sorted order.
-func sortedStringSet(m map[string]struct{}) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }
