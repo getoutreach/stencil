@@ -347,9 +347,7 @@ arguments:
     schema:
       type: 123
 `
-	res, err := lintmanifest.Load(strings.NewReader(y))
-	assert.NilError(t, err)
-	findings := lintmanifest.Validate(res)
+	findings := validateString(y)
 	assert.Assert(t, hasFinding(findings, "arguments.commands.schema", "invalid JSON schema"))
 }
 
@@ -363,9 +361,7 @@ arguments:
     from: github.com/getoutreach/stencil-base
     refines: github.com/getoutreach/stencil-base
 `
-	res, err := lintmanifest.Load(strings.NewReader(y))
-	assert.NilError(t, err)
-	findings := lintmanifest.Validate(res)
+	findings := validateString(y)
 	assert.Assert(t, hasFinding(findings, "arguments.commands", "mutually exclusive"))
 }
 
