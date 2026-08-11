@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/getoutreach/gobox/pkg/set"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
 	"github.com/getoutreach/stencil/internal/dotnotation"
@@ -312,13 +313,13 @@ func makeRefinePair(name, x, y string) refinePair {
 // It returns precondition/invalid-narrowing errors plus the set of child<->parent
 // pairs whose O6 warning must be suppressed. Argument names and declarations are
 // processed in sorted order for determinism.
-func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings []lint.Finding, suppressed map[refinePair]struct{}) {
+func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings []lint.Finding, suppressed set.Set[refinePair]) {
 	var f lint.Findings
-	suppressed = map[refinePair]struct{}{}
+	suppressed = make(set.Set[refinePair])
 
-	resolved := make(map[string]struct{}, len(mods))
+	resolved := make(set.Set[string], len(mods))
 	for _, m := range mods {
-		resolved[m.ImportPath] = struct{}{}
+		resolved.Insert(m.ImportPath)
 	}
 
 	for _, name := range slices.Sorted(maps.Keys(idx)) {
@@ -349,7 +350,7 @@ func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings
 			}
 
 			// Precondition 2: target module resolved.
-			if _, ok := resolved[target]; !ok {
+			if !resolved.Contains(target) {
 				f.Errorf("arguments."+name,
 					"argument %q refines module %q, but it is not in the resolved dependency "+
 						"graph", name, target)
@@ -372,7 +373,7 @@ func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings
 			}
 
 			// Preconditions pass: the pair is handled here, so O6 must not also warn.
-			suppressed[makeRefinePair(name, d.importPath, target)] = struct{}{}
+			suppressed.Insert(makeRefinePair(name, d.importPath, target))
 			if ok, reason := refines(d.arg.Schema, parent.arg.Schema); !ok {
 				f.Errorf("arguments."+name,
 					"argument %q declares refines %q but its schema is not a valid narrowing: "+
@@ -389,7 +390,7 @@ func checkRefines(idx map[string][]declaration, mods []ResolvedModule) (findings
 // by a refines: assertion (in suppressed) are skipped — they are handled by
 // checkRefines. Never fatal; both schemas still drive O2. Arg names processed in
 // sorted order.
-func checkSchemaConflicts(idx map[string][]declaration, suppressed map[refinePair]struct{}) []lint.Finding {
+func checkSchemaConflicts(idx map[string][]declaration, suppressed set.Set[refinePair]) []lint.Finding {
 	var f lint.Findings
 	for _, name := range slices.Sorted(maps.Keys(idx)) {
 		decls := idx[name]
@@ -404,7 +405,7 @@ func checkSchemaConflicts(idx map[string][]declaration, suppressed map[refinePai
 		found := false
 		for i := 0; i < len(sorted) && !found; i++ {
 			for j := i + 1; j < len(sorted); j++ {
-				if _, skip := suppressed[makeRefinePair(name, sorted[i].importPath, sorted[j].importPath)]; skip {
+				if suppressed.Contains(makeRefinePair(name, sorted[i].importPath, sorted[j].importPath)) {
 					continue
 				}
 				if !schemaEquivalent(sorted[i].arg.Schema, sorted[j].arg.Schema) {
