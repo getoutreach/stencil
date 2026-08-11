@@ -283,7 +283,7 @@ func TestCheckSchemaConflictsNoneWhenEquivalent(t *testing.T) {
 				Schema: map[string]any{"minLength": 1, "type": "string"}}},
 		},
 	}
-	assert.Equal(t, 0, len(checkSchemaConflicts(idx)))
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, nil)))
 }
 
 func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
@@ -295,7 +295,7 @@ func TestCheckSchemaConflictsWarnsWhenDifferent(t *testing.T) {
 				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
-	findings := checkSchemaConflicts(idx)
+	findings := checkSchemaConflicts(idx, nil)
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, lint.SeverityWarning, findings[0].Severity)
 	assert.Equal(t, "arguments.foo", findings[0].Path)
@@ -316,7 +316,7 @@ func TestCheckSchemaConflictsOnePerArgForThreeModules(t *testing.T) {
 				Schema: map[string]any{"type": "integer"}}},
 		},
 	}
-	findings := checkSchemaConflicts(idx)
+	findings := checkSchemaConflicts(idx, nil)
 	assert.Equal(t, 1, len(findings))
 	assert.Assert(t, contains(findings[0].Message, "github.com/x/a"))
 	assert.Assert(t, contains(findings[0].Message, "github.com/x/c"))
@@ -330,7 +330,7 @@ func TestCheckSchemaConflictsNilVsEmptyEquivalent(t *testing.T) {
 				Schema: map[string]any{}}},
 		},
 	}
-	assert.Equal(t, 0, len(checkSchemaConflicts(idx))) // both "no schema" → equivalent
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, nil))) // both "no schema" → equivalent
 }
 
 func TestValidateOnlineRunsOfflineFirst(t *testing.T) {
@@ -537,4 +537,126 @@ func TestCheckReplacementsBareLocalPath(t *testing.T) {
 	findings := checkReplacements(res, mods)
 	assert.Equal(t, 1, len(findings))
 	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+}
+
+func TestBuildArgIndexFromAndRefinesConflict(t *testing.T) {
+	// b's 'foo' sets BOTH from: a and refines: a, with a a resolvable dependency.
+	// Gate 0 must fire BEFORE the from: branch, so the conflict is reported and
+	// the declaration is not indexed via the from: path.
+	mods := []ResolvedModule{
+		mod("github.com/x/a", map[string]configuration.Argument{
+			"foo": {Schema: map[string]any{"type": "string"}},
+		}),
+		mod("github.com/x/b", map[string]configuration.Argument{
+			"foo": {
+				From:    "github.com/x/a",
+				Refines: "github.com/x/a",
+				Schema:  map[string]any{"type": "string"},
+			},
+		}, "github.com/x/a"),
+	}
+	idx, findings := buildArgIndex(mods)
+	assert.Equal(t, 1, len(findings))
+	assert.Equal(t, lint.SeverityError, findings[0].Severity)
+	assert.Equal(t, "arguments.foo", findings[0].Path)
+	assert.Assert(t, contains(findings[0].Message, "mutually exclusive"))
+	// Only a's declaration is indexed; b's both-set declaration is skipped.
+	assert.Equal(t, 1, len(idx["foo"]))
+	assert.Equal(t, "github.com/x/a", idx["foo"][0].importPath)
+}
+
+func TestCheckRefinesValidSuppressesDeclaredPairOnly(t *testing.T) {
+	a := mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]any{
+			"type": "array", "items": map[string]any{"type": "string"},
+		}},
+	})
+	b := mod("github.com/x/b", map[string]configuration.Argument{
+		"foo": {
+			Refines: "github.com/x/a",
+			Schema: map[string]any{"type": "array", "items": map[string]any{
+				"type": "string", "enum": []any{"http", "grpc", "temporal", "python"},
+			}},
+		},
+	}, "github.com/x/a")
+	// A third module whose schema genuinely disagrees with both.
+	c := mod("github.com/x/c", map[string]configuration.Argument{
+		"foo": {Schema: map[string]any{"type": "string"}},
+	})
+	mods := []ResolvedModule{a, b, c}
+	idx, o4 := buildArgIndex(mods)
+	assert.Equal(t, 0, len(o4))
+	rf, suppressed := checkRefines(idx, mods)
+	assert.Equal(t, 0, len(rf)) // valid narrowing -> no findings
+	o6 := checkSchemaConflicts(idx, suppressed)
+	// a<->b suppressed; c still disagrees -> exactly one O6.
+	assert.Equal(t, 1, len(o6))
+	assert.Equal(t, lint.SeverityWarning, o6[0].Severity)
+}
+
+func TestCheckRefinesInvalidErrorsAndSuppressesO6(t *testing.T) {
+	a := mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]any{"type": "string"}},
+	})
+	b := mod("github.com/x/b", map[string]configuration.Argument{
+		"foo": {
+			Refines: "github.com/x/a",
+			Schema:  map[string]any{"type": "number"}, // loosening -> invalid
+		},
+	}, "github.com/x/a")
+	mods := []ResolvedModule{a, b}
+	idx, _ := buildArgIndex(mods)
+	rf, suppressed := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Equal(t, lint.SeverityError, rf[0].Severity)
+	assert.Equal(t, "arguments.foo", rf[0].Path)
+	assert.Assert(t, contains(rf[0].Message, "not a valid narrowing"))
+	// The error replaces the O6 warning for that pair.
+	assert.Equal(t, 0, len(checkSchemaConflicts(idx, suppressed)))
+}
+
+func TestCheckRefinesTargetNotADependency(t *testing.T) {
+	a := mod("github.com/x/a", map[string]configuration.Argument{
+		"foo": {Schema: map[string]any{"type": "string"}},
+	})
+	// b refines a but does NOT list a as a dependency.
+	b := mod("github.com/x/b", map[string]configuration.Argument{
+		"foo": {Refines: "github.com/x/a",
+			Schema: map[string]any{"type": "string"}},
+	})
+	mods := []ResolvedModule{a, b}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Equal(t, lint.SeverityError, rf[0].Severity)
+	assert.Assert(t, contains(rf[0].Message, "does not list"))
+}
+
+func TestCheckRefinesTargetUnresolved(t *testing.T) {
+	// b lists a as a dep, but a is not in the resolved module set.
+	b := mod("github.com/x/b", map[string]configuration.Argument{
+		"foo": {Refines: "github.com/x/a",
+			Schema: map[string]any{"type": "string"}},
+	}, "github.com/x/a")
+	mods := []ResolvedModule{b}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Assert(t, contains(rf[0].Message, "not in the resolved dependency graph"))
+}
+
+func TestCheckRefinesTargetLacksArgOrSchema(t *testing.T) {
+	// a is present and a dependency, but does not declare 'foo'.
+	a := mod("github.com/x/a", map[string]configuration.Argument{
+		"other": {Schema: map[string]any{"type": "string"}},
+	})
+	b := mod("github.com/x/b", map[string]configuration.Argument{
+		"foo": {Refines: "github.com/x/a",
+			Schema: map[string]any{"type": "string"}},
+	}, "github.com/x/a")
+	mods := []ResolvedModule{a, b}
+	idx, _ := buildArgIndex(mods)
+	rf, _ := checkRefines(idx, mods)
+	assert.Equal(t, 1, len(rf))
+	assert.Assert(t, contains(rf[0].Message, "does not declare argument"))
 }
