@@ -10,12 +10,15 @@ package projectmanifest
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 )
 
 // metadataKeywords do not constrain values and are ignored when comparing a
 // child schema against its parent.
+//
+//nolint:gochecknoglobals // Why: static set of metadata keywords ignored during refinement.
 var metadataKeywords = map[string]struct{}{
 	"description": {}, "title": {}, "examples": {}, "default": {}, "$comment": {},
 }
@@ -23,6 +26,8 @@ var metadataKeywords = map[string]struct{}{
 // handledKeywords are the keywords refines() compares with a dedicated rule.
 // Any parent keyword outside this set (and outside metadataKeywords) falls back
 // to an equality check.
+//
+//nolint:gochecknoglobals // Why: static set of keywords with a dedicated refinement rule.
 var handledKeywords = map[string]struct{}{
 	"type": {}, "enum": {}, "const": {},
 	"properties": {}, "required": {}, "additionalProperties": {},
@@ -36,12 +41,44 @@ var handledKeywords = map[string]struct{}{
 // every value accepted by child is also accepted by parent. On false it returns
 // a human-readable reason naming the first violating keyword. Keywords are
 // visited in a deterministic order so the reason is stable.
-func refines(child, parent map[string]any) (bool, string) {
+func refines(child, parent map[string]any) (ok bool, reason string) {
 	// anyOf/oneOf restructure the whole comparison, so handle them first.
 	if hasBranches(child) || hasBranches(parent) {
 		return branchRefines(child, parent)
 	}
+	if ok, reason := typeRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := enumRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := propertiesRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := requiredRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := additionalPropertiesRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := itemsRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := boundsRefine(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := patternFormatRefines(child, parent); !ok {
+		return false, reason
+	}
+	if ok, reason := fallbackRefines(child, parent); !ok {
+		return false, reason
+	}
+	return true, ""
+}
 
+// typeRefines checks the "type" keyword: when the parent sets a type, the child
+// must set a type that is a subset of it.
+func typeRefines(child, parent map[string]any) (ok bool, reason string) {
 	// type: parent present -> child must set type and be a subset.
 	if pt, ok := parent["type"]; ok {
 		ct, ok := child["type"]
@@ -52,7 +89,12 @@ func refines(child, parent map[string]any) (bool, string) {
 			return false, reason
 		}
 	}
+	return true, ""
+}
 
+// enumRefines checks enum/const: when the parent constrains its allowed values,
+// the child must restrict them to a subset.
+func enumRefines(child, parent map[string]any) (ok bool, reason string) {
 	// enum/const: parent constrains values -> child must restrict to a subset.
 	if pe := effectiveEnum(parent); pe != nil {
 		ce := effectiveEnum(child)
@@ -63,7 +105,12 @@ func refines(child, parent map[string]any) (bool, string) {
 			return false, `child "enum"/"const" is not a subset of parent's allowed values`
 		}
 	}
+	return true, ""
+}
 
+// propertiesRefines checks object properties: every property the parent declares
+// must be defined and refined by the child.
+func propertiesRefines(child, parent map[string]any) (ok bool, reason string) {
 	// object properties: every parent property must be defined and refined by child.
 	if pp, ok := parent["properties"].(map[string]any); ok {
 		cp, _ := child["properties"].(map[string]any)
@@ -78,7 +125,12 @@ func refines(child, parent map[string]any) (bool, string) {
 			}
 		}
 	}
+	return true, ""
+}
 
+// requiredRefines checks required: the child must require at least everything the
+// parent requires.
+func requiredRefines(child, parent map[string]any) (ok bool, reason string) {
 	// required: child must require at least everything parent requires.
 	if pr := toStringSet(parent["required"]); len(pr) > 0 {
 		cr := toStringSet(child["required"])
@@ -88,7 +140,12 @@ func refines(child, parent map[string]any) (bool, string) {
 			}
 		}
 	}
+	return true, ""
+}
 
+// additionalPropertiesRefines checks additionalProperties: the child must be at
+// least as strict as the parent about extra keys.
+func additionalPropertiesRefines(child, parent map[string]any) (ok bool, reason string) {
 	// additionalProperties: the child must be at least as strict as the parent.
 	if pap, ok := parent["additionalProperties"]; ok {
 		switch p := pap.(type) {
@@ -141,19 +198,13 @@ func refines(child, parent map[string]any) (bool, string) {
 			}
 		}
 	}
+	return true, ""
+}
 
-	// items: child items schema must refine parent items schema.
-	if ok, reason := itemsRefines(child, parent); !ok {
-		return false, reason
-	}
-
-	// numeric/length bounds: child may add a bound or tighten an existing one.
-	if ok, reason := boundsRefine(child, parent); !ok {
-		return false, reason
-	}
-
-	// pattern/format: child must keep parent's constraint; if both present they
-	// must be equal (subsumption of two regexes cannot be proven cheaply).
+// patternFormatRefines checks pattern/format: the child must keep the parent's
+// constraint; if both present they must be equal (subsumption of two regexes
+// cannot be proven cheaply).
+func patternFormatRefines(child, parent map[string]any) (ok bool, reason string) {
 	for _, kw := range []string{"pattern", "format"} {
 		pv, ok := parent[kw]
 		if !ok {
@@ -167,7 +218,12 @@ func refines(child, parent map[string]any) (bool, string) {
 			return false, fmt.Sprintf("child %q differs from parent's; subsumption cannot be proven", kw)
 		}
 	}
+	return true, ""
+}
 
+// fallbackRefines applies an equality check to any other parent keyword, so a
+// keyword refines() does not model specially is never treated as a loosening.
+func fallbackRefines(child, parent map[string]any) (ok bool, reason string) {
 	// equality fallback for any other parent keyword.
 	for _, k := range sortedKeys(parent) {
 		if _, meta := metadataKeywords[k]; meta {
@@ -180,7 +236,6 @@ func refines(child, parent map[string]any) (bool, string) {
 			return false, fmt.Sprintf("cannot verify refinement of keyword %q: schemas differ", k)
 		}
 	}
-
 	return true, ""
 }
 
@@ -235,7 +290,7 @@ func withoutBranchKeywords(s map[string]any) map[string]any {
 // keywords are ANDed into every branch first, so a sibling constraint beside
 // anyOf is not dropped. oneOf is treated like anyOf, which is conservative for a
 // subset check.
-func branchRefines(child, parent map[string]any) (bool, string) {
+func branchRefines(child, parent map[string]any) (ok bool, reason string) {
 	childBranches, ok := effectiveBranches(child)
 	if !ok {
 		return false, "child combines anyOf/oneOf with a conflicting sibling keyword; refinement cannot be verified"
@@ -286,9 +341,7 @@ func effectiveBranches(s map[string]any) ([]map[string]any, bool) {
 // conflicting keyword.
 func mergeSchemas(a, b map[string]any) (map[string]any, bool) {
 	out := make(map[string]any, len(a)+len(b))
-	for k, v := range a {
-		out[k] = v
-	}
+	maps.Copy(out, a)
 	for k, v := range b {
 		if existing, ok := out[k]; ok && canon(existing) != canon(v) {
 			return nil, false
@@ -299,7 +352,7 @@ func mergeSchemas(a, b map[string]any) (map[string]any, bool) {
 }
 
 // typeSubset reports whether child's declared type(s) are all within parent's.
-func typeSubset(childType, parentType any) (bool, string) {
+func typeSubset(childType, parentType any) (ok bool, reason string) {
 	cs := toStringSet(childType)
 	if len(cs) == 0 {
 		return false, `child "type" is not a string or list of strings`
@@ -350,7 +403,7 @@ func enumSubset(child, parent []any) bool {
 // itemsRefines compares array item schemas. It supports both the single-schema
 // form (items: {...}) and the tuple form (items: [{...}, ...]). When parent has
 // no items constraint, child may add one.
-func itemsRefines(child, parent map[string]any) (bool, string) {
+func itemsRefines(child, parent map[string]any) (ok bool, reason string) {
 	pit, ok := parent["items"]
 	if !ok {
 		return true, "" // parent unconstrained; child may add items
@@ -388,7 +441,7 @@ func itemsRefines(child, parent map[string]any) (bool, string) {
 // boundsRefine checks numeric and length bounds. Minimum-style bounds may only
 // increase (or be added); maximum-style bounds may only decrease (or be added);
 // multipleOf may be added or replaced by an integer multiple of parent's.
-func boundsRefine(child, parent map[string]any) (bool, string) {
+func boundsRefine(child, parent map[string]any) (ok bool, reason string) {
 	for _, kw := range []string{"minimum", "minLength", "minItems"} {
 		if ok, reason := boundDirection(child, parent, kw, true); !ok {
 			return false, reason
@@ -414,7 +467,7 @@ func boundsRefine(child, parent map[string]any) (bool, string) {
 // boundDirection enforces one bound keyword. When wantHigher is true (minimum
 // family) child must be >= parent; otherwise (maximum family) child must be <=
 // parent. A child bound where parent has none is always a valid tightening.
-func boundDirection(child, parent map[string]any, kw string, wantHigher bool) (bool, string) {
+func boundDirection(child, parent map[string]any, kw string, wantHigher bool) (ok bool, reason string) {
 	pv, ok := asFloat(parent[kw])
 	if !ok {
 		return true, ""
