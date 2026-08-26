@@ -24,7 +24,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/sirupsen/logrus v1.10.0
+	github.com/sirupsen/logrus v1.10.1
 	github.com/urfave/cli/v3 v3.10.1
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/sync v0.22.0
