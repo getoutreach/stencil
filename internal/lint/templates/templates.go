@@ -91,7 +91,7 @@ func addf(f *lint.Findings, name string, line int, sev lint.Severity, format str
 // scan() so the wording can't drift between them.
 func addSingleHashFinding(f *lint.Findings, name string, line int, subject, tagDesc string) {
 	addf(f, name, line, lint.SeverityError,
-		"%s uses a single \"#\" comment marker; %s must start with \"##\", not \"#\".", subject, tagDesc)
+		`%s uses a single "#" comment marker; %s must start with "##", not "#".`, subject, tagDesc)
 }
 
 // LintReader lints a single template stream named name (e.g. a file path or
