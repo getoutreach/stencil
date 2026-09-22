@@ -242,6 +242,21 @@ func TestLint(t *testing.T) {
 			name: "single hash tags are still detected when indented",
 			in:   "      # <<Stencil::Block(foo)>>\n      {{ file.Block \"foo\" }}\n      # <</Stencil::Block>>\n",
 		},
+		{
+			// Negative case: a "#" appearing mid-line -- not at the line's
+			// own comment-prefix position -- must never be mistaken for a
+			// single-hash START tag, even when literal text after it happens
+			// to look like one (e.g. a line documenting the syntax rather
+			// than using it). Detection must anchor to the start of the
+			// line's prefix, like every other tag regex in this file.
+			name: "a stray # mid-line is never mistaken for a single-hash start tag",
+			in:   "Example of the WRONG syntax: # <<Stencil::Block(name)>>\n",
+		},
+		{
+			// Negative case: same guard for the END-tag mirror.
+			name: "a stray # mid-line is never mistaken for a single-hash end tag",
+			in:   "Docs: to close a block, use # <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {
