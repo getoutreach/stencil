@@ -55,6 +55,14 @@ var v2StartAny = regexp.MustCompile(`^\s*(//|##|--|<!--|#)\s?<<Stencil::Block(\(
 // bad-prefix cases. Group 1 is the matched prefix.
 var v2EndAny = regexp.MustCompile(`^\s*(//|##|--|<!--|#)\s?<</Stencil::Block(\([^>]*\))?>>`)
 
+// literalBlockName matches a name satisfying codegen.V2BlockPattern's own
+// name character class -- i.e. a literal identifier, as opposed to a dynamic
+// template expression like "{{ $x }}" that the strict pattern rejects (and
+// that reaches v2StartAny/v2EndAny instead). Used to decide whether a name
+// reaching those lint-only regexes is dynamic, so that check stays tied to
+// the actual character class rather than a "{{" substring guess.
+var literalBlockName = regexp.MustCompile(`^[a-zA-Z0-9 _]+$`)
+
 // blockState tracks the currently open block during a scan.
 type blockState struct {
 	name      string
@@ -73,6 +81,17 @@ func addf(f *lint.Findings, name string, line int, sev lint.Severity, format str
 		Line:     line,
 		Message:  fmt.Sprintf(format, a...),
 	})
+}
+
+// addSingleHashFinding appends the rule-6 finding for a tag using a bare "#"
+// comment marker instead of "##". subject names what was malformed, e.g.
+// `block "foo"'s start tag` or `block end tag`; tagDesc is that tag's
+// required correct form, e.g. `<<Stencil::Block(foo)>>` or
+// `<</Stencil::Block>>`. Shared by both the start- and end-tag cases in
+// scan() so the wording can't drift between them.
+func addSingleHashFinding(f *lint.Findings, name string, line int, subject, tagDesc string) {
+	addf(f, name, line, lint.SeverityError,
+		"%s uses a single \"#\" comment marker; %s must start with \"##\", not \"#\".", subject, tagDesc)
 }
 
 // LintReader lints a single template stream named name (e.g. a file path or
@@ -145,9 +164,8 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 				// rule 6: single "#" instead of "##". Reported unconditionally
 				// (even inside an illegal nesting, below) since it's an
 				// independent defect from the tag's balance/nesting.
-				addf(f, name, line, lint.SeverityError,
-					"block %q's start tag uses a single \"#\" comment marker; "+
-						"<<Stencil::Block(%s)>> must start with \"##\", not \"#\".", tok.name, tok.name)
+				addSingleHashFinding(f, name, line, fmt.Sprintf("block %q's start tag", tok.name),
+					fmt.Sprintf("<<Stencil::Block(%s)>>", tok.name))
 			}
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
@@ -180,9 +198,7 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 				// rule 6 (end-tag mirror): reported unconditionally, like the
 				// start-tag case, since it's an independent defect from the
 				// tag's balance/nesting.
-				addf(f, name, line, lint.SeverityError,
-					"block end tag uses a single \"#\" comment marker; "+
-						"<</Stencil::Block>> must start with \"##\", not \"#\".")
+				addSingleHashFinding(f, name, line, "block end tag", "<</Stencil::Block>>")
 			}
 			switch {
 			case pendingNested > 0:
@@ -339,14 +355,14 @@ func classify(text string) token {
 		// V2BlockPattern rejected the {{...}} name) OR the prefix is a bad
 		// single "#" (rule 6) -- a correctly-prefixed literal name is
 		// already handled above by V2BlockPattern. dynamic is derived from
-		// the name text itself (a template expression contains "{{"), not
-		// from which branch matched, since it's no longer implied by
-		// reaching this branch. m[1] is the matched prefix; m[2] is
-		// "(expr)" or "" — trim to the raw name/expression text. The name is
-		// never compared, only displayed (and, for rule 1, used to suggest
-		// the file.Block call).
+		// the name text against literalBlockName, not from which branch
+		// matched, since it's no longer implied by reaching this branch.
+		// m[1] is the matched prefix; m[2] is "(expr)" or "" — trim to the
+		// raw name/expression text. The name is never compared, only
+		// displayed (and, for rule 1, used to suggest the file.Block call).
 		name := trimArgs(m[2])
-		return token{start: true, name: name, dynamic: strings.Contains(name, "{{"), singleHash: m[1] == "#"}
+		singleHash := m[1] == "#"
+		return token{start: true, name: name, dynamic: !literalBlockName.MatchString(name), singleHash: singleHash}
 	}
 	if m := v2EndAny.FindStringSubmatch(text); m != nil {
 		// Mirrors v2StartAny: reached for a dynamic-name close, a bad
@@ -355,7 +371,8 @@ func classify(text string) token {
 		// still balances against its open, instead of leaving it dangling
 		// and cascading into false "illegal nesting" errors on every block
 		// that follows.
-		return token{end: true, singleHash: m[1] == "#"}
+		singleHash := m[1] == "#"
+		return token{end: true, singleHash: singleHash}
 	}
 	return token{}
 }
