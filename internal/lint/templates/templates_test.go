@@ -234,6 +234,14 @@ func TestLint(t *testing.T) {
 				"# <<Stencil::Block(bad)>>\n{{ file.Block \"bad\" }}\n# <</Stencil::Block>>\n" +
 				"## <<Stencil::Block(after)>>\n{{ file.Block \"after\" }}\n## <</Stencil::Block>>\n",
 		},
+		{
+			// Regression: leading indentation before the tag (as in a nested
+			// template block) must not defeat rule 6 -- mirrors how the
+			// dynamic-name tests above exercise indentation for
+			// v2StartAny/v2EndAny.
+			name: "single hash tags are still detected when indented",
+			in:   "      # <<Stencil::Block(foo)>>\n      {{ file.Block \"foo\" }}\n      # <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {
