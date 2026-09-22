@@ -193,6 +193,25 @@ func TestLint(t *testing.T) {
 			name: "single hash block also missing file.Block",
 			in:   "# <<Stencil::Block(foo)>>\nno file block here\n## <</Stencil::Block>>\n",
 		},
+		{
+			// Rule 6 end-tag mirror: a single "#" instead of "##" before the
+			// END tag. The tag still closes the (correctly prefixed) start
+			// tag's block, so rule 6 is the only finding.
+			name: "single hash instead of double hash before block end",
+			in:   "## <<Stencil::Block(foo)>>\n{{ file.Block \"foo\" }}\n# <</Stencil::Block>>\n",
+		},
+		{
+			// Regression: mirrors a real-world report where a block's single-
+			// "#" start AND single-"#" end tag were both invisible to the
+			// pre-rule-6 linter, leaving the block "never closed" and
+			// cascading into false "illegal nesting" errors for every block
+			// that followed. With rule 6 recognizing both tags as real (in
+			// addition to reporting the bad prefix on each), the block closes
+			// normally and the next, correctly-prefixed block is clean.
+			name: "single hash start and end tags close cleanly, no nesting cascade",
+			in: "# <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n# <</Stencil::Block>>\n" +
+				"## <<Stencil::Block(b)>>\n{{ file.Block \"b\" }}\n## <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {

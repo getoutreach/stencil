@@ -57,6 +57,14 @@ var v2EndAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<</Stencil::Block(\([
 // without this check the tag would be silently ignored rather than flagged.
 var singleHashBlockStart = regexp.MustCompile(`(^|[^#])#\s+<<Stencil::Block\(([^>]*)\)>>`)
 
+// singleHashBlockEnd is the end-tag mirror of singleHashBlockStart: a v2
+// Block END tag introduced by a bare "#" instead of "##" (rule 6). Unlike
+// v2EndAny it doesn't allow parenthesized content -- a correct close tag
+// never takes arguments, so a single-"#" close tag WITH arguments is a
+// rarer double-typo case left unrecognized (falls through to token{})
+// rather than adding that complexity here.
+var singleHashBlockEnd = regexp.MustCompile(`(^|[^#])#\s+<</Stencil::Block>>`)
+
 // blockState tracks the currently open block during a scan.
 type blockState struct {
 	name      string
@@ -178,6 +186,14 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 						"(run 'stencil lint templates --fix' to migrate it automatically).", tok.name, tok.name)
 			}
 		case tok.end:
+			if tok.singleHash {
+				// rule 6 (end-tag mirror): reported unconditionally, like the
+				// start-tag case, since it's an independent defect from the
+				// tag's balance/nesting.
+				addf(f, name, line, lint.SeverityError,
+					"block end tag uses a single \"#\" comment marker; "+
+						"<</Stencil::Block>> must start with \"##\", not \"#\".")
+			}
 			switch {
 			case pendingNested > 0:
 				pendingNested--
@@ -274,8 +290,8 @@ func collectFileBlockNames(lines []string) map[string]bool {
 //   - legacy: whether the tag used the deprecated ###Block/### syntax
 //   - misuse: a non-empty rule-5 message (with no "line N:" prefix) when the
 //     line is a malformed v2 tag; empty otherwise
-//   - singleHash: whether a start tag (rule 6) used a bare "#" comment marker
-//     instead of the required "##"
+//   - singleHash: whether a start or end tag (rule 6) used a bare "#" comment
+//     marker instead of the required "##"
 type token struct {
 	start      bool
 	end        bool
@@ -347,6 +363,14 @@ func classify(text string) token {
 		// recognized as a real start (so it balances against its end tag and
 		// gets the rule-1 file.Block check) in addition to the rule-6 finding.
 		return token{start: true, name: m[2], singleHash: true}
+	}
+	if singleHashBlockEnd.MatchString(text) {
+		// rule 6 (end-tag mirror): a close tag using a single "#" instead of
+		// "##". Still recognized as a real end (so it closes its open block
+		// instead of leaving it dangling and cascading into false "illegal
+		// nesting" errors on every block that follows) in addition to the
+		// rule-6 finding.
+		return token{end: true, singleHash: true}
 	}
 	return token{}
 }
