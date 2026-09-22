@@ -225,6 +225,15 @@ func TestLint(t *testing.T) {
 				"# <<Stencil::Block(bad)>>\n# <</Stencil::Block>>\n" +
 				"## <<Stencil::Block(after)>>\n{{ file.Block \"after\" }}\n## <</Stencil::Block>>\n",
 		},
+		{
+			// Same shape, but the single-"#" block DOES have a file.Block
+			// call, so rule 6 (on both its tags) is the only finding: rule 1
+			// doesn't spuriously fire, and neither neighbor is touched.
+			name: "good block, then single-hash block with file.Block, then good block - no cascade",
+			in: "## <<Stencil::Block(before)>>\n{{ file.Block \"before\" }}\n## <</Stencil::Block>>\n" +
+				"# <<Stencil::Block(bad)>>\n{{ file.Block \"bad\" }}\n# <</Stencil::Block>>\n" +
+				"## <<Stencil::Block(after)>>\n{{ file.Block \"after\" }}\n## <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {
