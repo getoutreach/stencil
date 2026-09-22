@@ -1,0 +1,4 @@
+error  t.tpl:4  block "bad"'s start tag uses a single "#" comment marker; <<Stencil::Block(bad)>> must start with "##", not "#".
+error  t.tpl:4  block "bad" has no file.Block call; user edits inside this block are silently discarded on the next render. Add {{ file.Block "bad" }} inside the block.
+error  t.tpl:5  block end tag uses a single "#" comment marker; <</Stencil::Block>> must start with "##", not "#".
+

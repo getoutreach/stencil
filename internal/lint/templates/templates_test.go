@@ -212,6 +212,19 @@ func TestLint(t *testing.T) {
 			in: "# <<Stencil::Block(a)>>\n{{ file.Block \"a\" }}\n# <</Stencil::Block>>\n" +
 				"## <<Stencil::Block(b)>>\n{{ file.Block \"b\" }}\n## <</Stencil::Block>>\n",
 		},
+		{
+			// Regression: the exact stencil-base shape -- a normal block,
+			// then a single-"#" block with no file.Block call, then another
+			// normal block. Rule 6 fires on the middle block's tags and
+			// rule 1 fires for its missing file.Block, but it still closes
+			// normally, so neither the preceding nor the following
+			// correctly-prefixed block is swept into a nesting/dangling
+			// cascade.
+			name: "good block, then single-hash block, then good block - no cascade",
+			in: "## <<Stencil::Block(before)>>\n{{ file.Block \"before\" }}\n## <</Stencil::Block>>\n" +
+				"# <<Stencil::Block(bad)>>\n# <</Stencil::Block>>\n" +
+				"## <<Stencil::Block(after)>>\n{{ file.Block \"after\" }}\n## <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {
