@@ -179,6 +179,20 @@ func TestLint(t *testing.T) {
 			in: "## <<Stencil::Block(a)>>\nno file block\n" +
 				"## <</Stencil::EndBlock>>\n",
 		},
+		{
+			// Rule 6: a single "#" instead of "##" before the start tag. The
+			// tag still balances against its (correctly prefixed) end tag and
+			// has a file.Block call, so rule 6 is the only finding.
+			name: "single hash instead of double hash before block start",
+			in:   "# <<Stencil::Block(foo)>>\n{{ file.Block \"foo\" }}\n## <</Stencil::Block>>\n",
+		},
+		{
+			// Rule 6 and rule 1 both fire: the single-"#" start tag is still
+			// recognized as a real start (so it balances), but it also has no
+			// file.Block call.
+			name: "single hash block also missing file.Block",
+			in:   "# <<Stencil::Block(foo)>>\nno file block here\n## <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {

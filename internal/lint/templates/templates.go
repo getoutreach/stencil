@@ -48,6 +48,15 @@ var v2StartAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<<Stencil::Block(\(
 // only adds the dynamic/parenthesized-close case.
 var v2EndAny = regexp.MustCompile(`^\s*(?://|##|--|<!--)\s?<</Stencil::Block(\([^>]*\))?>>`)
 
+// singleHashBlockStart matches a v2 Block START tag introduced by a bare "#"
+// comment marker instead of the required "##" (rule 6). The "(^|[^#])"
+// alternation only matches a "#" that is NOT itself preceded by another "#",
+// so it never fires on the second "#" of a correct "##" (or "///", "--",
+// "<!--") prefix -- a single "#" is otherwise invisible to every other
+// block-recognition regex in this package and to codegen.V2BlockPattern, so
+// without this check the tag would be silently ignored rather than flagged.
+var singleHashBlockStart = regexp.MustCompile(`(^|[^#])#\s+<<Stencil::Block\(([^>]*)\)>>`)
+
 // blockState tracks the currently open block during a scan.
 type blockState struct {
 	name      string
@@ -134,6 +143,14 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 			// tag still reports silently-discarded user edits.
 			cur, pendingNested = closeBlock(f, name, cur, pendingNested, fileBlockNames)
 		case tok.start:
+			if tok.singleHash {
+				// rule 6: single "#" instead of "##". Reported unconditionally
+				// (even inside an illegal nesting, below) since it's an
+				// independent defect from the tag's balance/nesting.
+				addf(f, name, line, lint.SeverityError,
+					"block %q's start tag uses a single \"#\" comment marker; "+
+						"<<Stencil::Block(%s)>> must start with \"##\", not \"#\".", tok.name, tok.name)
+			}
 			if cur != nil {
 				// rule 4: illegal nesting. Keep the outer block; absorb the
 				// inner block's eventual end tag.
@@ -257,13 +274,16 @@ func collectFileBlockNames(lines []string) map[string]bool {
 //   - legacy: whether the tag used the deprecated ###Block/### syntax
 //   - misuse: a non-empty rule-5 message (with no "line N:" prefix) when the
 //     line is a malformed v2 tag; empty otherwise
+//   - singleHash: whether a start tag (rule 6) used a bare "#" comment marker
+//     instead of the required "##"
 type token struct {
-	start   bool
-	end     bool
-	name    string
-	legacy  bool
-	misuse  string
-	dynamic bool
+	start      bool
+	end        bool
+	name       string
+	legacy     bool
+	misuse     string
+	dynamic    bool
+	singleHash bool
 }
 
 // classify inspects a single line and reports what block token it is, if any.
@@ -320,6 +340,13 @@ func classify(text string) token {
 		// {{...}} name). Recognize it as an end so a dynamic-name block's close
 		// balances against its open instead of dangling. Mirrors v2StartAny.
 		return token{end: true}
+	}
+
+	if m := singleHashBlockStart.FindStringSubmatch(text); m != nil {
+		// rule 6: a start tag using a single "#" instead of "##". Still
+		// recognized as a real start (so it balances against its end tag and
+		// gets the rule-1 file.Block check) in addition to the rule-6 finding.
+		return token{start: true, name: m[2], singleHash: true}
 	}
 	return token{}
 }

@@ -1,0 +1,2 @@
+error  t.tpl:1  block "foo"'s start tag uses a single "#" comment marker; <<Stencil::Block(foo)>> must start with "##", not "#".
+
