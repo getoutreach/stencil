@@ -1,0 +1,5 @@
+--- fixed ---
+Example of the WRONG syntax: # <<Stencil::Block(name)>>
+--- applied ---
+(no fixes applied)
+

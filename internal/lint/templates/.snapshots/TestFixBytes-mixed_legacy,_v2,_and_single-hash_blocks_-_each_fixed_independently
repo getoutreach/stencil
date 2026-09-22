@@ -1,0 +1,16 @@
+--- fixed ---
+## <<Stencil::Block(a)>>
+{{ file.Block "a" }}
+## <</Stencil::Block>>
+## <<Stencil::Block(b)>>
+{{ file.Block "b" }}
+## <</Stencil::Block>>
+## <<Stencil::Block(c)>>
+{{ file.Block "c" }}
+## <</Stencil::Block>>
+--- applied ---
+t.tpl:1  migrated deprecated block syntax to <<Stencil::Block(a)>>
+t.tpl:3  migrated deprecated block syntax to <</Stencil::Block>>
+t.tpl:7  migrated single "#" comment marker to "##" before a block start tag
+t.tpl:9  migrated single "#" comment marker to "##" before a block end tag
+

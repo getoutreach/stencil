@@ -126,6 +126,47 @@ func TestFixBytes(t *testing.T) {
 			name: "CRLF line endings are preserved",
 			in:   "###Block(x)\r\n{{ file.Block \"x\" }}\r\n###EndBlock(x)\r\n",
 		},
+		{
+			// Rule 6: a single "#" start tag is migrated to "##" by
+			// duplicating the character in place; everything else on the
+			// line is untouched.
+			name: "single-hash start tag is migrated to double hash",
+			in:   "# <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n## <</Stencil::Block>>\n",
+		},
+		{
+			// Rule 6 end-tag mirror.
+			name: "single-hash end tag is migrated to double hash",
+			in:   "## <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n# <</Stencil::Block>>\n",
+		},
+		{
+			name: "single-hash start and end tags are both migrated",
+			in:   "# <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n# <</Stencil::Block>>\n",
+		},
+		{
+			name: "indentation before a single-hash tag is preserved",
+			in:   "      # <<Stencil::Block(x)>>\n      {{ file.Block \"x\" }}\n      # <</Stencil::Block>>\n",
+		},
+		{
+			// The fix is purely mechanical (duplicate the "#"), independent
+			// of whether the name is a literal or a dynamic template
+			// expression, so a dynamic-name single-hash block is migrated
+			// too.
+			name: "dynamic-name single-hash block is still migrated",
+			in:   "# <<Stencil::Block({{ $b }})>>\n{{ file.Block $b }}\n# <</Stencil::Block>>\n",
+		},
+		{
+			// Regression guard mirroring the linter's own negative case
+			// (templates_test.go): a "#" appearing mid-line, not at the
+			// line's own comment-prefix position, must never be rewritten.
+			name: "a stray # mid-line is left untouched by --fix",
+			in:   "Example of the WRONG syntax: # <<Stencil::Block(name)>>\n",
+		},
+		{
+			name: "mixed legacy, v2, and single-hash blocks - each fixed independently",
+			in: "###Block(a)\n{{ file.Block \"a\" }}\n###EndBlock(a)\n" +
+				"## <<Stencil::Block(b)>>\n{{ file.Block \"b\" }}\n## <</Stencil::Block>>\n" +
+				"# <<Stencil::Block(c)>>\n{{ file.Block \"c\" }}\n# <</Stencil::Block>>\n",
+		},
 	}
 
 	for _, test := range tests {

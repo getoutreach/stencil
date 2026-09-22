@@ -1,2 +1,2 @@
-error  t.tpl:3  block end tag uses a single "#" comment marker; <</Stencil::Block>> must start with "##", not "#".
+error  t.tpl:3  block end tag uses a single "#" comment marker; <</Stencil::Block>> must start with "##", not "#" (run 'stencil lint templates --fix' to migrate it automatically).
 

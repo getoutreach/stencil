@@ -88,10 +88,13 @@ func addf(f *lint.Findings, name string, line int, sev lint.Severity, format str
 // `block "foo"'s start tag` or `block end tag`; tagDesc is that tag's
 // required correct form, e.g. `<<Stencil::Block(foo)>>` or
 // `<</Stencil::Block>>`. Shared by both the start- and end-tag cases in
-// scan() so the wording can't drift between them.
+// scan() so the wording can't drift between them. The --fix pointer mirrors
+// the legacy-syntax deprecation message below: fixSingleHashLine (fix.go)
+// makes this always mechanically fixable, so the pointer never overpromises.
 func addSingleHashFinding(f *lint.Findings, name string, line int, subject, tagDesc string) {
 	addf(f, name, line, lint.SeverityError,
-		`%s uses a single "#" comment marker; %s must start with "##", not "#".`, subject, tagDesc)
+		`%s uses a single "#" comment marker; %s must start with "##", not "#" `+
+			`(run 'stencil lint templates --fix' to migrate it automatically).`, subject, tagDesc)
 }
 
 // LintReader lints a single template stream named name (e.g. a file path or
