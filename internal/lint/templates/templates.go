@@ -38,12 +38,16 @@ var fileBlockNameArg = regexp.MustCompile(`\bfile\.Block\b\s*\(?\s*"([^"]*)"`)
 // dynamic-name and/or bad-prefix block still balances against its end tag
 // (avoiding a false "bare end tag"/"never closed") and still gets the
 // presence-based file.Block check. It deliberately does NOT match end tags
-// or EndBlock. Group 1 is the matched prefix (classify() checks it against
-// "#" to set singleHash); group 2 is the name/args, display-only. Anchoring
-// to the start of the line (mirroring V2BlockPattern) is what makes this
-// safe: a "#" elsewhere on the line can never match, only one sitting where
-// the line's own comment prefix belongs.
-var v2StartAny = regexp.MustCompile(`^\s*(//|##|--|<!--|#)\s?<<Stencil::Block(\([^>]*\))?>>`)
+// or EndBlock. The "prefix" group is what classify() checks against "#" to
+// set singleHash; "args" is the name/args, display-only. Both groups are
+// named (rather than positional) so adding/reordering a group later can't
+// silently shift an existing m[N]/idx[2N:2N+2] access onto the wrong one --
+// exactly what happened here when rule 6 added the prefix group and moved
+// the name from m[1] to m[2]. Anchoring to the start of the line (mirroring
+// V2BlockPattern) is what makes this safe: a "#" elsewhere on the line can
+// never match, only one sitting where the line's own comment prefix
+// belongs.
+var v2StartAny = regexp.MustCompile(`^\s*(?P<prefix>//|##|--|<!--|#)\s?<<Stencil::Block(?P<args>\([^>]*\))?>>`)
 
 // v2EndAny matches a v2 Block END tag with ANY parenthesized content
 // (including a dynamic close like ({{ $x }})) AND a bare "#" in place of
@@ -52,8 +56,8 @@ var v2StartAny = regexp.MustCompile(`^\s*(//|##|--|<!--|#)\s?<<Stencil::Block(\(
 // slash after << is required so it never matches an open tag. Note a bare,
 // correctly-prefixed <</Stencil::Block>> (no parens) is already handled by
 // V2BlockPattern, so this only adds the dynamic/parenthesized-close and
-// bad-prefix cases. Group 1 is the matched prefix.
-var v2EndAny = regexp.MustCompile(`^\s*(//|##|--|<!--|#)\s?<</Stencil::Block(\([^>]*\))?>>`)
+// bad-prefix cases. Named groups mirror v2StartAny, for the same reason.
+var v2EndAny = regexp.MustCompile(`^\s*(?P<prefix>//|##|--|<!--|#)\s?<</Stencil::Block(?P<args>\([^>]*\))?>>`)
 
 // literalBlockName matches a name satisfying codegen.V2BlockPattern's own
 // name character class -- i.e. a literal identifier, as opposed to a dynamic
@@ -203,6 +207,14 @@ func scan(name string, r io.Reader, f *lint.Findings) error {
 				// tag's balance/nesting.
 				addSingleHashFinding(f, name, line, "block end tag", "<</Stencil::Block>>")
 			}
+			if tok.argsOnClose {
+				// rule 5 equivalent for a single-"#" close tag: a correctly
+				// prefixed line carrying literal args would already have hit
+				// this via V2BlockPattern's own misuse detection (classify()'s
+				// first branch); reported here (independent of tok.singleHash
+				// above) so a single-"#" close doesn't silently lose it.
+				addf(f, name, line, lint.SeverityError, "%s", codegen.MsgClosingTagArgs)
+			}
 			switch {
 			case pendingNested > 0:
 				pendingNested--
@@ -301,14 +313,21 @@ func collectFileBlockNames(lines []string) map[string]bool {
 //     line is a malformed v2 tag; empty otherwise
 //   - singleHash: whether a start or end tag (rule 6) used a bare "#" comment
 //     marker instead of the required "##"
+//   - argsOnClose: whether an end tag reached via v2EndAny carried literal
+//     (non-dynamic) args -- the rule-5 defect V2BlockPattern itself would
+//     have caught (MsgClosingTagArgs) had the prefix been correct; kept
+//     separate from misuse (see classify()'s v2EndAny branch) so it can
+//     coexist with singleHash on the same line instead of the exclusive
+//     tok.misuse switch arm suppressing rule 6
 type token struct {
-	start      bool
-	end        bool
-	name       string
-	legacy     bool
-	misuse     string
-	dynamic    bool
-	singleHash bool
+	start       bool
+	end         bool
+	name        string
+	legacy      bool
+	misuse      string
+	dynamic     bool
+	singleHash  bool
+	argsOnClose bool
 }
 
 // classify inspects a single line and reports what block token it is, if any.
@@ -360,11 +379,11 @@ func classify(text string) token {
 		// already handled above by V2BlockPattern. dynamic is derived from
 		// the name text against literalBlockName, not from which branch
 		// matched, since it's no longer implied by reaching this branch.
-		// m[1] is the matched prefix; m[2] is "(expr)" or "" — trim to the
-		// raw name/expression text. The name is never compared, only
-		// displayed (and, for rule 1, used to suggest the file.Block call).
-		name := trimArgs(m[2])
-		singleHash := m[1] == "#"
+		// "args" is "(expr)" or "" — trim to the raw name/expression text.
+		// The name is never compared, only displayed (and, for rule 1, used
+		// to suggest the file.Block call).
+		name := trimArgs(m[v2StartAny.SubexpIndex("args")])
+		singleHash := m[v2StartAny.SubexpIndex("prefix")] == "#"
 		return token{start: true, name: name, dynamic: !literalBlockName.MatchString(name), singleHash: singleHash}
 	}
 	if m := v2EndAny.FindStringSubmatch(text); m != nil {
@@ -373,9 +392,18 @@ func classify(text string) token {
 		// either way means a dynamic-name and/or bad-prefix block's close
 		// still balances against its open, instead of leaving it dangling
 		// and cascading into false "illegal nesting" errors on every block
-		// that follows.
-		singleHash := m[1] == "#"
-		return token{end: true, singleHash: singleHash}
+		// that follows. A close carrying a DYNAMIC name (mirroring its
+		// open, as v2StartAny/v2EndAny's own doc comments describe) is
+		// legitimate and never flagged; a LITERAL name on a close is
+		// always wrong (args := trimArgs(m[2]) is only non-empty here when
+		// V2BlockPattern itself couldn't match -- i.e. a bad prefix, since
+		// a literal-args close with a correct prefix is already caught
+		// above as MsgClosingTagArgs -- so literalBlockName distinguishes
+		// the two only-reachable-here cases).
+		singleHash := m[v2EndAny.SubexpIndex("prefix")] == "#"
+		args := trimArgs(m[v2EndAny.SubexpIndex("args")])
+		argsOnClose := args != "" && literalBlockName.MatchString(args)
+		return token{end: true, singleHash: singleHash, argsOnClose: argsOnClose}
 	}
 	return token{}
 }

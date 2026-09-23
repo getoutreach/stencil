@@ -120,21 +120,25 @@ func fixLine(line string, hasOpen bool, openName string) (fixed, message string)
 // lines, or a tag already using a valid prefix (including a dynamic-name
 // block, which v2StartAny/v2EndAny also match).
 //
-// It reuses the same v2StartAny/v2EndAny regexes and prefix group (index
-// [2:4] of FindStringSubmatchIndex) that classify() uses for the linter's
-// own singleHash check, so this fixer can never drift from what rule 6
-// flags: fixing every single-"#" tag is always safe here because it's
-// mechanical (duplicate one character) and never guesses at intent, unlike
-// the legacy migration's name-mismatch caution above.
+// It reuses the same v2StartAny/v2EndAny regexes and named "prefix" group
+// that classify() uses for the linter's own singleHash check, so this fixer
+// can never drift from what rule 6 flags: fixing every single-"#" tag is
+// always safe here because it's mechanical (duplicate one character) and
+// never guesses at intent, unlike the legacy migration's name-mismatch
+// caution above. The group is looked up by name (SubexpIndex), not a
+// hardcoded position, since a future group added to either regex would
+// otherwise silently shift which pair of indices "prefix" occupies.
 func fixSingleHashLine(line string) (fixed, message string) {
 	if idx := v2StartAny.FindStringSubmatchIndex(line); idx != nil {
-		if line[idx[2]:idx[3]] == "#" {
-			return line[:idx[3]] + "#" + line[idx[3]:], `migrated single "#" comment marker to "##" before a block start tag`
+		p := 2 * v2StartAny.SubexpIndex("prefix")
+		if line[idx[p]:idx[p+1]] == "#" {
+			return line[:idx[p+1]] + "#" + line[idx[p+1]:], `migrated single "#" comment marker to "##" before a block start tag`
 		}
 	}
 	if idx := v2EndAny.FindStringSubmatchIndex(line); idx != nil {
-		if line[idx[2]:idx[3]] == "#" {
-			return line[:idx[3]] + "#" + line[idx[3]:], `migrated single "#" comment marker to "##" before a block end tag`
+		p := 2 * v2EndAny.SubexpIndex("prefix")
+		if line[idx[p]:idx[p+1]] == "#" {
+			return line[:idx[p+1]] + "#" + line[idx[p+1]:], `migrated single "#" comment marker to "##" before a block end tag`
 		}
 	}
 	return line, ""

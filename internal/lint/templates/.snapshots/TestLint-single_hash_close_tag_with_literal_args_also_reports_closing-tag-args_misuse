@@ -1,0 +1,4 @@
+error  t.tpl:1  block "x"'s start tag uses a single "#" comment marker; <<Stencil::Block(x)>> must start with "##", not "#" (run 'stencil lint templates --fix' to migrate it automatically).
+error  t.tpl:3  block end tag uses a single "#" comment marker; <</Stencil::Block>> must start with "##", not "#" (run 'stencil lint templates --fix' to migrate it automatically).
+error  t.tpl:3  expected no arguments to <</Stencil::Block>>
+

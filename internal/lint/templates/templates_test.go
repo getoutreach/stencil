@@ -257,6 +257,26 @@ func TestLint(t *testing.T) {
 			name: "a stray # mid-line is never mistaken for a single-hash end tag",
 			in:   "Docs: to close a block, use # <</Stencil::Block>>\n",
 		},
+		{
+			// Review finding (PR #530): with a correct "##" prefix, a closing
+			// tag carrying literal args reaches codegen.V2BlockPattern and
+			// reports rule 5 (MsgClosingTagArgs). With a single "#", the
+			// strict pattern misses (wrong prefix) and v2EndAny accepted the
+			// line as a plain end tag, silently losing that misuse report.
+			// This must fire it too, alongside rule 6.
+			name: "single hash close tag with literal args also reports closing-tag-args misuse",
+			in:   "# <<Stencil::Block(x)>>\n{{ file.Block \"x\" }}\n# <</Stencil::Block(x)>>\n",
+		},
+		{
+			// Regression guard: a single-"#" close tag carrying a DYNAMIC
+			// name (mirroring its dynamic-name open, as the correctly-
+			// prefixed "dynamic-name v2 block with dynamic close" case above
+			// already allows) must NOT be flagged as closing-tag-args misuse
+			// -- only rule 6 fires, same as if the prefix had been correct.
+			name: "single hash close tag with dynamic args is not misuse",
+			in: "# <<Stencil::Block({{ $b }})>>\n{{ file.Block $b }}\n" +
+				"# <</Stencil::Block({{ $b }})>>\n",
+		},
 	}
 
 	for _, test := range tests {
