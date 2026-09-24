@@ -3,7 +3,9 @@
 // Description: Implements a mechanical, comment-preserving auto-fix that
 // migrates deprecated legacy Stencil block syntax (###Block(name) /
 // ###EndBlock(name), in any of the three legacy comment styles) to the v2
-// <<Stencil::Block(name)>> / <</Stencil::Block>> form, one line at a time.
+// <<Stencil::Block(name)>> / <</Stencil::Block>> form, and separately repairs
+// a v2 tag using a bare "#" comment marker instead of "##" (rule 6), one line
+// at a time.
 
 package templates
 
@@ -109,6 +111,39 @@ func fixLine(line string, hasOpen bool, openName string) (fixed, message string)
 	}
 }
 
+// fixSingleHashLine rewrites a line using a bare "#" comment marker instead
+// of the required "##" before a v2 Block start or end tag (rule 6; see
+// templates.go's v2StartAny/v2EndAny and their singleHash detection) by
+// duplicating that "#" into "##". Everything else on the line -- indentation,
+// whitespace, the tag itself, and any trailing content -- is preserved byte
+// for byte. message is empty when the line isn't a single-"#" tag: most
+// lines, or a tag already using a valid prefix (including a dynamic-name
+// block, which v2StartAny/v2EndAny also match).
+//
+// It reuses the same v2StartAny/v2EndAny regexes and named "prefix" group
+// that classify() uses for the linter's own singleHash check, so this fixer
+// can never drift from what rule 6 flags: fixing every single-"#" tag is
+// always safe here because it's mechanical (duplicate one character) and
+// never guesses at intent, unlike the legacy migration's name-mismatch
+// caution above. The group is looked up by name (SubexpIndex), not a
+// hardcoded position, since a future group added to either regex would
+// otherwise silently shift which pair of indices "prefix" occupies.
+func fixSingleHashLine(line string) (fixed, message string) {
+	if idx := v2StartAny.FindStringSubmatchIndex(line); idx != nil {
+		p := 2 * v2StartAny.SubexpIndex("prefix")
+		if line[idx[p]:idx[p+1]] == "#" {
+			return line[:idx[p+1]] + "#" + line[idx[p+1]:], `migrated single "#" comment marker to "##" before a block start tag`
+		}
+	}
+	if idx := v2EndAny.FindStringSubmatchIndex(line); idx != nil {
+		p := 2 * v2EndAny.SubexpIndex("prefix")
+		if line[idx[p]:idx[p+1]] == "#" {
+			return line[:idx[p+1]] + "#" + line[idx[p+1]:], `migrated single "#" comment marker to "##" before a block end tag`
+		}
+	}
+	return line, ""
+}
+
 // splitKeepEnds splits raw into lines, each retaining its original line
 // terminator (if any). It mirrors bytes.SplitAfter(raw, []byte("\n")), but
 // drops the trailing empty chunk SplitAfter produces when raw ends in a
@@ -139,7 +174,8 @@ func splitTerminator(chunk []byte) (content, term []byte) {
 }
 
 // FixBytes mechanically migrates deprecated legacy block syntax in raw to v2
-// syntax (see fixLine) and returns the result plus a log of the changes made.
+// syntax (see fixLine), and separately repairs a single-"#" tag (see
+// fixSingleHashLine), returning the result plus a log of the changes made.
 // When nothing changed, fixed is raw itself, so a no-op fix never reformats an
 // already-clean or already-v2 file. name identifies the template in the
 // returned Applied entries' Path field. Every other line, and everything on a
@@ -161,6 +197,9 @@ func FixBytes(name string, raw []byte) (fixed []byte, applied []Applied) {
 		text := string(content)
 
 		newContent, message := fixLine(text, hasOpen, openName)
+		if message == "" {
+			newContent, message = fixSingleHashLine(text)
+		}
 
 		switch tok := classify(text); {
 		case tok.start:

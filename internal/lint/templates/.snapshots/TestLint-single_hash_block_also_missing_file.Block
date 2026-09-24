@@ -1,0 +1,3 @@
+error  t.tpl:1  block "foo"'s start tag uses a single "#" comment marker; <<Stencil::Block(foo)>> must start with "##", not "#" (run 'stencil lint templates --fix' to migrate it automatically).
+error  t.tpl:1  block "foo" has no file.Block call; user edits inside this block are silently discarded on the next render. Add {{ file.Block "foo" }} inside the block.
+

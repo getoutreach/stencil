@@ -1,0 +1,7 @@
+--- fixed ---
+## <<Stencil::Block(x)>>
+{{ file.Block "x" }}
+## <</Stencil::Block>>
+--- applied ---
+t.tpl:3  migrated single "#" comment marker to "##" before a block end tag
+
