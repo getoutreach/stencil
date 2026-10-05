@@ -5,11 +5,17 @@
 package stencil
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/getoutreach/stencil/internal/codegen"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
@@ -215,4 +221,56 @@ func TestValidateStencilVersionConstraintValidationSuccess(t *testing.T) {
 		modules.NewWithFS(ctx, "example.com/stencil-test", osfs.New("testdata/stencil-version-success")),
 	}
 	assert.NilError(t, c.validateStencilVersion(ctx, mods, "v1.10.0"))
+}
+
+func TestCommand_writeFileDelete(t *testing.T) {
+	tests := []struct {
+		name       string
+		exists     bool
+		skipped    bool
+		dryRun     bool
+		wantAction string
+		wantExists bool
+	}{
+		{name: "should delete an existing file", exists: true, wantAction: "Deleted"},
+		{name: "should delete an existing file that is also skipped", exists: true, skipped: true, wantAction: "Deleted"},
+		{name: "should not report a missing file as deleted", wantAction: "Already absent"},
+		{name: "should keep an existing file in dry-run", exists: true, dryRun: true, wantAction: "Deleted", wantExists: true},
+		{name: "should not report a missing file as deleted in dry-run", dryRun: true, wantAction: "Already absent"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "file.txt")
+			if tt.exists {
+				assert.NilError(t, os.WriteFile(path, []byte("contents"), 0o644))
+			}
+			f, err := codegen.NewFile(path, 0o644, time.Now())
+			assert.NilError(t, err)
+			f.Deleted = true
+			f.Skipped = tt.skipped
+
+			var out bytes.Buffer
+			log := logrus.New()
+			log.SetOutput(&out)
+			c := &Command{log: log, dryRun: tt.dryRun}
+
+			assert.NilError(t, c.writeFile(f))
+			assert.Assert(t, strings.Contains(out.String(), "-> "+tt.wantAction+" "+path), out.String())
+			_, err = os.Lstat(path)
+			assert.Equal(t, err == nil, tt.wantExists)
+		})
+	}
+}
+
+func TestCommand_writeFileDeleteError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dir")
+	f, err := codegen.NewFile(path, 0o644, time.Now())
+	assert.NilError(t, err)
+	f.Deleted = true
+
+	// os.Remove fails on a non-empty directory
+	assert.NilError(t, os.MkdirAll(filepath.Join(path, "child"), 0o755))
+
+	c := &Command{log: testLogger(t)}
+	assert.ErrorContains(t, c.writeFile(f), "failed to delete")
 }
