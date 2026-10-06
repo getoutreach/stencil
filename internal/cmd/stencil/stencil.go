@@ -377,8 +377,13 @@ func (c *Command) writeFile(f *codegen.File) error {
 	if f.Deleted {
 		action = "Deleted"
 
-		if !c.dryRun {
-			os.Remove(f.Name())
+		// Lstat not Stat to match os.Remove which doesn't follow symlinks
+		if _, err := os.Lstat(f.Name()); errors.Is(err, os.ErrNotExist) {
+			action = "Already absent"
+		} else if !c.dryRun {
+			if err := os.Remove(f.Name()); err != nil {
+				return errors.Wrapf(err, "failed to delete %q", f.Name())
+			}
 		}
 	} else if f.Skipped {
 		action = "Skipped"
