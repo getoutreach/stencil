@@ -8,6 +8,7 @@ package codegen
 
 import (
 	"context"
+	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -15,6 +16,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,10 +56,22 @@ type git struct {
 	// index.
 	Dirty bool
 
-	// DefaultBranch is the default branch to use for this repository
-	// generally this is equal to "main", but some repositories
-	// use other values.
-	DefaultBranch string
+	// defaultBranch is the default branch to use for this repository.
+	// It is exposed to templates through DefaultBranch.
+	defaultBranch string
+
+	// defaultBranchErr is why defaultBranch could not be determined, if it
+	// could not be. This includes failing to open the git repository.
+	defaultBranchErr error
+}
+
+// DefaultBranch is the default branch to use for this repository, generally
+// "main", but some repositories use other values. It returns an error, which
+// fails template rendering, when the branch could not be determined (after
+// retries) or the git repository could not be opened, instead of rendering
+// an empty string.
+func (g git) DefaultBranch() (string, error) {
+	return g.defaultBranch, g.defaultBranchErr
 }
 
 // config contains a small amount of configuration that
@@ -121,6 +135,40 @@ type Values struct {
 	Template stencilTemplate
 }
 
+// This block configures retrying the default branch lookup, which can fail
+// transiently because it asks the remote.
+const (
+	defaultBranchAttempts   = 3
+	defaultBranchRetryDelay = time.Second
+)
+
+// getDefaultBranchWithRetry calls get up to defaultBranchAttempts times, waiting
+// delay (doubling each time) between failures. It returns the last error if every
+// attempt fails or ctx is done first.
+func getDefaultBranchWithRetry(ctx context.Context, log logrus.FieldLogger,
+	get func(ctx context.Context, path string) (string, error), delay time.Duration) (string, error) {
+	var err error
+	for i := 1; i <= defaultBranchAttempts; i++ {
+		var db string
+		if db, err = get(ctx, ""); err == nil {
+			return db, nil
+		}
+		// Git ran fine but did not report a branch, so asking again won't help.
+		if i == defaultBranchAttempts || errors.Is(err, stencilgit.ErrNoRemoteHeadBranch) {
+			break
+		}
+
+		log.Warnf("Failed to get default branch (attempt %d/%d), retrying: %v", i, defaultBranchAttempts, err)
+		select {
+		case <-ctx.Done():
+			return "", errors.Wrap(ctx.Err(), "failed to get default branch")
+		case <-time.After(delay):
+			delay *= 2
+		}
+	}
+	return "", errors.Wrap(err, "failed to get default branch")
+}
+
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
@@ -153,13 +201,14 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	// If we're a repository, add repository information
-	if r, err := gogit.PlainOpen(""); err == nil {
-		db, err := stencilgit.GetDefaultBranch(ctx, "")
-		if err != nil {
-			log.Warnf("Failed to get default branch, defaulting to 'main': %v", err)
-			db = "main"
-		}
-		vals.Git.DefaultBranch = db
+	r, err := gogit.PlainOpen("")
+	if err != nil {
+		// Keep the cause (e.g. a git extension go-git doesn't support) so that a
+		// template reading .Git.DefaultBranch can say why it failed.
+		vals.Git.defaultBranchErr = errors.Wrap(err, "failed to open git repository in the current directory")
+	} else {
+		vals.Git.defaultBranch, vals.Git.defaultBranchErr = getDefaultBranchWithRetry(
+			ctx, log, stencilgit.GetDefaultBranch, defaultBranchRetryDelay)
 
 		// Add HEAD information
 		if pref, err := r.Head(); err == nil {
