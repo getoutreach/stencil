@@ -13,7 +13,6 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
-	stencilgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -21,8 +20,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
 )
 
@@ -103,6 +102,13 @@ func TestValues(t *testing.T) {
 	assert.Equal(t, branch, "main")
 }
 
+// gitInDir runs git with args in dir and fails the test if it fails.
+func gitInDir(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	assert.NilError(t, err, string(out))
+}
+
 func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 	log := logrus.New()
 	man := &configuration.TemplateRepositoryManifest{Name: "testing"}
@@ -125,14 +131,9 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 			setup: func(t *testing.T) string {
 				t.Helper()
 				dir := t.TempDir()
-				for _, args := range [][]string{
-					{"init", "-q"},
-					{"config", "core.repositoryformatversion", "1"},
-					{"config", "extensions.worktreeConfig", "true"},
-				} {
-					out, err := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...).CombinedOutput()
-					assert.NilError(t, err, string(out))
-				}
+				gitInDir(t, dir, "init", "-q")
+				gitInDir(t, dir, "config", "core.repositoryformatversion", "1")
+				gitInDir(t, dir, "config", "extensions.worktreeConfig", "true")
 				return dir
 			},
 			wantErr: "does not support extension",
@@ -153,44 +154,15 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 	}
 }
 
-func TestGetDefaultBranchWithRetry(t *testing.T) {
-	errBoom := errors.New("boom")
-	log := logrus.New()
+func TestDefaultBranchWithoutOriginRemoteIsNotRetried(t *testing.T) {
+	dir := t.TempDir()
+	gitInDir(t, dir, "init", "-q")
+	t.Chdir(dir)
 
-	t.Run("does not retry when git reports no branch", func(t *testing.T) {
-		calls := 0
-		_, err := getDefaultBranchWithRetry(context.Background(), log,
-			func(context.Context, string) (string, error) {
-				calls++
-				return "", stencilgit.ErrNoRemoteHeadBranch
-			}, time.Millisecond)
-		assert.ErrorIs(t, err, stencilgit.ErrNoRemoteHeadBranch)
-		assert.Equal(t, calls, 1)
-	})
+	log, hook := logtest.NewNullLogger()
+	vals := NewValues(context.Background(), &configuration.ServiceManifest{Name: "testing"}, nil, log)
 
-	t.Run("succeeds after a transient failure", func(t *testing.T) {
-		calls := 0
-		db, err := getDefaultBranchWithRetry(context.Background(), log,
-			func(context.Context, string) (string, error) {
-				calls++
-				if calls < 3 {
-					return "", errBoom
-				}
-				return "trunk", nil
-			}, time.Millisecond)
-		assert.NilError(t, err)
-		assert.Equal(t, db, "trunk")
-		assert.Equal(t, calls, 3)
-	})
-
-	t.Run("fails once retries are exhausted", func(t *testing.T) {
-		calls := 0
-		_, err := getDefaultBranchWithRetry(context.Background(), log,
-			func(context.Context, string) (string, error) {
-				calls++
-				return "", errBoom
-			}, time.Millisecond)
-		assert.ErrorIs(t, err, errBoom)
-		assert.Equal(t, calls, 3)
-	})
+	_, err := vals.Git.DefaultBranch()
+	assert.ErrorContains(t, err, `"origin" remote`)
+	assert.Equal(t, len(hook.AllEntries()), 0, "expected no retries to be logged")
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/box"
 	stencilgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
@@ -135,40 +136,6 @@ type Values struct {
 	Template stencilTemplate
 }
 
-// This block configures retrying the default branch lookup, which can fail
-// transiently because it asks the remote.
-const (
-	defaultBranchAttempts   = 3
-	defaultBranchRetryDelay = time.Second
-)
-
-// getDefaultBranchWithRetry calls get up to defaultBranchAttempts times, waiting
-// delay (doubling each time) between failures. It returns the last error if every
-// attempt fails or ctx is done first.
-func getDefaultBranchWithRetry(ctx context.Context, log logrus.FieldLogger,
-	get func(ctx context.Context, path string) (string, error), delay time.Duration) (string, error) {
-	var err error
-	for i := 1; i <= defaultBranchAttempts; i++ {
-		var db string
-		if db, err = get(ctx, ""); err == nil {
-			return db, nil
-		}
-		// Git ran fine but did not report a branch, so asking again won't help.
-		if i == defaultBranchAttempts || errors.Is(err, stencilgit.ErrNoRemoteHeadBranch) {
-			break
-		}
-
-		log.Warnf("Failed to get default branch (attempt %d/%d), retrying: %v", i, defaultBranchAttempts, err)
-		select {
-		case <-ctx.Done():
-			return "", errors.Wrap(ctx.Err(), "failed to get default branch")
-		case <-time.After(delay):
-			delay *= 2
-		}
-	}
-	return "", errors.Wrap(err, "failed to get default branch")
-}
-
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
@@ -207,8 +174,11 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		// template reading .Git.DefaultBranch can say why it failed.
 		vals.Git.defaultBranchErr = errors.Wrap(err, "failed to open git repository in the current directory")
 	} else {
-		vals.Git.defaultBranch, vals.Git.defaultBranchErr = getDefaultBranchWithRetry(
-			ctx, log, stencilgit.GetDefaultBranch, defaultBranchRetryDelay)
+		db, err := stencilgit.GetDefaultBranchWithRetry(ctx, "",
+			retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
+				log.Warnf("Failed to get default branch (attempt %d), retrying in %s: %v", attempt, wait, err)
+			}))
+		vals.Git.defaultBranch, vals.Git.defaultBranchErr = db, errors.Wrap(err, "failed to get default branch")
 
 		// Add HEAD information
 		if pref, err := r.Head(); err == nil {
