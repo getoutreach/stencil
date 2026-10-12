@@ -8,6 +8,8 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,7 +21,7 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
@@ -76,10 +78,9 @@ func TestValues(t *testing.T) {
 	}, logrus.New())
 	assert.DeepEqual(t, &Values{
 		Git: git{
-			Ref:           plumbing.NewBranchReferenceName("main").String(),
-			Commit:        cmt.String(),
-			Dirty:         false,
-			defaultBranch: "main",
+			Ref:    plumbing.NewBranchReferenceName("main").String(),
+			Commit: cmt.String(),
+			Dirty:  false,
 		},
 		Runtime: runtime{
 			Generator:        app.Info().Name,
@@ -95,7 +96,7 @@ func TestValues(t *testing.T) {
 		Config: config{
 			Name: sm.Name,
 		},
-	}, vals, cmp.AllowUnexported(git{}))
+	}, vals, cmpopts.IgnoreUnexported(git{}))
 
 	branch, err := vals.Git.DefaultBranch()
 	assert.NilError(t, err, "expected DefaultBranch() not to fail in a git repository")
@@ -165,4 +166,49 @@ func TestDefaultBranchWithoutOriginRemoteIsNotRetried(t *testing.T) {
 	_, err := vals.Git.DefaultBranch()
 	assert.ErrorContains(t, err, `"origin" remote`)
 	assert.Equal(t, len(hook.AllEntries()), 0, "expected no retries to be logged")
+}
+
+func TestDefaultBranchIsLookedUpOnFirstUseOnly(t *testing.T) {
+	lookups := 0
+	vals := &Values{Git: git{defaultBranch: sync.OnceValues(func() (string, error) {
+		lookups++
+		return "trunk", nil
+	})}}
+	assert.Equal(t, lookups, 0, "expected no lookup before the first use")
+
+	// Copies of Values, such as the one made for each template, share one lookup.
+	for _, v := range []*Values{vals, vals.WithModule("m", "1.0.0"), vals.WithTemplate("t.tpl")} {
+		branch, err := v.Git.DefaultBranch()
+		assert.NilError(t, err)
+		assert.Equal(t, branch, "trunk")
+	}
+	assert.Equal(t, lookups, 1)
+}
+
+func TestNewValuesDoesNotLookUpTheDefaultBranch(t *testing.T) {
+	// An unreachable origin would make an eager lookup fail, and log a retry.
+	dir := t.TempDir()
+	gitInDir(t, dir, "init", "-q")
+	gitInDir(t, dir, "remote", "add", "origin", filepath.Join(t.TempDir(), "missing"))
+	t.Chdir(dir)
+
+	log, hook := logtest.NewNullLogger()
+	NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, log)
+	assert.Equal(t, len(hook.AllEntries()), 0, "expected no lookup until a template reads the default branch")
+}
+
+func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
+	upstream := t.TempDir()
+	gitInDir(t, upstream, "init", "-q", "-b", "trunk")
+	gitInDir(t, upstream, "-c", "user.name=Stencil", "-c", "user.email=email@example.com",
+		"commit", "-q", "--allow-empty", "-m", "initial commit")
+
+	parent := t.TempDir()
+	gitInDir(t, parent, "clone", "-q", upstream, "clone")
+	t.Chdir(filepath.Join(parent, "clone"))
+
+	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+	branch, err := vals.Git.DefaultBranch()
+	assert.NilError(t, err)
+	assert.Equal(t, branch, "trunk")
 }
