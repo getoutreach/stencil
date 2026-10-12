@@ -24,6 +24,7 @@ import (
 // maxAttempts is the maximum total number of calls to fn, including the first.
 const maxAttempts = 3
 
+// config holds the settings that Options change.
 type config struct {
 	// strategy computes the delay before each retry.
 	strategy Strategy
@@ -56,6 +57,7 @@ type Strategy interface {
 	delay(attempt int) time.Duration
 }
 
+// exponential is the Strategy that Exponential returns.
 type exponential struct {
 	initial, maxDelay time.Duration
 	multiplier        float64
