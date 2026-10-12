@@ -31,8 +31,9 @@ var (
 	// is needed to determine its default branch.
 	ErrNoOriginRemote = errors.New(`the repository has no "origin" remote to determine the default branch from`)
 
-	// headPattern is used to parse git output to determine the head branch.
-	headPattern = regexp.MustCompile(`HEAD branch: ([[:alpha:]]+)`)
+	// headPattern is used to parse git output to determine the head branch. It does not
+	// match git's "(unknown)" placeholder.
+	headPattern = regexp.MustCompile(`HEAD branch: ([^\s(]\S*)`)
 )
 
 // GetDefaultBranch determines the default/HEAD branch for a given git

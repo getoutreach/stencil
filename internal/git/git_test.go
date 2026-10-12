@@ -7,6 +7,7 @@ package git_test
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -115,4 +116,39 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, db, "master")
 	})
+}
+
+func TestGetDefaultBranchWithNonLetterCharacters(t *testing.T) {
+	for _, branch := range []string{"release-1", "1.x", "team/feature_2", "_main"} {
+		t.Run(branch, func(t *testing.T) {
+			repoDir := t.TempDir()
+			_, err := git.PlainCloneContext(t.Context(), repoDir, false, &git.CloneOptions{
+				URL: createTempGitRepo(t, plumbing.NewBranchReferenceName(branch)),
+			})
+			assert.NilError(t, err)
+
+			defaultBranch, err := stgit.GetDefaultBranch(t.Context(), repoDir)
+			assert.NilError(t, err)
+			assert.Equal(t, defaultBranch, branch)
+		})
+	}
+}
+
+// gitInDir runs git with args in dir and fails the test on error.
+func gitInDir(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	assert.NilError(t, err, string(out))
+}
+
+func TestGetDefaultBranchUnknown(t *testing.T) {
+	upstream := createTempGitRepo(t, plumbing.Main)
+	// Point the remote's HEAD at a branch that does not exist.
+	gitInDir(t, upstream, "symbolic-ref", "HEAD", "refs/heads/missing")
+
+	repoDir := filepath.Join(t.TempDir(), "clone")
+	gitInDir(t, filepath.Dir(repoDir), "clone", "-q", upstream, repoDir)
+
+	_, err := stgit.GetDefaultBranch(t.Context(), repoDir)
+	assert.ErrorIs(t, err, stgit.ErrNoRemoteHeadBranch)
 }
