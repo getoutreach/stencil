@@ -147,7 +147,7 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 				Name:      "testing",
 				Arguments: map[string]any{},
 			}, []*modules.Module{m}, log)
-			_, err := st.Render(context.Background(), log)
+			_, err := st.Render(t.Context(), log)
 			assert.ErrorContains(t, err, "failed to open git repository")
 			assert.ErrorContains(t, err, tt.wantErr)
 		})
@@ -160,7 +160,7 @@ func TestDefaultBranchWithoutOriginRemoteIsNotRetried(t *testing.T) {
 	t.Chdir(dir)
 
 	log, hook := logtest.NewNullLogger()
-	vals := NewValues(context.Background(), &configuration.ServiceManifest{Name: "testing"}, nil, log)
+	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, log)
 
 	_, err := vals.Git.DefaultBranch()
 	assert.ErrorContains(t, err, `"origin" remote`)

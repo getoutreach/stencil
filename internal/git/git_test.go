@@ -74,7 +74,7 @@ func TestGetDefaultBranchMaster(t *testing.T) {
 }
 
 func TestGetDefaultBranchNoOriginRemote(t *testing.T) {
-	_, err := stgit.GetDefaultBranch(context.Background(), createTempGitRepo(t, plumbing.Main))
+	_, err := stgit.GetDefaultBranch(t.Context(), createTempGitRepo(t, plumbing.Main))
 	assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
 }
 
@@ -90,7 +90,7 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 		assert.NilError(t, err)
 
 		retries := 0
-		_, err = stgit.GetDefaultBranchWithRetry(context.Background(), repoDir, fast,
+		_, err = stgit.GetDefaultBranchWithRetry(t.Context(), repoDir, fast,
 			retry.WithOnRetry(func(context.Context, int, error, time.Duration) { retries++ }))
 		assert.Assert(t, err != nil)
 		assert.Equal(t, retries, 2, "expected 3 attempts, so 2 retries")
@@ -98,7 +98,7 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 
 	t.Run("does not retry without an origin remote", func(t *testing.T) {
 		retries := 0
-		_, err := stgit.GetDefaultBranchWithRetry(context.Background(), createTempGitRepo(t, plumbing.Main), fast,
+		_, err := stgit.GetDefaultBranchWithRetry(t.Context(), createTempGitRepo(t, plumbing.Main), fast,
 			retry.WithOnRetry(func(context.Context, int, error, time.Duration) { retries++ }))
 		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
 		assert.Equal(t, retries, 0)
@@ -106,12 +106,12 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 
 	t.Run("returns the branch", func(t *testing.T) {
 		repoDir := t.TempDir()
-		_, err := git.PlainCloneContext(context.Background(), repoDir, false, &git.CloneOptions{
+		_, err := git.PlainCloneContext(t.Context(), repoDir, false, &git.CloneOptions{
 			URL: createTempGitRepo(t, plumbing.Master),
 		})
 		assert.NilError(t, err)
 
-		db, err := stgit.GetDefaultBranchWithRetry(context.Background(), repoDir, fast)
+		db, err := stgit.GetDefaultBranchWithRetry(t.Context(), repoDir, fast)
 		assert.NilError(t, err)
 		assert.Equal(t, db, "master")
 	})

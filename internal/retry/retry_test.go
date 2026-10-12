@@ -23,7 +23,7 @@ func fast() retry.Option {
 
 func TestDoValueRetriesUntilSuccess(t *testing.T) {
 	calls := 0
-	v, err := retry.DoValue(context.Background(), func(context.Context) (string, error) {
+	v, err := retry.DoValue(t.Context(), func(context.Context) (string, error) {
 		calls++
 		if calls < 3 {
 			return "", errBoom
@@ -37,7 +37,7 @@ func TestDoValueRetriesUntilSuccess(t *testing.T) {
 
 func TestDoValueStopsAfterThreeAttempts(t *testing.T) {
 	calls := 0
-	v, err := retry.DoValue(context.Background(), func(context.Context) (string, error) {
+	v, err := retry.DoValue(t.Context(), func(context.Context) (string, error) {
 		calls++
 		return "partial", errBoom
 	}, fast())
@@ -48,7 +48,7 @@ func TestDoValueStopsAfterThreeAttempts(t *testing.T) {
 
 func TestDoValuePermanentStopsImmediately(t *testing.T) {
 	calls := 0
-	_, err := retry.DoValue(context.Background(), func(context.Context) (string, error) {
+	_, err := retry.DoValue(t.Context(), func(context.Context) (string, error) {
 		calls++
 		return "", retry.Permanent(errBoom)
 	}, fast())
@@ -57,7 +57,7 @@ func TestDoValuePermanentStopsImmediately(t *testing.T) {
 }
 
 func TestDoValueReturnsContextError(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	calls := 0
 	_, err := retry.DoValue(ctx, func(context.Context) (string, error) {
 		calls++
@@ -70,7 +70,7 @@ func TestDoValueReturnsContextError(t *testing.T) {
 
 func TestDoValueOnRetryReceivesAttemptErrorAndWait(t *testing.T) {
 	var attempts []int
-	_, _ = retry.DoValue(context.Background(), func(context.Context) (string, error) { return "", errBoom },
+	_, _ = retry.DoValue(t.Context(), func(context.Context) (string, error) { return "", errBoom },
 		fast(),
 		retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
 			assert.ErrorIs(t, err, errBoom)
