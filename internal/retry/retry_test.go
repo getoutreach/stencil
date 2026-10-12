@@ -12,6 +12,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/retry"
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
 var errBoom = errors.New("boom")
@@ -81,9 +82,5 @@ func TestDoValueOnRetryReceivesAttemptErrorAndWait(t *testing.T) {
 }
 
 func TestExponentialPanicsOnInvalidArguments(t *testing.T) {
-	assert.Assert(t, func() (panicked bool) {
-		defer func() { panicked = recover() != nil }()
-		retry.Exponential(time.Minute, time.Second, 2, 0)
-		return false
-	}())
+	assert.Assert(t, cmp.Panics(func() { retry.Exponential(time.Minute, time.Second, 2, 0) }))
 }

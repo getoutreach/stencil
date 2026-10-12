@@ -103,7 +103,7 @@ func TestValues(t *testing.T) {
 	assert.Equal(t, branch, "main")
 }
 
-// gitInDir runs git with args in dir and fails the test if it fails.
+// gitInDir runs git with args in dir and fails the test on error.
 func gitInDir(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	out, err := exec.CommandContext(t.Context(), "git", append([]string{"-C", dir}, args...)...).CombinedOutput()

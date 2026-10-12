@@ -24,7 +24,6 @@ import (
 // maxAttempts is the maximum total number of calls to fn, including the first.
 const maxAttempts = 3
 
-// config is the resolved configuration for DoValue.
 type config struct {
 	// strategy computes the delay before each retry.
 	strategy Strategy
