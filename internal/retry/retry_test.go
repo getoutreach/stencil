@@ -71,13 +71,14 @@ func TestDoValueReturnsContextError(t *testing.T) {
 
 func TestDoValueOnRetryReceivesAttemptErrorAndWait(t *testing.T) {
 	var attempts []int
-	_, _ = retry.DoValue(t.Context(), func(context.Context) (string, error) { return "", errBoom },
+	_, err := retry.DoValue(t.Context(), func(context.Context) (string, error) { return "", errBoom },
 		fast(),
 		retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
 			assert.ErrorIs(t, err, errBoom)
 			assert.Equal(t, wait, time.Millisecond)
 			attempts = append(attempts, attempt)
 		}))
+	assert.ErrorIs(t, err, errBoom, "expected the last error once the attempts are used up")
 	assert.DeepEqual(t, attempts, []int{1, 2})
 }
 
