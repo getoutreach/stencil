@@ -103,6 +103,24 @@ func TestValues(t *testing.T) {
 	assert.Equal(t, branch, "main")
 }
 
+func TestGeneratedValues(t *testing.T) {
+	log := logrus.New()
+
+	man := &configuration.TemplateRepositoryManifest{
+		Name: "testing",
+	}
+	m, err := modulestest.NewModuleFromTemplates(man, "testdata/values/values.tpl")
+	assert.NilError(t, err, "failed to create module")
+
+	st := NewStencil(&configuration.ServiceManifest{
+		Name:      "testing",
+		Arguments: map[string]any{},
+	}, []*modules.Module{m}, log)
+	tpls, err := st.Render(context.Background(), log)
+	assert.NilError(t, err, "failed to render templates")
+	assert.Equal(t, tpls[0].Files[0].String(), "vfs vfs vfs testdata/values/values.tpl")
+}
+
 // gitInDir runs git with args in dir and fails the test on error.
 func gitInDir(t *testing.T, dir string, args ...string) {
 	t.Helper()
