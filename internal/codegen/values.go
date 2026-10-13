@@ -8,13 +8,17 @@ package codegen
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
 	stencilgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/internal/modules"
+	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,10 +58,18 @@ type git struct {
 	// index.
 	Dirty bool
 
-	// DefaultBranch is the default branch to use for this repository
-	// generally this is equal to "main", but some repositories
-	// use other values.
-	DefaultBranch string
+	// defaultBranch is a func value so that the copies of Values share one lookup.
+	defaultBranch func() (string, error)
+}
+
+// DefaultBranch is the default branch to use for this repository, generally
+// "main", but some repositories use other values. It is looked up on first use,
+// so runs where no template reads it never ask the remote. It returns an error,
+// which fails template rendering, when the branch could not be determined (after
+// retries) or the git repository could not be opened, instead of rendering an
+// empty string.
+func (g git) DefaultBranch() (string, error) {
+	return g.defaultBranch()
 }
 
 // config contains a small amount of configuration that
@@ -123,6 +135,8 @@ type Values struct {
 
 // NewValues returns a fully initialized Values
 // based on the current runtime environment.
+// The default branch is looked up on first use, so ctx must stay valid until
+// all templates have been rendered.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
 	vals := &Values{
 		Git: git{},
@@ -153,13 +167,20 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	// If we're a repository, add repository information
-	if r, err := gogit.PlainOpen(""); err == nil {
-		db, err := stencilgit.GetDefaultBranch(ctx, "")
-		if err != nil {
-			log.Warnf("Failed to get default branch, defaulting to 'main': %v", err)
-			db = "main"
-		}
-		vals.Git.DefaultBranch = db
+	r, err := gogit.PlainOpen("")
+	if err != nil {
+		// Keep the cause (e.g. a git extension go-git doesn't support) so that a
+		// template reading .Git.DefaultBranch can say why it failed.
+		openErr := errors.Wrap(err, "failed to open git repository in the current directory")
+		vals.Git.defaultBranch = func() (string, error) { return "", openErr }
+	} else {
+		vals.Git.defaultBranch = sync.OnceValues(func() (string, error) {
+			db, err := stencilgit.GetDefaultBranchWithRetry(ctx, "",
+				retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
+					log.Warnf("Failed to get default branch (attempt %d), retrying in %s: %v", attempt, wait, err)
+				}))
+			return db, errors.Wrap(err, "failed to get default branch")
+		})
 
 		// Add HEAD information
 		if pref, err := r.Head(); err == nil {
