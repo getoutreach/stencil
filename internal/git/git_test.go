@@ -6,6 +6,7 @@ package git_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -93,7 +94,8 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 		retries := 0
 		_, err = stgit.GetDefaultBranchWithRetry(t.Context(), repoDir, fast,
 			retry.WithOnRetry(func(context.Context, int, error, time.Duration) { retries++ }))
-		assert.Assert(t, err != nil)
+		var exitErr *exec.ExitError
+		assert.Assert(t, errors.As(err, &exitErr), "expected git to exit with an error, got: %v", err)
 		assert.Equal(t, retries, 2, "expected 3 attempts, so 2 retries")
 	})
 
