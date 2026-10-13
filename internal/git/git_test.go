@@ -75,9 +75,68 @@ func TestGetDefaultBranchMaster(t *testing.T) {
 	assert.Equal(t, defaultBranch, "master", "Expected default branch to be 'master'")
 }
 
-func TestGetDefaultBranchNoOriginRemote(t *testing.T) {
-	_, err := stgit.GetDefaultBranch(t.Context(), createTempGitRepo(t, plumbing.Main))
-	assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
+// createTwoBranchRepo is createTempGitRepo with a second branch, so that the
+// default branch cannot be inferred without an "origin" remote.
+func createTwoBranchRepo(t *testing.T) string {
+	t.Helper()
+	repoDir := createTempGitRepo(t, plumbing.Main)
+	repo, err := git.PlainOpen(repoDir)
+	assert.NilError(t, err)
+	head, err := repo.Head()
+	assert.NilError(t, err)
+	assert.NilError(t, repo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName("other"), head.Hash())))
+	return repoDir
+}
+
+func TestGetDefaultBranchWithoutOriginRemote(t *testing.T) {
+	t.Run("infers the only branch", func(t *testing.T) {
+		repoDir := createTempGitRepo(t, plumbing.NewBranchReferenceName("develop"))
+		defaultBranch, err := stgit.GetDefaultBranch(t.Context(), repoDir)
+		assert.NilError(t, err)
+		assert.Equal(t, defaultBranch, "develop")
+	})
+
+	t.Run("uses the branch HEAD names when there are no commits yet", func(t *testing.T) {
+		repoDir := t.TempDir()
+		_, err := git.PlainInitWithOptions(repoDir, &git.PlainInitOptions{
+			InitOptions: git.InitOptions{DefaultBranch: plumbing.NewBranchReferenceName("develop")},
+		})
+		assert.NilError(t, err)
+
+		defaultBranch, err := stgit.GetDefaultBranch(t.Context(), repoDir)
+		assert.NilError(t, err)
+		assert.Equal(t, defaultBranch, "develop")
+	})
+
+	t.Run("fails when HEAD is detached and there are no branches", func(t *testing.T) {
+		repoDir := createTempGitRepo(t, plumbing.Main)
+		repo, err := git.PlainOpen(repoDir)
+		assert.NilError(t, err)
+		head, err := repo.Head()
+		assert.NilError(t, err)
+		assert.NilError(t, repo.Storer.SetReference(plumbing.NewHashReference(plumbing.HEAD, head.Hash())))
+		assert.NilError(t, repo.Storer.RemoveReference(plumbing.Main))
+
+		_, err = stgit.GetDefaultBranch(t.Context(), repoDir)
+		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
+		assert.ErrorContains(t, err, "detached")
+	})
+
+	t.Run("sees the branches of other worktrees", func(t *testing.T) {
+		repoDir := createTempGitRepo(t, plumbing.Main)
+		worktreeDir := filepath.Join(t.TempDir(), "worktree")
+		gitInDir(t, repoDir, "worktree", "add", "-q", "-b", "other", worktreeDir)
+
+		_, err := stgit.GetDefaultBranch(t.Context(), worktreeDir)
+		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
+		assert.ErrorContains(t, err, "2 local branches")
+	})
+
+	t.Run("fails when there are several branches", func(t *testing.T) {
+		_, err := stgit.GetDefaultBranch(t.Context(), createTwoBranchRepo(t))
+		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
+		assert.ErrorContains(t, err, "2 local branches")
+	})
 }
 
 func TestGetDefaultBranchWithRetry(t *testing.T) {
@@ -101,7 +160,7 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 
 	t.Run("does not retry without an origin remote", func(t *testing.T) {
 		retries := 0
-		_, err := stgit.GetDefaultBranchWithRetry(t.Context(), createTempGitRepo(t, plumbing.Main), fast,
+		_, err := stgit.GetDefaultBranchWithRetry(t.Context(), createTwoBranchRepo(t), fast,
 			retry.WithOnRetry(func(context.Context, int, error, time.Duration) { retries++ }))
 		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
 		assert.Equal(t, retries, 0)

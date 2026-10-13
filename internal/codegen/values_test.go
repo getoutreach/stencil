@@ -155,17 +155,41 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 	}
 }
 
-func TestDefaultBranchWithoutOriginRemoteIsNotRetried(t *testing.T) {
+// newValuesWithoutOrigin runs NewValues in a new repository without an "origin"
+// remote, after setup has prepared it, and returns the values and the log hook.
+func newValuesWithoutOrigin(t *testing.T, setup func(dir string)) (*Values, *logtest.Hook) {
+	t.Helper()
 	dir := t.TempDir()
-	gitInDir(t, dir, "init", "-q")
+	setup(dir)
 	t.Chdir(dir)
 
 	log, hook := logtest.NewNullLogger()
-	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, log)
+	return NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, log), hook
+}
 
-	_, err := vals.Git.DefaultBranch()
-	assert.ErrorContains(t, err, `"origin" remote`)
-	assert.Equal(t, len(hook.AllEntries()), 0, "expected no retries to be logged")
+func TestDefaultBranchWithoutOriginRemote(t *testing.T) {
+	// The ways of inferring the branch are covered in the git package.
+	t.Run("is inferred", func(t *testing.T) {
+		vals, hook := newValuesWithoutOrigin(t, func(dir string) { gitInDir(t, dir, "init", "-q", "-b", "develop") })
+
+		branch, err := vals.Git.DefaultBranch()
+		assert.NilError(t, err)
+		assert.Equal(t, branch, "develop")
+		assert.Equal(t, len(hook.AllEntries()), 0, "expected no retries to be logged")
+	})
+
+	t.Run("fails without retries when it is ambiguous", func(t *testing.T) {
+		vals, hook := newValuesWithoutOrigin(t, func(dir string) {
+			gitInDir(t, dir, "init", "-q", "-b", "trunk")
+			gitInDir(t, dir, "-c", "user.name=Stencil", "-c", "user.email=email@example.com",
+				"commit", "-q", "--allow-empty", "-m", "initial commit")
+			gitInDir(t, dir, "branch", "other")
+		})
+
+		_, err := vals.Git.DefaultBranch()
+		assert.ErrorContains(t, err, `"origin" remote`)
+		assert.Equal(t, len(hook.AllEntries()), 0, "expected no retries to be logged")
+	})
 }
 
 func TestDefaultBranchIsLookedUpOnFirstUseOnly(t *testing.T) {
