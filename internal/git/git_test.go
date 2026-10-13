@@ -88,6 +88,17 @@ func createTwoBranchRepo(t *testing.T) string {
 	return repoDir
 }
 
+// detachHEAD detaches HEAD from its branch, keeping the branch.
+func detachHEAD(t *testing.T, repoDir string) *git.Repository {
+	t.Helper()
+	repo, err := git.PlainOpen(repoDir)
+	assert.NilError(t, err)
+	head, err := repo.Head()
+	assert.NilError(t, err)
+	assert.NilError(t, repo.Storer.SetReference(plumbing.NewHashReference(plumbing.HEAD, head.Hash())))
+	return repo
+}
+
 func TestGetDefaultBranchWithoutOriginRemote(t *testing.T) {
 	t.Run("infers the only branch", func(t *testing.T) {
 		repoDir := createTempGitRepo(t, plumbing.NewBranchReferenceName("develop"))
@@ -110,16 +121,46 @@ func TestGetDefaultBranchWithoutOriginRemote(t *testing.T) {
 
 	t.Run("fails when HEAD is detached and there are no branches", func(t *testing.T) {
 		repoDir := createTempGitRepo(t, plumbing.Main)
-		repo, err := git.PlainOpen(repoDir)
-		assert.NilError(t, err)
-		head, err := repo.Head()
-		assert.NilError(t, err)
-		assert.NilError(t, repo.Storer.SetReference(plumbing.NewHashReference(plumbing.HEAD, head.Hash())))
+		repo := detachHEAD(t, repoDir)
 		assert.NilError(t, repo.Storer.RemoveReference(plumbing.Main))
 
-		_, err = stgit.GetDefaultBranch(t.Context(), repoDir)
+		_, err := stgit.GetDefaultBranch(t.Context(), repoDir)
 		assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
 		assert.ErrorContains(t, err, "detached")
+	})
+
+	t.Run("checks the only branch when HEAD does not name it", func(t *testing.T) {
+		// Do not read the git settings of the machine that runs the tests.
+		t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+		t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+		tests := map[string]struct {
+			branch  string
+			config  string
+			wantErr bool
+		}{
+			"init.defaultBranch is not set": {branch: "develop"},
+			"it is init.defaultBranch":      {branch: "develop", config: "develop"},
+			"it is not init.defaultBranch":  {branch: "gh-pages", config: "main", wantErr: true},
+		}
+		for name, tt := range tests {
+			t.Run(name, func(t *testing.T) {
+				repoDir := createTempGitRepo(t, plumbing.NewBranchReferenceName(tt.branch))
+				detachHEAD(t, repoDir)
+				if tt.config != "" {
+					gitInDir(t, repoDir, "config", "init.defaultBranch", tt.config)
+				}
+
+				defaultBranch, err := stgit.GetDefaultBranch(t.Context(), repoDir)
+				if tt.wantErr {
+					assert.ErrorIs(t, err, stgit.ErrNoOriginRemote)
+					assert.ErrorContains(t, err, tt.branch)
+					return
+				}
+				assert.NilError(t, err)
+				assert.Equal(t, defaultBranch, tt.branch)
+			})
+		}
 	})
 
 	t.Run("sees the branches of other worktrees", func(t *testing.T) {
