@@ -84,7 +84,8 @@ func createTwoBranchRepo(t *testing.T) string {
 	assert.NilError(t, err)
 	head, err := repo.Head()
 	assert.NilError(t, err)
-	assert.NilError(t, repo.Storer.SetReference(plumbing.NewHashReference(plumbing.NewBranchReferenceName("other"), head.Hash())))
+	other := plumbing.NewHashReference(plumbing.NewBranchReferenceName("other"), head.Hash())
+	assert.NilError(t, repo.Storer.SetReference(other))
 	return repoDir
 }
 
@@ -188,7 +189,8 @@ func TestGetDefaultBranchWithRetry(t *testing.T) {
 		// An unreachable origin makes `git remote show origin` fail every time.
 		repo, err := git.PlainOpen(repoDir)
 		assert.NilError(t, err)
-		_, err = repo.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{filepath.Join(t.TempDir(), "missing")}})
+		missing := filepath.Join(t.TempDir(), "missing")
+		_, err = repo.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{missing}})
 		assert.NilError(t, err)
 
 		retries := 0

@@ -97,7 +97,8 @@ func inferLocalDefaultBranch(ctx context.Context, path string) (string, error) {
 		}
 		return head, nil
 	default:
-		return "", errors.Wrapf(ErrNoOriginRemote, "found %d local branches, add an \"origin\" remote to choose one", len(refs))
+		return "", errors.Wrapf(ErrNoOriginRemote,
+			"found %d local branches, add an \"origin\" remote to choose one", len(refs))
 	}
 }
 
