@@ -239,7 +239,10 @@ func TestNewValuesDoesNotLookUpTheDefaultBranch(t *testing.T) {
 	assert.Equal(t, len(hook.AllEntries()), 0, "expected no lookup until a template reads the default branch")
 }
 
-func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
+// newClonedRepository clones a new repository, whose only branch is "trunk"
+// and which has one empty commit, and returns the path of the clone.
+func newClonedRepository(t *testing.T) string {
+	t.Helper()
 	upstream := t.TempDir()
 	gitInDir(t, upstream, "init", "-q", "-b", "trunk")
 	gitInDir(t, upstream, "-c", "user.name=Stencil", "-c", "user.email=email@example.com",
@@ -247,9 +250,29 @@ func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
 
 	parent := t.TempDir()
 	gitInDir(t, parent, "clone", "-q", upstream, "clone")
-	t.Chdir(filepath.Join(parent, "clone"))
+	return filepath.Join(parent, "clone")
+}
+
+func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
+	t.Chdir(newClonedRepository(t))
 
 	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+	branch, err := vals.Git.DefaultBranch()
+	assert.NilError(t, err)
+	assert.Equal(t, branch, "trunk")
+}
+
+func TestValuesInSubdirectoryOfRepository(t *testing.T) {
+	clone := newClonedRepository(t)
+	subdir := filepath.Join(clone, "nested", "dir")
+	assert.NilError(t, os.MkdirAll(subdir, 0o755))
+	t.Chdir(subdir)
+
+	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+
+	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
+	assert.Assert(t, vals.Git.Commit != "", "expected the commit of the repository above the working directory")
+
 	branch, err := vals.Git.DefaultBranch()
 	assert.NilError(t, err)
 	assert.Equal(t, branch, "trunk")

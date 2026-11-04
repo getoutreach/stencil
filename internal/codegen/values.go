@@ -166,12 +166,13 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		vals.Runtime.Box = &box.Config{}
 	}
 
-	// If we're a repository, add repository information
-	r, err := gogit.PlainOpen("")
+	// If we're in a repository, add repository information. Parent directories
+	// are searched too, so this works from a subdirectory of the repository.
+	r, err := gogit.PlainOpenWithOptions("", &gogit.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		// Keep the cause (e.g. a git extension go-git doesn't support) so that a
 		// template reading .Git.DefaultBranch can say why it failed.
-		openErr := errors.Wrap(err, "failed to open git repository in the current directory")
+		openErr := errors.Wrap(err, "failed to open git repository in the current or a parent directory")
 		vals.Git.defaultBranch = func() (string, error) { return "", openErr }
 	} else {
 		vals.Git.defaultBranch = sync.OnceValues(func() (string, error) {
