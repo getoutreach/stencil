@@ -7,6 +7,7 @@ package retry_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -16,7 +17,10 @@ import (
 	"gotest.tools/v3/assert/cmp"
 )
 
-var errBoom = errors.New("boom")
+var (
+	errBoom      = errors.New("boom")
+	errTransient = errors.New("transient")
+)
 
 // fast waits exactly 1ms before every retry.
 func fast() retry.Option {
@@ -130,6 +134,128 @@ func TestDoValueWithMaxAttempts(t *testing.T) {
 	assert.ErrorIs(t, err, errBoom)
 	assert.Equal(t, v, "", "expected the zero value on failure")
 	assert.Equal(t, calls, 4)
+}
+
+// retryAfterError is an error that asks for a minimum wait before the next attempt.
+type retryAfterError struct {
+	err   error
+	after time.Duration
+}
+
+func (e *retryAfterError) Error() string             { return e.err.Error() }
+func (e *retryAfterError) Unwrap() error             { return e.err }
+func (e *retryAfterError) RetryAfter() time.Duration { return e.after }
+
+// waits runs fn under fast() with extra options, and returns the delay before each retry.
+func waits(t *testing.T, fn func(context.Context) error, opts ...retry.Option) []time.Duration {
+	t.Helper()
+	var got []time.Duration
+	opts = append([]retry.Option{fast(), retry.WithOnRetry(func(_ context.Context, _ int, _ error, wait time.Duration) {
+		got = append(got, wait)
+	})}, opts...)
+	_ = retry.Do(t.Context(), fn, opts...)
+	return got
+}
+
+// TestDoCallCounts checks how many times fn is called under combinations of
+// the options that limit the attempts. fn fails until call number succeedOn
+// (0 means it always fails).
+func TestDoCallCounts(t *testing.T) {
+	never := func(error) bool { return false }
+	for _, tc := range []struct {
+		name      string
+		opts      []retry.Option
+		succeedOn int
+		want      int
+	}{
+		{"error that is not retryable", []retry.Option{retry.WithRetryable(never)}, 0, 1},
+		{"without attempt limit", []retry.Option{retry.WithoutAttemptLimit()}, 10, 10},
+		{"max attempts after without attempt limit", []retry.Option{retry.WithoutAttemptLimit(), retry.WithMaxAttempts(2)}, 0, 2},
+		{"without attempt limit after max attempts", []retry.Option{retry.WithMaxAttempts(2), retry.WithoutAttemptLimit()}, 6, 6},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			_ = retry.Do(t.Context(), func(context.Context) error {
+				calls++
+				if calls == tc.succeedOn {
+					return nil
+				}
+				return errBoom
+			}, append([]retry.Option{fast()}, tc.opts...)...)
+			assert.Equal(t, calls, tc.want)
+		})
+	}
+}
+
+func TestDoWithRetryableRetriesOnTrue(t *testing.T) {
+	calls := 0
+	err := retry.Do(t.Context(), func(context.Context) error {
+		calls++
+		if calls < 3 {
+			return fmt.Errorf("attempt %d: %w", calls, errTransient)
+		}
+		return errBoom
+	}, fast(), retry.WithRetryable(func(err error) bool { return errors.Is(err, errTransient) }))
+	assert.Equal(t, err, errBoom, "expected the first error that is not retryable")
+	assert.Equal(t, calls, 3)
+}
+
+func TestDoWithRetryableIsNotAskedAboutPermanentOrContextErrors(t *testing.T) {
+	asked := 0
+	retryable := retry.WithRetryable(func(error) bool {
+		asked++
+		return true
+	})
+
+	err := retry.Do(t.Context(), func(context.Context) error { return retry.Permanent(errBoom) }, fast(), retryable)
+	assert.Equal(t, err, errBoom)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	err = retry.Do(ctx, func(context.Context) error {
+		cancel()
+		return errBoom
+	}, fast(), retryable)
+	assert.ErrorIs(t, err, context.Canceled)
+
+	assert.Equal(t, asked, 0)
+}
+
+func TestDoWithoutAttemptLimitStopsOnContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	calls := 0
+	err := retry.Do(ctx, func(context.Context) error {
+		calls++
+		if calls == 5 {
+			cancel()
+		}
+		return errBoom
+	}, fast(), retry.WithoutAttemptLimit())
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, calls, 5)
+}
+
+func TestConstantWaitsTheSameBeforeEveryRetry(t *testing.T) {
+	got := waits(t, func(context.Context) error { return errBoom },
+		retry.WithBackoff(retry.Constant(2*time.Millisecond)), retry.WithMaxAttempts(4))
+	assert.DeepEqual(t, got, []time.Duration{2 * time.Millisecond, 2 * time.Millisecond, 2 * time.Millisecond})
+}
+
+func TestRetryAfterSetsAMinimumWait(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		after, want time.Duration
+	}{
+		{"raises the wait", 20 * time.Millisecond, 20 * time.Millisecond},
+		{"never shortens the wait", time.Microsecond, time.Millisecond}, // fast() waits 1ms
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := waits(t, func(context.Context) error {
+				// Wrapped, to show that RetryAfter is found anywhere in the chain.
+				return fmt.Errorf("calling upstream: %w", &retryAfterError{err: errBoom, after: tc.after})
+			}, retry.WithMaxAttempts(2))
+			assert.DeepEqual(t, got, []time.Duration{tc.want})
+		})
+	}
 }
 
 func TestExponentialPanicsOnInvalidArguments(t *testing.T) {

@@ -5,8 +5,9 @@
 // Package retry retries a function with backoff.
 //
 // It is a small subset of github.com/getoutreach/services/pkg/retry (Do,
-// DoValue, WithMaxAttempts, WithBackoff, WithOnRetry, Permanent and Exponential),
-// using functional options so it is easy to replace with a shared retry helper
+// DoValue, WithMaxAttempts, WithoutAttemptLimit, WithRetryable, WithBackoff,
+// WithOnRetry, Permanent, RetryAfter, Exponential and Constant), using
+// functional options so it is easy to replace with a shared retry helper
 // later. Port more of that package here when a caller needs it. Delete this
 // package once gobox provides one.
 package retry
@@ -34,6 +35,10 @@ const defaultMaxAttempts = 3
 type config struct {
 	// maxAttempts is the maximum total number of calls to fn, including the first.
 	maxAttempts int
+
+	// retryable classifies an error from fn: true retries, false stops. A nil
+	// retryable retries every error.
+	retryable func(error) bool
 
 	// strategy computes the delay before each retry.
 	strategy Strategy
@@ -64,6 +69,21 @@ func WithMaxAttempts(n int) Option {
 	}
 }
 
+// WithoutAttemptLimit removes the attempt cap, so only ctx, Permanent or
+// WithRetryable end the retries. Always use it with a ctx that can be canceled
+// or has a deadline. The last of WithMaxAttempts and WithoutAttemptLimit wins.
+func WithoutAttemptLimit() Option {
+	return func(c *config) { c.maxAttempts = math.MaxInt }
+}
+
+// WithRetryable sets the function that decides whether an error from fn is
+// retried: true retries, false returns the error at once. The default retries
+// every error. Permanent errors are never passed to fn, and neither is any
+// error once ctx is done.
+func WithRetryable(fn func(error) bool) Option {
+	return func(c *config) { c.retryable = fn }
+}
+
 // WithBackoff sets the Strategy used to compute the delay before each retry.
 // The default is Exponential(1s, 5m, 1.6, 0.2).
 func WithBackoff(s Strategy) Option {
@@ -78,7 +98,7 @@ func WithOnRetry(fn func(ctx context.Context, attempt int, err error, wait time.
 }
 
 // Strategy describes a backoff curve: how long to wait before a given retry.
-// It is opaque so it can only be obtained from Exponential.
+// It is opaque so it can only be obtained from Exponential or Constant.
 type Strategy interface {
 	// delay returns the wait before the attempt-th retry: delay(1) is the wait
 	// after the first call to fn fails.
@@ -109,6 +129,24 @@ func (e exponential) delay(attempt int) time.Duration {
 	return time.Duration(d - delta + rand.Float64()*2*delta) //nolint:gosec // Why: jitter does not need a secure source.
 }
 
+// constant is the Strategy that Constant returns.
+type constant time.Duration
+
+// Constant returns a Strategy that waits d before every retry.
+func Constant(d time.Duration) Strategy { return constant(d) }
+
+func (c constant) delay(int) time.Duration { return time.Duration(c) }
+
+// RetryAfter is implemented by an error that says how long to wait before the
+// next attempt, such as a rate limit error. Do waits at least that long when an
+// error in the chain returned by fn implements it, even if the Strategy's delay
+// is shorter.
+//
+//nolint:revive // Why: The name stutters with the package, but matches services/pkg/retry so error types work with both.
+type RetryAfter interface {
+	RetryAfter() time.Duration
+}
+
 // permanentError marks the wrapped error as not retryable.
 type permanentError struct{ err error }
 
@@ -126,15 +164,18 @@ func Permanent(err error) error {
 }
 
 // Do calls fn until it succeeds, returns an error wrapped by Permanent, ctx is
-// done, or the attempt budget (3 by default, see WithMaxAttempts) is used up, in
-// which case it returns the last error from fn. An invalid option (see
+// done, WithRetryable returns false, or the attempt budget (3 by default, see
+// WithMaxAttempts; none with WithoutAttemptLimit) is used up, in which case it
+// returns the last error from fn. An invalid option (see
 // WithMaxAttempts) is returned before fn is called. Each error from fn is
 // handled in this order:
 //
 //  1. ctx is done: stop and return ctx.Err().
 //  2. The error is wrapped by Permanent: stop and return the unwrapped error.
-//  3. The attempt budget is exhausted: stop and return the error.
-//  4. Otherwise wait for the Strategy's delay, then try again.
+//  3. WithRetryable is set and returns false: stop and return the error.
+//  4. The attempt budget is exhausted: stop and return the error.
+//  5. Otherwise wait for the Strategy's delay (at least the error's RetryAfter,
+//     if it implements one), then try again.
 func Do(ctx context.Context, fn func(context.Context) error, opts ...Option) error {
 	c := &config{
 		maxAttempts: defaultMaxAttempts,
@@ -162,11 +203,19 @@ func Do(ctx context.Context, fn func(context.Context) error, opts ...Option) err
 			return perm.err
 		}
 
+		if c.retryable != nil && !c.retryable(err) {
+			return err
+		}
+
 		if attempt >= c.maxAttempts {
 			return err
 		}
 
 		wait := c.strategy.delay(attempt)
+		var ra RetryAfter
+		if errors.As(err, &ra) {
+			wait = max(wait, ra.RetryAfter())
+		}
 		if c.onRetry != nil {
 			c.onRetry(ctx, attempt, err, wait)
 		}
