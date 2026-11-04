@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -65,6 +66,13 @@ type Module struct {
 
 	// fs is a cached filesystem
 	fs billy.Filesystem
+
+	// manifestMu guards manifest and serializes the first load of it.
+	manifestMu sync.Mutex
+
+	// manifest is the parsed manifest.yaml of this module. It is set on the
+	// first successful call to Manifest, and is never handed out directly.
+	manifest *configuration.TemplateRepositoryManifest
 }
 
 // uriIsLocal returns true if the URI is a local file path.
@@ -100,7 +108,12 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		return nil, fmt.Errorf("%w: %q", ErrVersionRequired, tr.Name)
 	}
 
-	return &Module{template.New(tr.Name).Funcs(sprig.TxtFuncMap()), tr.Name, uri, tr.Version, nil}, nil
+	return &Module{
+		t:       template.New(tr.Name).Funcs(sprig.TxtFuncMap()),
+		Name:    tr.Name,
+		URI:     uri,
+		Version: tr.Version,
+	}, nil
 }
 
 // NewWithFS creates a module with the specified file system. This is
@@ -143,42 +156,20 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 
 // Manifest downloads the module if not already downloaded and returns a parsed
 // configuration.TemplateRepositoryManifest of this module.
+//
+// The manifest is read once per Module and then cached, so edits to a local
+// module's manifest.yaml are not seen by an existing Module. Errors are not
+// cached. Each call returns a copy, so callers may modify the result, except
+// for the slice behind Type.Types(). It is safe for concurrent use.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
-	lockDir := FSLockDir(m.PathSlug())
-	lock, err := exclusiveLockDirectory(lockDir)
-	if err != nil {
-		return configuration.TemplateRepositoryManifest{},
-			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
-	}
-
-	//nolint:errcheck // Why: Unlock error can be safely ignored here
-	defer lock.Unlock()
-
-	fs, err := m.GetFS(ctx)
-	if err != nil {
-		return configuration.TemplateRepositoryManifest{}, errors.Wrap(err, "failed to download fs")
-	}
-
-	mf, err := fs.Open("manifest.yaml")
+	cached, err := m.cachedManifest(ctx)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{}, err
 	}
-	defer mf.Close()
 
-	var manifest configuration.TemplateRepositoryManifest
-	if err := yaml.NewDecoder(mf).Decode(&manifest); err != nil {
-		return configuration.TemplateRepositoryManifest{}, err
-	}
-
-	// ensure that the manifest name is equal to the import path
-	if manifest.Name != m.Name {
-		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
-			"%w: declared %q but imported as %q",
-			ErrImportPathMismatch, manifest.Name, m.Name,
-		)
-	}
-
-	return manifest, nil
+	// The cached manifest is never modified once set, so it is copied
+	// without holding the lock.
+	return cloneManifest(cached), nil
 }
 
 // GetFS returns a billy.Filesystem that contains the contents of this module.
@@ -260,6 +251,64 @@ func (m *Module) PathSlug() string {
 
 func (m *Module) FSCacheDir() string {
 	return FSCacheDir(m.PathSlug())
+}
+
+// cachedManifest returns the cached manifest, loading it first if needed.
+// The lock is held during the load so that concurrent callers do not parse
+// the same manifest more than once. The result must not be modified.
+func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRepositoryManifest, error) {
+	m.manifestMu.Lock()
+	defer m.manifestMu.Unlock()
+
+	if m.manifest == nil {
+		manifest, err := m.loadManifest(ctx)
+		if err != nil {
+			return nil, err
+		}
+		m.manifest = &manifest
+	}
+
+	return m.manifest, nil
+}
+
+// loadManifest downloads the module if not already downloaded and parses its
+// manifest.yaml, without consulting the cache.
+func (m *Module) loadManifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
+	lockDir := FSLockDir(m.PathSlug())
+	lock, err := exclusiveLockDirectory(lockDir)
+	if err != nil {
+		return configuration.TemplateRepositoryManifest{},
+			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
+	}
+
+	//nolint:errcheck // Why: Unlock error can be safely ignored here
+	defer lock.Unlock()
+
+	fs, err := m.GetFS(ctx)
+	if err != nil {
+		return configuration.TemplateRepositoryManifest{}, errors.Wrap(err, "failed to download fs")
+	}
+
+	mf, err := fs.Open("manifest.yaml")
+	if err != nil {
+		return configuration.TemplateRepositoryManifest{}, err
+	}
+	defer mf.Close()
+
+	var manifest configuration.TemplateRepositoryManifest
+	if err := yaml.NewDecoder(mf).Decode(&manifest); err != nil {
+		return configuration.TemplateRepositoryManifest{}, err
+	}
+
+	// ensure that the manifest name is equal to the import path
+	if manifest.Name != m.Name {
+		return configuration.TemplateRepositoryManifest{}, fmt.Errorf(
+			"%w: declared %q but imported as %q",
+			ErrImportPathMismatch, manifest.Name, m.Name,
+		)
+	}
+
+	return manifest, nil
 }
 
 // exclusiveLockDirectory creates a new flock lock for the specified directory.
