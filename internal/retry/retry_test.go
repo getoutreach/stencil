@@ -7,6 +7,7 @@ package retry_test
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -80,6 +81,55 @@ func TestDoValueOnRetryReceivesAttemptErrorAndWait(t *testing.T) {
 		}))
 	assert.ErrorIs(t, err, errBoom, "expected the last error once the attempts are used up")
 	assert.DeepEqual(t, attempts, []int{1, 2})
+}
+
+func TestDoWithMaxAttempts(t *testing.T) {
+	for _, n := range []int{1, 2, 5} {
+		t.Run(strconv.Itoa(n), func(t *testing.T) {
+			calls, retries := 0, 0
+			err := retry.Do(t.Context(), func(context.Context) error {
+				calls++
+				return errBoom
+			}, fast(), retry.WithMaxAttempts(n),
+				retry.WithOnRetry(func(context.Context, int, error, time.Duration) { retries++ }))
+			assert.ErrorIs(t, err, errBoom)
+			assert.Equal(t, calls, n, "expected n calls in total, including the first")
+			assert.Equal(t, retries, n-1, "expected no wait after the last call")
+		})
+	}
+}
+
+func TestDoWithMaxAttemptsRejectsLessThanOne(t *testing.T) {
+	for _, n := range []int{0, -1} {
+		calls := 0
+		err := retry.Do(t.Context(), func(context.Context) error {
+			calls++
+			return nil
+		}, retry.WithMaxAttempts(n))
+		assert.ErrorIs(t, err, retry.ErrInvalidMaxAttempts, "expected a configuration error for n=%d", n)
+		assert.Equal(t, calls, 0, "expected fn not to be called")
+	}
+}
+
+func TestDoLastWithMaxAttemptsWins(t *testing.T) {
+	calls := 0
+	err := retry.Do(t.Context(), func(context.Context) error {
+		calls++
+		return nil
+	}, retry.WithMaxAttempts(0), retry.WithMaxAttempts(5))
+	assert.NilError(t, err, "expected a valid option to clear an earlier invalid one")
+	assert.Equal(t, calls, 1)
+}
+
+func TestDoValueWithMaxAttempts(t *testing.T) {
+	calls := 0
+	v, err := retry.DoValue(t.Context(), func(context.Context) (string, error) {
+		calls++
+		return "partial", errBoom
+	}, fast(), retry.WithMaxAttempts(4))
+	assert.ErrorIs(t, err, errBoom)
+	assert.Equal(t, v, "", "expected the zero value on failure")
+	assert.Equal(t, calls, 4)
 }
 
 func TestExponentialPanicsOnInvalidArguments(t *testing.T) {

@@ -4,15 +4,16 @@
 
 // Package retry retries a function with backoff.
 //
-// It is intentionally the smallest API that stencil needs (DoValue, WithBackoff,
-// WithOnRetry, Permanent and Exponential), using functional options so it is
-// easy to replace with a shared retry helper later. Delete this package once
-// gobox provides one. The attempt cap is fixed at 3; a caller that needs another
-// count should add a WithMaxAttempts option rather than change the constant.
+// It is a small subset of github.com/getoutreach/services/pkg/retry (Do,
+// DoValue, WithMaxAttempts, WithBackoff, WithOnRetry, Permanent and Exponential),
+// using functional options so it is easy to replace with a shared retry helper
+// later. Port more of that package here when a caller needs it. Delete this
+// package once gobox provides one.
 package retry
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand/v2"
 	"time"
@@ -21,20 +22,47 @@ import (
 	"github.com/pkg/errors"
 )
 
-// maxAttempts is the maximum total number of calls to fn, including the first.
-const maxAttempts = 3
+// ErrInvalidMaxAttempts is returned by Do and DoValue, before fn is called, when
+// WithMaxAttempts is given an n below 1.
+var ErrInvalidMaxAttempts = errors.New("retry: WithMaxAttempts: n must be >= 1")
+
+// defaultMaxAttempts is the default maximum total number of calls to fn,
+// including the first.
+const defaultMaxAttempts = 3
 
 // config holds the settings that Options change.
 type config struct {
+	// maxAttempts is the maximum total number of calls to fn, including the first.
+	maxAttempts int
+
 	// strategy computes the delay before each retry.
 	strategy Strategy
 
 	// onRetry, if set, runs immediately before each sleep between attempts.
 	onRetry func(ctx context.Context, attempt int, err error, wait time.Duration)
+
+	// err holds a configuration error (see WithMaxAttempts), returned before the
+	// first call to fn.
+	err error
 }
 
-// Option configures DoValue.
+// Option configures Do and DoValue.
 type Option func(*config)
+
+// WithMaxAttempts sets the maximum total number of calls to fn, including the
+// first. The default is 3. n must be at least 1: a smaller value is a
+// configuration error, returned before fn is called. Only the last call in the
+// options list decides the outcome, so a valid call clears an earlier invalid one.
+func WithMaxAttempts(n int) Option {
+	return func(c *config) {
+		if n < 1 {
+			c.err = fmt.Errorf("%w (got %d)", ErrInvalidMaxAttempts, n)
+			return
+		}
+		c.err = nil
+		c.maxAttempts = n
+	}
+}
 
 // WithBackoff sets the Strategy used to compute the delay before each retry.
 // The default is Exponential(1s, 5m, 1.6, 0.2).
@@ -87,7 +115,7 @@ type permanentError struct{ err error }
 func (p *permanentError) Error() string { return p.err.Error() }
 func (p *permanentError) Unwrap() error { return p.err }
 
-// Permanent wraps err so DoValue stops immediately and returns err unchanged
+// Permanent wraps err so Do and DoValue stop immediately and return err unchanged
 // (only Permanent's own marker is removed). Wrap err with any extra context
 // before calling Permanent, not after.
 func Permanent(err error) error {
@@ -97,39 +125,45 @@ func Permanent(err error) error {
 	return &permanentError{err: err}
 }
 
-// DoValue calls fn until it succeeds, returns an error wrapped by Permanent, ctx
-// is done, or 3 attempts have been made, in which case it returns the last error
-// from fn. On failure it returns the zero value. Each error from fn is handled
-// in this order:
+// Do calls fn until it succeeds, returns an error wrapped by Permanent, ctx is
+// done, or the attempt budget (3 by default, see WithMaxAttempts) is used up, in
+// which case it returns the last error from fn. An invalid option (see
+// WithMaxAttempts) is returned before fn is called. Each error from fn is
+// handled in this order:
 //
 //  1. ctx is done: stop and return ctx.Err().
 //  2. The error is wrapped by Permanent: stop and return the unwrapped error.
 //  3. The attempt budget is exhausted: stop and return the error.
 //  4. Otherwise wait for the Strategy's delay, then try again.
-func DoValue[T any](ctx context.Context, fn func(context.Context) (T, error), opts ...Option) (T, error) {
-	c := &config{strategy: Exponential(time.Second, 5*time.Minute, 1.6, 0.2)}
+func Do(ctx context.Context, fn func(context.Context) error, opts ...Option) error {
+	c := &config{
+		maxAttempts: defaultMaxAttempts,
+		strategy:    Exponential(time.Second, 5*time.Minute, 1.6, 0.2),
+	}
 	for _, opt := range opts {
 		opt(c)
 	}
+	if c.err != nil {
+		return c.err
+	}
 
-	var zero T
 	for attempt := 1; ; attempt++ {
-		v, err := fn(ctx)
+		err := fn(ctx)
 		if err == nil {
-			return v, nil
+			return nil
 		}
 
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			return zero, ctxErr
+			return ctxErr
 		}
 
 		var perm *permanentError
 		if errors.As(err, &perm) {
-			return zero, perm.err
+			return perm.err
 		}
 
-		if attempt >= maxAttempts {
-			return zero, err
+		if attempt >= c.maxAttempts {
+			return err
 		}
 
 		wait := c.strategy.delay(attempt)
@@ -138,7 +172,22 @@ func DoValue[T any](ctx context.Context, fn func(context.Context) (T, error), op
 		}
 		async.Sleep(ctx, wait)
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			return zero, ctxErr
+			return ctxErr
 		}
 	}
+}
+
+// DoValue is Do for a function that also returns a value. On failure it returns
+// the zero value of T, even if fn returned a value alongside its error.
+func DoValue[T any](ctx context.Context, fn func(context.Context) (T, error), opts ...Option) (T, error) {
+	var value T
+	err := Do(ctx, func(ctx context.Context) error {
+		v, err := fn(ctx)
+		if err != nil {
+			return err
+		}
+		value = v
+		return nil
+	}, opts...)
+	return value, err
 }
