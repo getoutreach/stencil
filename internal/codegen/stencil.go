@@ -44,6 +44,9 @@ type Stencil struct {
 
 	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
+
+	// defaultBranch, when set, is used as .Git.DefaultBranch instead of asking git.
+	defaultBranch string
 }
 
 // NewStencil creates a new, fully initialized Stencil renderer function.
@@ -56,6 +59,14 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 		isFirstPass: true,
 		sharedData:  newSharedData(),
 	}
+}
+
+// WithDefaultBranch makes templates see branch as .Git.DefaultBranch, instead of
+// the branch that git reports. This is for callers, like stenciltest, that render
+// without a real repository to ask.
+func (s *Stencil) WithDefaultBranch(branch string) *Stencil {
+	s.defaultBranch = branch
+	return s
 }
 
 // hashModuleHookValue hashes the module hook value using the
@@ -192,6 +203,9 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 
 	log.Debug("Creating values for template")
 	vals := NewValues(ctx, s.m, s.modules, log)
+	if branch := s.defaultBranch; branch != "" {
+		vals.Git.defaultBranch = func() (string, error) { return branch, nil }
+	}
 	log.Debug("Finished creating values")
 
 	warnings, err := s.deprecatedArgumentWarnings(ctx)

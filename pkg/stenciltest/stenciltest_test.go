@@ -1,6 +1,7 @@
 package stenciltest
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -75,4 +76,21 @@ func TestCoverageHack(t *testing.T) {
 	assert.Equal(t, st.persist, true)
 	assert.Assert(t, !cmp.Equal(st.t, nil))
 	assert.Equal(t, st.m.Name, "testing")
+}
+
+func TestDefaultBranchHasDefault(t *testing.T) {
+	tpl, err := filepath.Abs("testdata/default-branch.tpl")
+	assert.NilError(t, err)
+
+	// Not a git repository, so rendering would fail without the default.
+	t.Chdir(t.TempDir())
+
+	st := &Template{
+		path:    tpl,
+		m:       &configuration.TemplateRepositoryManifest{Name: "testing"},
+		t:       t,
+		persist: false,
+		log:     logrus.New(),
+	}
+	st.Run(false)
 }
