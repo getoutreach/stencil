@@ -11,9 +11,8 @@ import (
 )
 
 // cloneManifest returns a copy of mf that shares no maps, slices, or pointers
-// with it, with one exception: Type is copied by value, so its underlying
-// slice is still shared. Its fields are unexported and it is only read by
-// callers, so callers must not modify the result of Type.Types().
+// with it, except for the slice behind Type, which is copied by value. Callers
+// must not modify the result of Type.Types().
 func cloneManifest(mf *configuration.TemplateRepositoryManifest) configuration.TemplateRepositoryManifest {
 	out := *mf
 	out.Modules = clonePtrs(mf.Modules)
