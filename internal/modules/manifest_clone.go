@@ -22,14 +22,20 @@ func cloneManifest(mf *configuration.TemplateRepositoryManifest) configuration.T
 	if mf.Arguments != nil {
 		out.Arguments = make(map[string]configuration.Argument, len(mf.Arguments))
 		for name, arg := range mf.Arguments {
-			arg.Default = cloneValue(arg.Default)
-			arg.Schema = cloneMap(arg.Schema)
-			//nolint:staticcheck // Why: Values is deprecated but must still be copied.
-			arg.Values = slices.Clone(arg.Values)
-			out.Arguments[name] = arg
+			out.Arguments[name] = cloneArgument(&arg)
 		}
 	}
 
+	return out
+}
+
+// cloneArgument returns a copy of arg that shares no maps or slices with it.
+func cloneArgument(arg *configuration.Argument) configuration.Argument {
+	out := *arg
+	out.Default = cloneValue(arg.Default)
+	out.Schema = cloneMap(arg.Schema)
+	//nolint:staticcheck // Why: Values is deprecated but must still be copied.
+	out.Values = slices.Clone(arg.Values)
 	return out
 }
 

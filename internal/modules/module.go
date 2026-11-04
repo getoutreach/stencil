@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"text/template"
@@ -173,6 +174,32 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 	// The cached manifest is never modified once set, so it is copied
 	// without holding the lock.
 	return cloneManifest(cached), nil
+}
+
+// Argument returns a copy of the named argument declared in this module's
+// manifest, and whether it is declared. It is cheaper than Manifest when only
+// one argument is needed.
+func (m *Module) Argument(ctx context.Context, name string) (configuration.Argument, bool, error) {
+	cached, err := m.cachedManifest(ctx)
+	if err != nil {
+		return configuration.Argument{}, false, err
+	}
+
+	arg, ok := cached.Arguments[name]
+	return cloneArgument(&arg), ok, nil
+}
+
+// ImportsModule returns whether this module's manifest lists the module with
+// the given import path as a dependency.
+func (m *Module) ImportsModule(ctx context.Context, importPath string) (bool, error) {
+	cached, err := m.cachedManifest(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return slices.ContainsFunc(cached.Modules, func(tr *configuration.TemplateRepository) bool {
+		return tr != nil && tr.Name == importPath
+	}), nil
 }
 
 // GetFS returns a billy.Filesystem that contains the contents of this module.

@@ -174,3 +174,46 @@ func TestFailedCloneIsRetried(t *testing.T) {
 	_, err = m.GetFS(ctx)
 	assert.Assert(t, err != nil, "expected the clone to be tried again")
 }
+
+func TestArgument(t *testing.T) {
+	ctx := context.Background()
+	fs := memfs.New()
+	writeManifest(t, fs)
+	m := modules.NewWithFS(ctx, "test", fs)
+
+	arg, ok, err := m.Argument(ctx, "foo")
+	assert.NilError(t, err)
+	assert.Assert(t, ok)
+	assert.Equal(t, arg.Schema["type"], "object")
+
+	// The result is a copy.
+	arg.Schema["type"] = "changed"
+	again, _, err := m.Argument(ctx, "foo")
+	assert.NilError(t, err)
+	assert.Equal(t, again.Schema["type"], "object")
+
+	_, ok, err = m.Argument(ctx, "missing")
+	assert.NilError(t, err)
+	assert.Assert(t, !ok)
+
+	_, _, err = modules.NewWithFS(ctx, "test", memfs.New()).Argument(ctx, "foo")
+	assert.Assert(t, err != nil, "expected an error when manifest.yaml is missing")
+}
+
+func TestImportsModule(t *testing.T) {
+	ctx := context.Background()
+	fs := memfs.New()
+	writeManifest(t, fs)
+	m := modules.NewWithFS(ctx, "test", fs)
+
+	imports, err := m.ImportsModule(ctx, "github.com/getoutreach/stencil-base")
+	assert.NilError(t, err)
+	assert.Assert(t, imports)
+
+	imports, err = m.ImportsModule(ctx, "github.com/getoutreach/other")
+	assert.NilError(t, err)
+	assert.Assert(t, !imports)
+
+	_, err = modules.NewWithFS(ctx, "test", memfs.New()).ImportsModule(ctx, "x")
+	assert.Assert(t, err != nil, "expected an error when manifest.yaml is missing")
+}
