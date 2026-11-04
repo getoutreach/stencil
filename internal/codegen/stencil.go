@@ -45,8 +45,8 @@ type Stencil struct {
 	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
 
-	// defaultBranch, when set, is used as .Git.DefaultBranch instead of asking git.
-	defaultBranch string
+	// gitOverride, when set, replaces the git information read from the checkout.
+	gitOverride *GitInfo
 }
 
 // NewStencil creates a new, fully initialized Stencil renderer function.
@@ -61,12 +61,11 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 	}
 }
 
-// WithDefaultBranch makes templates see branch as .Git.DefaultBranch, instead of
-// the branch that git reports. This is for callers, like stenciltest, that render
-// without a real repository to ask.
-func (s *Stencil) WithDefaultBranch(branch string) *Stencil {
-	s.defaultBranch = branch
-	return s
+// SetGit makes templates see info as .Git, instead of what git reports for the
+// current directory. This is for callers, like stenciltest, whose output must not
+// depend on the checkout they run in.
+func (s *Stencil) SetGit(info GitInfo) {
+	s.gitOverride = &info
 }
 
 // hashModuleHookValue hashes the module hook value using the
@@ -202,10 +201,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	}
 
 	log.Debug("Creating values for template")
-	vals := NewValues(ctx, s.m, s.modules, log)
-	if branch := s.defaultBranch; branch != "" {
-		vals.Git.defaultBranch = func() (string, error) { return branch, nil }
-	}
+	vals := newValues(ctx, s.m, s.modules, log, s.gitOverride)
 	log.Debug("Finished creating values")
 
 	warnings, err := s.deprecatedArgumentWarnings(ctx)

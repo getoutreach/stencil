@@ -27,8 +27,14 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// defaultBranch is the value of .Git.DefaultBranch in templates rendered by stenciltest.
-const defaultBranch = "main"
+// testGit returns the value of .Git in templates rendered by stenciltest.
+func testGit() codegen.GitInfo {
+	return codegen.GitInfo{
+		DefaultBranch: "main",
+		Ref:           "refs/heads/main",
+		Commit:        "0000000000000000000000000000000000000000",
+	}
+}
 
 // Template is a template that is being tested by the stenciltest framework.
 type Template struct {
@@ -165,8 +171,8 @@ func (t *Template) Run(save bool) {
 			Arguments: t.args,
 			Modules:   t.mods,
 		}
-		// Tests must not depend on the git remotes of the checkout they run in.
-		st := codegen.NewStencil(mf, mods, t.log).WithDefaultBranch(defaultBranch)
+		st := codegen.NewStencil(mf, mods, t.log)
+		st.SetGit(testGit())
 
 		for name, ext := range t.exts {
 			st.RegisterInprocExtensions(name, ext)

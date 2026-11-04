@@ -72,6 +72,26 @@ func (g git) DefaultBranch() (string, error) {
 	return g.defaultBranch()
 }
 
+// GitInfo is fixed values for .Git, used instead of reading the current
+// directory, see Stencil.SetGit.
+type GitInfo struct {
+	DefaultBranch string
+	Ref           string
+	Commit        string
+	Dirty         bool
+}
+
+// git returns the template values for i.
+func (i GitInfo) git() git {
+	branch := i.DefaultBranch
+	return git{
+		Ref:           i.Ref,
+		Commit:        i.Commit,
+		Dirty:         i.Dirty,
+		defaultBranch: func() (string, error) { return branch, nil },
+	}
+}
+
 // config contains a small amount of configuration that
 // originates from the service manifest and is propagated
 // here.
@@ -138,8 +158,14 @@ type Values struct {
 // The default branch is looked up on first use, so ctx must stay valid until
 // all templates have been rendered.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
+	return newValues(ctx, sm, mods, log, nil)
+}
+
+// newValues is NewValues, except that a non-nil gitOverride is used for .Git
+// without looking at the current directory.
+func newValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger,
+	gitOverride *GitInfo) *Values {
 	vals := &Values{
-		Git: git{},
 		Runtime: runtime{
 			Generator:        app.Info().Name,
 			GeneratorVersion: app.Info().Version,
@@ -166,37 +192,50 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		vals.Runtime.Box = &box.Config{}
 	}
 
-	// If we're a repository, add repository information
+	if gitOverride != nil {
+		vals.Git = gitOverride.git()
+	} else {
+		vals.Git = readGit(ctx, log)
+	}
+
+	return vals
+}
+
+// readGit returns the git information of the repository in the current
+// directory, if there is one.
+func readGit(ctx context.Context, log logrus.FieldLogger) git {
+	var g git
 	r, err := gogit.PlainOpen("")
 	if err != nil {
 		// Keep the cause (e.g. a git extension go-git doesn't support) so that a
 		// template reading .Git.DefaultBranch can say why it failed.
 		openErr := errors.Wrap(err, "failed to open git repository in the current directory")
-		vals.Git.defaultBranch = func() (string, error) { return "", openErr }
-	} else {
-		vals.Git.defaultBranch = sync.OnceValues(func() (string, error) {
-			db, err := stencilgit.GetDefaultBranchWithRetry(ctx, "",
-				retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
-					log.Warnf("Failed to get default branch (attempt %d), retrying in %s: %v", attempt, wait, err)
-				}))
-			return db, errors.Wrap(err, "failed to get default branch")
-		})
+		g.defaultBranch = func() (string, error) { return "", openErr }
+		return g
+	}
 
-		// Add HEAD information
-		if pref, err := r.Head(); err == nil {
-			vals.Git.Ref = pref.Name().String()
-			vals.Git.Commit = pref.Hash().String()
-		}
+	g.defaultBranch = sync.OnceValues(func() (string, error) {
+		db, err := stencilgit.GetDefaultBranchWithRetry(ctx, "",
+			retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
+				log.Warnf("Failed to get default branch (attempt %d), retrying in %s: %v", attempt, wait, err)
+			}))
+		return db, errors.Wrap(err, "failed to get default branch")
+	})
 
-		// Check if the worktree is clean
-		if wrk, err := r.Worktree(); err == nil {
-			if stat, err := wrk.Status(); err == nil {
-				vals.Git.Dirty = !stat.IsClean()
-			}
+	// Add HEAD information
+	if pref, err := r.Head(); err == nil {
+		g.Ref = pref.Name().String()
+		g.Commit = pref.Hash().String()
+	}
+
+	// Check if the worktree is clean
+	if wrk, err := r.Worktree(); err == nil {
+		if stat, err := wrk.Status(); err == nil {
+			g.Dirty = !stat.IsClean()
 		}
 	}
 
-	return vals
+	return g
 }
 
 // Copy returns a copy of the current values.

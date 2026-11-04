@@ -255,18 +255,19 @@ func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
 	assert.Equal(t, branch, "trunk")
 }
 
-func TestWithDefaultBranch(t *testing.T) {
+func TestSetGit(t *testing.T) {
 	log := logrus.New()
 	m, err := modulestest.NewModuleFromTemplates(&configuration.TemplateRepositoryManifest{Name: "testing"},
-		"testdata/values/default-branch.tpl")
+		"testdata/values/git.tpl")
 	assert.NilError(t, err, "failed to create module")
 
-	// Not a git repository, so the lookup would fail without the override.
+	// Rendering from a directory that is not a repository fails without the override.
 	t.Chdir(t.TempDir())
 
 	st := NewStencil(&configuration.ServiceManifest{Name: "testing", Arguments: map[string]any{}},
-		[]*modules.Module{m}, log).WithDefaultBranch("main")
+		[]*modules.Module{m}, log)
+	st.SetGit(GitInfo{DefaultBranch: "trunk", Ref: "refs/heads/feature", Commit: "abc123", Dirty: true})
 	tpls, err := st.Render(t.Context(), log)
 	assert.NilError(t, err)
-	assert.Equal(t, tpls[0].Files[0].String(), "main")
+	assert.Equal(t, tpls[0].Files[0].String(), "trunk refs/heads/feature abc123 true\n")
 }

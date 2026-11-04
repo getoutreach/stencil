@@ -78,11 +78,12 @@ func TestCoverageHack(t *testing.T) {
 	assert.Equal(t, st.m.Name, "testing")
 }
 
-func TestDefaultBranchHasDefault(t *testing.T) {
-	tpl, err := filepath.Abs("testdata/default-branch.tpl")
+// The template fails unless .Git has the values stenciltest pins.
+func TestGitIsPinned(t *testing.T) {
+	tpl, err := filepath.Abs("testdata/git.tpl")
 	assert.NilError(t, err)
 
-	// Not a git repository, so rendering would fail without the default.
+	// Outside a repository, so nothing could be read from git.
 	t.Chdir(t.TempDir())
 
 	st := &Template{
