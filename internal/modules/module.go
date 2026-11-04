@@ -64,6 +64,9 @@ type Module struct {
 	// Version is the version of this module
 	Version string
 
+	// fsMu guards fs.
+	fsMu sync.Mutex
+
 	// fs is a cached filesystem
 	fs billy.Filesystem
 
@@ -177,6 +180,9 @@ func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepository
 // Otherwise, it clones the module from a remote git repository into a temporary cache directory
 // on the OS filesystem. This allows the module to be used as a billy.Filesystem.
 func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
+	m.fsMu.Lock()
+	defer m.fsMu.Unlock()
+
 	if m.fs != nil {
 		return m.fs, nil
 	}
@@ -207,42 +213,18 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
 	}
 
-	m.fs = osfs.New(cacheDir)
-	opts := &git.CloneOptions{
-		URL:               m.URI,
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		Depth:             1,
-	}
-
-	if token, err := github.GetToken(); err == nil {
-		opts.Auth = &githttp.BasicAuth{
-			Username: "x-access-token",
-			Password: string(token),
+	fs := osfs.New(cacheDir)
+	if err := m.cloneInto(ctx, fs); err != nil {
+		// A partial clone must not be kept: the next call would take it as a
+		// valid cache and never retry the clone.
+		if rmErr := os.RemoveAll(cacheDir); rmErr != nil {
+			logrus.WithError(rmErr).Warnf("failed to remove partial module cache directory %q", cacheDir)
 		}
-	} else {
-		logrus.WithError(err).Warn("failed to get github token, will use an unauthenticated client")
+		return nil, err
 	}
 
-	if m.Version != "" {
-		opts.ReferenceName = plumbing.NewTagReferenceName(m.Version)
-		opts.SingleBranch = true
-	}
-
-	// We don't use the git object here because all we care about is
-	// the underlying filesystem object, which was created earlier
-	if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
-		// if tag not found try as a branch
-		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
-			return nil, err
-		}
-
-		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
-		if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
-			return nil, errors.Wrap(err, "failed to find version as branch/tag")
-		}
-	}
-
-	return m.fs, nil
+	m.fs = fs
+	return fs, nil
 }
 
 func (m *Module) PathSlug() string {
@@ -269,6 +251,45 @@ func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRep
 	}
 
 	return m.manifest, nil
+}
+
+// cloneInto clones this module's repository into fs.
+func (m *Module) cloneInto(ctx context.Context, fs billy.Filesystem) error {
+	opts := &git.CloneOptions{
+		URL:               m.URI,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		Depth:             1,
+	}
+
+	if token, err := github.GetToken(); err == nil {
+		opts.Auth = &githttp.BasicAuth{
+			Username: "x-access-token",
+			Password: string(token),
+		}
+	} else {
+		logrus.WithError(err).Warn("failed to get github token, will use an unauthenticated client")
+	}
+
+	if m.Version != "" {
+		opts.ReferenceName = plumbing.NewTagReferenceName(m.Version)
+		opts.SingleBranch = true
+	}
+
+	// We don't use the git object here because all we care about is
+	// the underlying filesystem object, which was created earlier
+	if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
+		// if tag not found try as a branch
+		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
+			return err
+		}
+
+		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
+		if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
+			return errors.Wrap(err, "failed to find version as branch/tag")
+		}
+	}
+
+	return nil
 }
 
 // loadManifest downloads the module if not already downloaded and parses its

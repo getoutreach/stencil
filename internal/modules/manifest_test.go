@@ -6,6 +6,8 @@ package modules_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -129,4 +131,46 @@ func TestManifestReturnsIndependentCopies(t *testing.T) {
 	want, err := fresh.Manifest(ctx)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, second, want, cmpopts.IgnoreUnexported(configuration.TemplateRepositoryTypes{}))
+}
+
+func TestManifestAndGetFSAreSafeToCallConcurrently(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte(testManifest), 0o600))
+
+	// A local module sets its filesystem on the first call to GetFS.
+	m, err := modules.New(ctx, dir, &configuration.TemplateRepository{Name: "test"})
+	assert.NilError(t, err)
+
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Go(func() {
+			if i%2 == 0 {
+				_, err := m.GetFS(ctx)
+				assert.Check(t, err)
+				return
+			}
+			_, err := m.Manifest(ctx)
+			assert.Check(t, err)
+		})
+	}
+	wg.Wait()
+}
+
+func TestFailedCloneIsRetried(t *testing.T) {
+	ctx := context.Background()
+	// Nothing listens on port 1, so the clone fails right away.
+	m, err := modules.New(ctx, "git://127.0.0.1:1/getoutreach/missing.git",
+		&configuration.TemplateRepository{Name: "github.com/getoutreach/missing", Version: "v1.0.0"})
+	assert.NilError(t, err)
+	t.Cleanup(func() { os.RemoveAll(m.FSCacheDir()) })
+
+	_, err = m.Manifest(ctx)
+	assert.Assert(t, err != nil, "expected the clone to fail")
+	_, err = os.Stat(m.FSCacheDir())
+	assert.Assert(t, os.IsNotExist(err), "expected the partial clone to be removed")
+
+	// A second call tries the clone again instead of using what the first left behind.
+	_, err = m.GetFS(ctx)
+	assert.Assert(t, err != nil, "expected the clone to be tried again")
 }
