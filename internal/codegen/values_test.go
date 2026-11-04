@@ -142,7 +142,12 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 		"not a git repository": {
 			setup: func(t *testing.T) string {
 				t.Helper()
-				return t.TempDir()
+				dir := t.TempDir()
+				// Parent directories are searched, so this needs a directory outside any repository.
+				if _, err := gogit.PlainOpenWithOptions(dir, &gogit.PlainOpenOptions{DetectDotGit: true}); err == nil {
+					t.Skipf("the temporary directory %q is inside a git repository", dir)
+				}
+				return dir
 			},
 			wantErr: "repository does not exist",
 		},
