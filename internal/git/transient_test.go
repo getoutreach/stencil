@@ -6,6 +6,7 @@ package git_test
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -23,7 +24,15 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-var errOther = errors.New("other")
+var (
+	errOther = errors.New("other")
+
+	// These have the messages of the errors that net/http returns for HTTP/2.
+	errStreamReset     = errors.New("stream error: stream ID 1; INTERNAL_ERROR; received from peer")
+	errServerGoAway    = errors.New(`http2: server sent GOAWAY and closed the connection; LastStreamID=1, ErrCode=NO_ERROR, debug=""`)
+	errTransportGoAway = errors.New("http2: Transport received GOAWAY from server ErrCode:NO_ERROR")
+	errConnectionLost  = errors.New("http2: client connection lost")
+)
 
 // timeoutError is a net.Error that says whether it is a timeout.
 type timeoutError struct{ timeout bool }
@@ -55,6 +64,11 @@ func TestIsTransientError(t *testing.T) {
 		{"missing host without a connection error", &net.DNSError{Err: "no such host", IsNotFound: true}, false},
 		{"response that ended early", fmt.Errorf("read: %w", io.ErrUnexpectedEOF), true},
 		{"connection that a server closed", &url.Error{Op: "Get", URL: "https://example.test", Err: io.EOF}, true},
+		{"HTTP/2 stream reset", &url.Error{Op: "Get", URL: "https://example.test", Err: errStreamReset}, true},
+		{"HTTP/2 GOAWAY", &url.Error{Op: "Get", URL: "https://example.test", Err: errServerGoAway}, true},
+		{"HTTP/2 GOAWAY during a request", &url.Error{Op: "Get", URL: "https://example.test", Err: errTransportGoAway}, true},
+		{"HTTP/2 connection lost", &url.Error{Op: "Get", URL: "https://example.test", Err: errConnectionLost}, true},
+		{"certificate that no authority signed", &url.Error{Op: "Get", URL: "https://example.test", Err: x509.UnknownAuthorityError{}}, false},
 		{"context canceled", context.Canceled, false},
 		{"context deadline exceeded", context.DeadlineExceeded, true},
 	} {
@@ -99,6 +113,26 @@ func TestIsTransientErrorFromGoGit(t *testing.T) {
 		assert.Assert(t, err != nil)
 		assert.Assert(t, stgit.IsTransientError(err), "error: %v", err)
 	})
+}
+
+// TestIsTransientErrorFromHTTP2 checks the error that net/http returns when a server
+// resets an HTTP/2 stream, because its type is not exported.
+func TestIsTransientErrorFromHTTP2(t *testing.T) {
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	}))
+	srv.EnableHTTP2 = true
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+	assert.NilError(t, err)
+	resp, err := srv.Client().Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
+	assert.ErrorContains(t, err, "stream error", "expected the server to reset the stream")
+	assert.Assert(t, stgit.IsTransientError(err), "error: %v", err)
 }
 
 func TestIsTransientStatus(t *testing.T) {
