@@ -74,8 +74,8 @@ type Module struct {
 	// manifestMu guards manifest and serializes the first load of it.
 	manifestMu sync.Mutex
 
-	// manifest is the parsed manifest.yaml of this module. It is set on the
-	// first successful call to Manifest, and is never handed out directly.
+	// manifest is the parsed manifest.yaml of this module. It is set by the
+	// first successful load and is never returned outside this package.
 	manifest *configuration.TemplateRepositoryManifest
 }
 
@@ -280,7 +280,8 @@ func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRep
 	return m.manifest, nil
 }
 
-// cloneInto clones this module's repository into fs.
+// cloneInto clones this module's repository into fs. It treats the version as a
+// tag, and as a branch if no such tag exists.
 func (m *Module) cloneInto(ctx context.Context, fs billy.Filesystem) error {
 	opts := &git.CloneOptions{
 		URL:               m.URI,

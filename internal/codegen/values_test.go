@@ -244,8 +244,8 @@ func TestNewValuesDoesNotLookUpTheDefaultBranch(t *testing.T) {
 	assert.Equal(t, len(hook.AllEntries()), 0, "expected no lookup until a template reads the default branch")
 }
 
-// newClonedRepository clones a new repository, whose only branch is "trunk"
-// and which has one empty commit, and returns the path of the clone.
+// newClonedRepository clones a new upstream repository that has one empty
+// commit on the branch "trunk", and returns the path of the clone.
 func newClonedRepository(t *testing.T) string {
 	t.Helper()
 	upstream := t.TempDir()

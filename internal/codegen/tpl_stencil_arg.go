@@ -178,7 +178,6 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 		)
 	}
 
-	// Get the referenced module
 	var fromModule *modules.Module
 	for _, m := range s.s.modules {
 		if m.Name == arg.From {

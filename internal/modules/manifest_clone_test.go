@@ -13,11 +13,10 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// TestCloneManifestHandlesEveryReferenceField fails when a type that
-// cloneManifest copies gains a field that holds a map, slice, pointer,
-// interface, or struct, and the field is not listed here. It checks the list,
-// not the copy: handle the new field in cloneManifest or cloneArgument, then
-// list it.
+// TestCloneManifestHandlesEveryReferenceField fails when a copied type gains a
+// map, slice, pointer, interface, or struct field that is not listed here. The
+// test checks only the list, not the copy. After adding a field, copy it in
+// cloneManifest or cloneArgument, then list it here.
 func TestCloneManifestHandlesEveryReferenceField(t *testing.T) {
 	handled := map[reflect.Type]map[string]bool{
 		reflect.TypeFor[configuration.TemplateRepositoryManifest](): {

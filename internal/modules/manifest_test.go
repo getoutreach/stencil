@@ -1,6 +1,6 @@
 // Copyright 2026 Outreach Corporation. All Rights Reserved.
 
-// Description: This file tests the caching behavior of Module.Manifest.
+// Description: This file tests manifest loading, caching, and copying on Module.
 
 package modules_test
 
@@ -21,7 +21,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// countingFS counts how many times manifest.yaml is opened.
+// countingFS wraps a filesystem so that tests can assert how often manifest.yaml is read.
 type countingFS struct {
 	billy.Filesystem
 
@@ -111,7 +111,7 @@ func TestManifestReturnsIndependentCopies(t *testing.T) {
 	first, err := m.Manifest(ctx)
 	assert.NilError(t, err)
 
-	// modify everything reachable from the returned manifest
+	// Modify everything reachable from the returned manifest.
 	first.Name = "changed"
 	first.Modules[0].Version = "changed"
 	first.Modules = append(first.Modules, &configuration.TemplateRepository{Name: "extra"})
@@ -186,7 +186,6 @@ func TestArgument(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Equal(t, arg.Schema["type"], "object")
 
-	// The result is a copy.
 	arg.Schema["type"] = "changed"
 	again, _, err := m.Argument(ctx, "foo")
 	assert.NilError(t, err)
