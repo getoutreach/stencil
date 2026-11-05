@@ -8,6 +8,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"gotest.tools/v3/assert"
@@ -20,30 +21,34 @@ func TestExclusiveLockDirectoryCreatesTheDirectory(t *testing.T) {
 }
 
 func TestExclusiveLockDirectoryWaitsForTheLock(t *testing.T) {
-	dir := t.TempDir()
-	held, err := exclusiveLockDirectory(t.Context(), dir)
-	assert.NilError(t, err)
+	synctest.Test(t, func(t *testing.T) {
+		dir := t.TempDir()
+		held, err := exclusiveLockDirectory(t.Context(), dir)
+		assert.NilError(t, err)
 
-	// The hold is longer than lockRetryDelay, so the waiter retries at least once.
-	const holdFor = 150 * time.Millisecond
-	time.AfterFunc(holdFor, func() { _ = held.Unlock() })
+		// The hold is longer than lockRetryDelay, so the waiter retries at least once.
+		const holdFor = 150 * time.Millisecond
+		time.AfterFunc(holdFor, func() { _ = held.Unlock() })
 
-	start := time.Now()
-	lock, err := exclusiveLockDirectory(t.Context(), dir)
-	assert.NilError(t, err)
-	assert.Assert(t, time.Since(start) >= holdFor/2, "expected to wait for the holder of the lock")
-	assert.NilError(t, lock.Unlock())
+		start := time.Now()
+		lock, err := exclusiveLockDirectory(t.Context(), dir)
+		assert.NilError(t, err)
+		assert.Assert(t, time.Since(start) >= holdFor, "expected to wait for the holder of the lock")
+		assert.NilError(t, lock.Unlock())
+	})
 }
 
 func TestExclusiveLockDirectoryStopsWaitingWhenContextIsDone(t *testing.T) {
-	dir := t.TempDir()
-	held, err := exclusiveLockDirectory(t.Context(), dir)
-	assert.NilError(t, err)
-	t.Cleanup(func() { _ = held.Unlock() })
+	synctest.Test(t, func(t *testing.T) {
+		dir := t.TempDir()
+		held, err := exclusiveLockDirectory(t.Context(), dir)
+		assert.NilError(t, err)
+		t.Cleanup(func() { _ = held.Unlock() })
 
-	ctx, cancel := context.WithTimeout(t.Context(), 150*time.Millisecond)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(t.Context(), 150*time.Millisecond)
+		defer cancel()
 
-	_, err = exclusiveLockDirectory(ctx, dir)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+		_, err = exclusiveLockDirectory(ctx, dir)
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+	})
 }
