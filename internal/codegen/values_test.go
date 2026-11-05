@@ -68,7 +68,12 @@ func TestValues(t *testing.T) {
 		Name: "testing",
 	}
 
-	boxConf, _ := box.LoadBox()
+	// NewValues falls back to an empty box config when it cannot load one. Mirror that,
+	// so that this test does not need a box config on disk.
+	boxConf, err := box.LoadBox()
+	if err != nil {
+		boxConf = &box.Config{}
+	}
 
 	vals := NewValues(context.Background(), sm, []*modules.Module{
 		{
