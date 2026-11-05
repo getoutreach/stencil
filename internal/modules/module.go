@@ -18,12 +18,14 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gofrs/flock"
@@ -207,16 +209,6 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	err = os.RemoveAll(cacheDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
-	}
-
-	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
-	}
-
-	m.fs = osfs.New(cacheDir)
 	opts := &git.CloneOptions{
 		URL:               m.URI,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -237,21 +229,71 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		opts.SingleBranch = true
 	}
 
-	// We don't use the git object here because all we care about is
-	// the underlying filesystem object, which was created earlier
-	if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
+	fs, err := cloneModule(ctx, cacheDir, opts)
+	if err != nil {
 		// if tag not found try as a branch
 		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
 			return nil, err
 		}
 
 		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
-		if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
+		if fs, err = cloneModule(ctx, cacheDir, opts); err != nil {
 			return nil, errors.Wrap(err, "failed to find version as branch/tag")
 		}
 	}
 
+	m.fs = fs
 	return m.fs, nil
+}
+
+// cloneModule clones a module into cacheDir and returns the filesystem that
+// holds it. It retries failures that asking again could fix, such as a network
+// error.
+func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (billy.Filesystem, error) {
+	fs := osfs.New(cacheDir)
+
+	err := retry.Do(ctx, func(ctx context.Context) error {
+		// A failed attempt can leave a partial checkout, so every attempt starts
+		// from an empty directory. Failing to prepare the directory is not retried.
+		if err := os.RemoveAll(cacheDir); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir))
+		}
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to create module cache directory %q", cacheDir))
+		}
+
+		// We don't use the git object here because all we care about is
+		// the underlying filesystem object.
+		_, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts)
+		return err
+	},
+		retry.WithRetryable(isRetryableCloneError),
+		retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
+			logrus.WithError(err).Warnf("Failed to clone %s (attempt %d), retrying in %s", opts.URL, attempt, wait)
+		}),
+	)
+	if err != nil {
+		// Do not leave a partial checkout behind: useCache would take it for a
+		// module that was cloned in full. The error that matters is the clone's.
+		_ = os.RemoveAll(cacheDir)
+		return nil, err
+	}
+
+	return fs, nil
+}
+
+// isRetryableCloneError reports whether err from cloning a module could go away
+// if the clone is tried again. It is false when the version, the repository or the
+// credentials are wrong, or the repository is empty, because a second attempt gives
+// the same error.
+func isRetryableCloneError(err error) bool {
+	// GetFS tries a version that is not a tag as a branch, which needs the first
+	// attempt to return NoMatchingRefSpecError at once.
+	return !errors.Is(err, git.NoMatchingRefSpecError{}) &&
+		!errors.Is(err, transport.ErrRepositoryNotFound) &&
+		!errors.Is(err, transport.ErrAuthenticationRequired) &&
+		!errors.Is(err, transport.ErrAuthorizationFailed) &&
+		!errors.Is(err, transport.ErrEmptyRemoteRepository)
 }
 
 func (m *Module) PathSlug() string {
