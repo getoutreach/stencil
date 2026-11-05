@@ -97,7 +97,8 @@ func WithOnRetry(fn func(ctx context.Context, attempt int, err error, wait time.
 // attempts, like "Failed to clone x (attempt 1), retrying in 1s", with the error in
 // the "error" field. operation is a verb phrase that completes "Failed to ...". The
 // log line is written before the WithOnRetry hook runs, and neither replaces the
-// other.
+// other. The operation and the error are logged as they are, so a caller that has a
+// URL in them must redact it first.
 //
 // Unlike WithLogging in services/pkg/retry, it takes the logger and an operation
 // name, and logs a different message and fields, so callers need a small change

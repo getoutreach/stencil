@@ -265,10 +265,10 @@ func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (
 		// We don't use the git object here because all we care about is
 		// the underlying filesystem object.
 		_, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts)
-		return err
+		return stgit.RedactError(err)
 	},
 		retry.WithRetryable(stgit.IsTransientError),
-		retry.WithLogging(logrus.StandardLogger(), "clone "+opts.URL),
+		retry.WithLogging(logrus.StandardLogger(), "clone "+stgit.RedactURL(opts.URL)),
 	)
 	if err != nil {
 		// Do not leave a partial checkout behind: useCache would take it for a

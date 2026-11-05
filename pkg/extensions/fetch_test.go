@@ -5,6 +5,7 @@
 package extensions
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -122,15 +123,13 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-// fetchWithStatus runs fetchRelease against a GitHub that answers every request
-// with status, and returns the number of requests and the error. Unlike the tests
-// above, it uses the errors that the version of go-github of gobox returns, so it
-// fails if that is not the version that classifyGitHubError imports.
-func fetchWithStatus(t *testing.T, status int) (int32, error) {
+// withTransport makes the default HTTP transport answer every request with status,
+// until the end of the test. release.Fetch has no token here, so it uses that
+// transport. It is a global, so the tests that call it must not run in parallel.
+func withTransport(t *testing.T, status int) *atomic.Int32 {
 	t.Helper()
 
-	// release.Fetch has no token here, so it uses the default transport.
-	var requests atomic.Int32
+	requests := new(atomic.Int32)
 	original := http.DefaultTransport
 	http.DefaultTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		requests.Add(1)
@@ -142,6 +141,18 @@ func fetchWithStatus(t *testing.T, status int) (int32, error) {
 		}, nil
 	})
 	t.Cleanup(func() { http.DefaultTransport = original })
+
+	return requests
+}
+
+// fetchWithStatus runs fetchRelease against a GitHub that answers every request
+// with status, and returns the number of requests and the error. Unlike the tests
+// above, it gets its errors from the go-github that gobox uses. It fails if that is
+// not the version that classifyGitHubError imports.
+func fetchWithStatus(t *testing.T, status int) (int32, error) {
+	t.Helper()
+
+	requests := withTransport(t, status)
 
 	_, _, err := fetchRelease(t.Context(), logrus.New(), "",
 		&release.FetchOptions{RepoURL: "https://github.com/example/repo", Tag: "v1.0.0", AssetName: "asset"},
@@ -161,4 +172,28 @@ func TestFetchReleaseDoesNotRetryPermanentErrors(t *testing.T) {
 
 	assert.Assert(t, err != nil)
 	assert.Equal(t, requests, int32(1), "expected no retry, because asking again gives the same answer")
+}
+
+func TestFetchReleaseDoesNotLogCredentials(t *testing.T) {
+	var logged bytes.Buffer
+	log := logrus.New()
+	log.Out = &logged
+	withTransport(t, http.StatusServiceUnavailable)
+
+	_, _, err := fetchRelease(t.Context(), log, "",
+		&release.FetchOptions{RepoURL: "https://ghp_secret@github.com/example/repo", Tag: "v1.0.0", AssetName: "asset"},
+		retry.WithBackoff(retry.Constant(time.Millisecond)))
+
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(logged.String(), "retrying"), "expected a warning for the retry")
+	assert.Assert(t, !strings.Contains(logged.String()+err.Error(), "ghp_secret"), "the log or the error has the token:\n%s\n%v", &logged, err)
+}
+
+func TestFetchReleaseDoesNotReturnCredentials(t *testing.T) {
+	// gobox puts the URL in the error when it cannot find the organization and the repository in it.
+	_, _, err := fetchRelease(t.Context(), logrus.New(), "",
+		&release.FetchOptions{RepoURL: "https://ghp_secret@github.com/example/repo/extra", Tag: "v1.0.0", AssetName: "asset"})
+
+	assert.ErrorContains(t, err, "invalid Github URL")
+	assert.Assert(t, !strings.Contains(err.Error(), "ghp_secret"), "the error has the token: %v", err)
 }

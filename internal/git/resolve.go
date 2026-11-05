@@ -21,13 +21,14 @@ func ResolveVersion(ctx context.Context, log logrus.FieldLogger, token cfg.Secre
 	opts ...retry.Option) (*resolver.Version, error) {
 	opts = append([]retry.Option{
 		retry.WithRetryable(IsTransientError),
-		retry.WithLogging(log, "resolve "+c.URL),
+		retry.WithLogging(log, "resolve "+RedactURL(c.URL)),
 	}, opts...)
 
 	return retry.DoValue(ctx, func(ctx context.Context) (*resolver.Version, error) {
 		// Resolve sets the channel and the constraints of the criteria that it is
 		// given, so each attempt gets a copy.
 		attempt := c
-		return resolver.Resolve(ctx, token, &attempt)
+		v, err := resolver.Resolve(ctx, token, &attempt)
+		return v, RedactError(err)
 	}, opts...)
 }

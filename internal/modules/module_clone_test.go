@@ -5,6 +5,7 @@
 package modules_test
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/cgi"
 	"net/http/httptest"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
 
@@ -132,4 +134,18 @@ func TestGetFS_DoesNotRetryMissingVersion(t *testing.T) {
 
 	_, err = os.Stat(modules.FSCacheDir(modules.PathSlug(srv.URL, "does-not-exist")))
 	assert.ErrorIs(t, err, os.ErrNotExist, "expected a failed clone not to leave a cache directory")
+}
+
+func TestGetFS_DoesNotLogCredentials(t *testing.T) {
+	srv := newGitServer(t, 1)
+	var logged bytes.Buffer
+	logrus.StandardLogger().SetOutput(&logged)
+	t.Cleanup(func() { logrus.StandardLogger().SetOutput(os.Stderr) })
+
+	url := strings.Replace(srv.URL, "http://", "http://ghp_secret@", 1)
+	_, err := newClonedModule(t, url, "v1.0.0").GetFS(t.Context())
+	assert.NilError(t, err)
+
+	assert.Assert(t, strings.Contains(logged.String(), "retrying"), "expected a warning for the retry")
+	assert.Assert(t, !strings.Contains(logged.String(), "ghp_secret"), "the log has the token:\n%s", &logged)
 }

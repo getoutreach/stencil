@@ -5,8 +5,10 @@
 package git_test
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,13 +21,15 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// resolveWith resolves the version of a repository that does not exist. The
-// server answers 404, but with 503 first if transientFirst. It returns the number
-// of requests and the error.
-func resolveWith(t *testing.T, transientFirst bool) (int32, error) {
+// fastRetry waits 1ms before each retry.
+var fastRetry = retry.WithBackoff(retry.Constant(time.Millisecond))
+
+// statusServer serves a repository that does not exist. It answers 404, but with 503
+// first if transientFirst.
+func statusServer(t *testing.T, transientFirst bool) (repoURL string, requests *atomic.Int32) {
 	t.Helper()
 
-	var requests atomic.Int32
+	requests = new(atomic.Int32)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		status := http.StatusNotFound
 		if requests.Add(1) == 1 && transientFirst {
@@ -35,21 +39,36 @@ func resolveWith(t *testing.T, transientFirst bool) (int32, error) {
 	}))
 	t.Cleanup(srv.Close)
 
-	_, err := stgit.ResolveVersion(t.Context(), logrus.New(), "", resolver.Criteria{URL: srv.URL + "/repo.git"},
-		retry.WithBackoff(retry.Constant(time.Millisecond)))
-	return requests.Load(), err
+	return srv.URL + "/repo.git", requests
 }
 
 func TestResolveVersionRetriesTransientErrors(t *testing.T) {
-	requests, err := resolveWith(t, true)
+	repoURL, requests := statusServer(t, true)
+
+	_, err := stgit.ResolveVersion(t.Context(), logrus.New(), "", resolver.Criteria{URL: repoURL}, fastRetry)
 
 	assert.ErrorIs(t, err, transport.ErrRepositoryNotFound, "expected the error of the second attempt")
-	assert.Equal(t, requests, int32(2))
+	assert.Equal(t, requests.Load(), int32(2))
 }
 
 func TestResolveVersionDoesNotRetryOtherErrors(t *testing.T) {
-	requests, err := resolveWith(t, false)
+	repoURL, requests := statusServer(t, false)
+
+	_, err := stgit.ResolveVersion(t.Context(), logrus.New(), "", resolver.Criteria{URL: repoURL}, fastRetry)
 
 	assert.ErrorIs(t, err, transport.ErrRepositoryNotFound)
-	assert.Equal(t, requests, int32(1), "expected no retry, because asking again gives the same answer")
+	assert.Equal(t, requests.Load(), int32(1), "expected no retry, because asking again gives the same answer")
+}
+
+func TestResolveVersionDoesNotLogCredentials(t *testing.T) {
+	repoURL, _ := statusServer(t, true)
+	var logged bytes.Buffer
+	log := logrus.New()
+	log.Out = &logged
+
+	withToken := "http://ghp_secret@" + strings.TrimPrefix(repoURL, "http://")
+	_, err := stgit.ResolveVersion(t.Context(), log, "", resolver.Criteria{URL: withToken}, fastRetry)
+
+	assert.Assert(t, strings.Contains(logged.String(), "retrying"), "expected a warning for the retry")
+	assert.Assert(t, !strings.Contains(logged.String()+err.Error(), "ghp_secret"), "the log or the error has the token:\n%s\n%v", &logged, err)
 }

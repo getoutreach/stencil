@@ -44,8 +44,8 @@ func fetchRelease(ctx context.Context, log logrus.FieldLogger, token cfg.SecretD
 	err := retry.Do(ctx, func(ctx context.Context) error {
 		var err error
 		asset, name, _, err = release.Fetch(ctx, token, opts)
-		return classifyGitHubError(err)
-	}, append([]retry.Option{retry.WithLogging(log, "fetch the release "+opts.Tag+" of "+opts.RepoURL)}, retryOpts...)...)
+		return classifyGitHubError(stgit.RedactError(err))
+	}, append([]retry.Option{retry.WithLogging(log, "fetch the release "+opts.Tag+" of "+stgit.RedactURL(opts.RepoURL))}, retryOpts...)...)
 
 	return asset, name, err
 }
