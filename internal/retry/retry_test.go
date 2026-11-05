@@ -105,26 +105,10 @@ func TestDoWithMaxAttempts(t *testing.T) {
 	}
 }
 
-func TestDoWithMaxAttemptsRejectsLessThanOne(t *testing.T) {
+func TestWithMaxAttemptsPanicsOnLessThanOne(t *testing.T) {
 	for _, n := range []int{0, -1} {
-		calls := 0
-		err := retry.Do(t.Context(), func(context.Context) error {
-			calls++
-			return nil
-		}, retry.WithMaxAttempts(n))
-		assert.ErrorIs(t, err, retry.ErrInvalidMaxAttempts, "expected a configuration error for n=%d", n)
-		assert.Equal(t, calls, 0, "expected fn not to be called")
+		assert.Assert(t, cmp.Panics(func() { retry.WithMaxAttempts(n) }), "expected a panic for n=%d", n)
 	}
-}
-
-func TestDoLastWithMaxAttemptsWins(t *testing.T) {
-	calls := 0
-	err := retry.Do(t.Context(), func(context.Context) error {
-		calls++
-		return nil
-	}, retry.WithMaxAttempts(0), retry.WithMaxAttempts(5))
-	assert.NilError(t, err, "expected a valid option to clear an earlier invalid one")
-	assert.Equal(t, calls, 1)
 }
 
 func TestDoValueWithMaxAttempts(t *testing.T) {

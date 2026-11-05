@@ -4,8 +4,8 @@
 
 // Package retry retries a function with backoff.
 //
-// It is a small subset of github.com/getoutreach/services/pkg/retry. Port more of
-// that package here when a caller needs it. Delete this package once gobox provides
+// It is a small subset of a retry helper that is not public. Port more of its
+// features here when a caller needs them. Delete this package once gobox provides
 // one.
 package retry
 
@@ -20,10 +20,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
-
-// ErrInvalidMaxAttempts is wrapped in the error that Do and DoValue return, before fn
-// is called, when WithMaxAttempts is given an n below 1.
-var ErrInvalidMaxAttempts = errors.New("retry: WithMaxAttempts: n must be >= 1")
 
 // defaultMaxAttempts is the most attempts that Do and DoValue make without WithMaxAttempts.
 const defaultMaxAttempts = 3
@@ -45,28 +41,18 @@ type config struct {
 
 	// logRetry, if set, runs immediately before each sleep between attempts, before onRetry.
 	logRetry func(attempt int, err error, wait time.Duration)
-
-	// err holds a configuration error (see WithMaxAttempts), returned before the
-	// first call to fn.
-	err error
 }
 
 // Option configures Do and DoValue.
 type Option func(*config)
 
 // WithMaxAttempts sets the maximum total number of calls to fn, including the
-// first. The default is 3. n must be at least 1: a smaller value is a
-// configuration error, returned before fn is called. Only the last call in the
-// options list decides the outcome, so a valid call clears an earlier invalid one.
+// first. The default is 3. It panics if n is below 1.
 func WithMaxAttempts(n int) Option {
-	return func(c *config) {
-		if n < 1 {
-			c.err = fmt.Errorf("%w (got %d)", ErrInvalidMaxAttempts, n)
-			return
-		}
-		c.err = nil
-		c.maxAttempts = n
+	if n < 1 {
+		panic(fmt.Sprintf("retry: WithMaxAttempts: n must be at least 1, got %d", n))
 	}
+	return func(c *config) { c.maxAttempts = n }
 }
 
 // WithRetryable sets the function that decides whether an error from fn is
@@ -96,9 +82,6 @@ func WithOnRetry(fn func(ctx context.Context, attempt int, err error, wait time.
 // written before the WithOnRetry hook runs, and neither replaces the other. The
 // operation and the error are logged as they are, so a caller must redact any URL in
 // them first.
-//
-// Unlike WithLogging in services/pkg/retry, this one takes the logger and an
-// operation name, and logs a different message and fields.
 func WithLogging(log logrus.FieldLogger, operation string) Option {
 	return func(c *config) {
 		c.logRetry = func(attempt int, err error, wait time.Duration) {
@@ -152,7 +135,7 @@ func (c constant) delay(int) time.Duration { return time.Duration(c) }
 // error in the chain returned by fn implements it, even if the Strategy's delay
 // is shorter.
 //
-//nolint:revive // Why: The name stutters with the package, but matches services/pkg/retry so error types work with both.
+//nolint:revive // Why: The name stutters with the package, but it matches the helper that this package is a subset of.
 type RetryAfter interface {
 	RetryAfter() time.Duration
 }
@@ -176,8 +159,7 @@ func Permanent(err error) error {
 // Do calls fn until it succeeds, returns an error wrapped by Permanent, ctx is
 // done, WithRetryable returns false, or the attempt budget (3 by default, see
 // WithMaxAttempts) is used up, in which case it returns the last error from fn.
-// An invalid option (see WithMaxAttempts) is returned before fn is called. Each
-// error from fn is handled in this order:
+// Each error from fn is handled in this order:
 //
 //  1. ctx is done: stop and return ctx.Err().
 //  2. The error is wrapped by Permanent: stop and return the unwrapped error.
@@ -192,9 +174,6 @@ func Do(ctx context.Context, fn func(context.Context) error, opts ...Option) err
 	}
 	for _, opt := range opts {
 		opt(c)
-	}
-	if c.err != nil {
-		return c.err
 	}
 
 	for attempt := 1; ; attempt++ {
