@@ -36,7 +36,6 @@ func runGit(t *testing.T, dir string, args ...string) {
 
 // gitServer serves a git repository, named repo.git, over HTTP.
 type gitServer struct {
-	// base is the URL of the server, and URL is the URL of the repository.
 	base, URL string
 
 	// infoRefs counts the requests for the repository's refs. Every clone attempt
@@ -85,7 +84,8 @@ func newGitServer(t *testing.T, failFirst int32) *gitServer {
 	return srv
 }
 
-// newClonedModule creates a module for url at version, with a clean cache.
+// newClonedModule creates a module for url at version, and removes its cache before
+// and after the test.
 func newClonedModule(t *testing.T, url, version string) *modules.Module {
 	t.Helper()
 

@@ -21,11 +21,10 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// fastRetry waits 1ms before each retry.
 var fastRetry = retry.WithBackoff(retry.Constant(time.Millisecond))
 
-// statusServer serves a repository that does not exist. It answers 404, but with 503
-// first if transientFirst.
+// statusServer serves a repository that does not exist. It answers 404, except that
+// the first request gets a 503 when transientFirst is set.
 func statusServer(t *testing.T, transientFirst bool) (repoURL string, requests *atomic.Int32) {
 	t.Helper()
 

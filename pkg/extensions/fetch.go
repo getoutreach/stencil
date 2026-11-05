@@ -19,12 +19,11 @@ import (
 )
 
 // maxRateLimitWait is the longest that a rate limit can make a retry wait. A rate
-// limit that lasts longer is not retried, so that stencil does not look hung while
-// it waits, and the error says when the limit resets.
+// limit that lasts longer is not retried, so that stencil does not look hung.
 const maxRateLimitWait = time.Minute
 
-// retryAfterError is an error that says how long to wait before the next attempt,
-// see retry.RetryAfter.
+// retryAfterError wraps an error with the wait that retry.Do honors. See
+// retry.RetryAfter.
 type retryAfterError struct {
 	error
 
@@ -35,7 +34,7 @@ func (e retryAfterError) Unwrap() error             { return e.error }
 func (e retryAfterError) RetryAfter() time.Duration { return e.after }
 
 // fetchRelease is release.Fetch, retried when GitHub or the network fails in a way
-// that could go away, see classifyGitHubError. Only the request is retried, not the
+// that could go away. See classifyGitHubError. Only the request is retried, not the
 // reading of the asset. retryOpts are applied after the defaults.
 func fetchRelease(ctx context.Context, log logrus.FieldLogger, token cfg.SecretData,
 	opts *release.FetchOptions, retryOpts ...retry.Option) (io.ReadCloser, string, error) {
@@ -51,7 +50,8 @@ func fetchRelease(ctx context.Context, log logrus.FieldLogger, token cfg.SecretD
 }
 
 // classifyGitHubError marks err for retry.Do: network errors and busy or broken
-// servers are retried, rate limits are waited out, and anything else is permanent.
+// servers are retried, rate limits that reset within maxRateLimitWait are waited out,
+// and anything else is permanent.
 func classifyGitHubError(err error) error {
 	if err == nil {
 		return nil
@@ -76,9 +76,9 @@ func classifyGitHubError(err error) error {
 	return retry.Permanent(err)
 }
 
-// afterRateLimit marks err, a rate limit error, to be retried after wait, unless
-// that is longer than maxRateLimitWait. A wait that has passed is shorter than
-// the backoff, so retry.Do uses the backoff.
+// afterRateLimit marks err, a rate limit error, to be retried after wait. It is
+// permanent when wait is longer than maxRateLimitWait. When wait is zero or less,
+// because the limit has reset or GitHub gave no wait, retry.Do uses its backoff.
 func afterRateLimit(err error, wait time.Duration) error {
 	if wait > maxRateLimitWait {
 		return retry.Permanent(err)

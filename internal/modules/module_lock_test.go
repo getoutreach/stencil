@@ -24,7 +24,7 @@ func TestExclusiveLockDirectoryWaitsForTheLock(t *testing.T) {
 	held, err := exclusiveLockDirectory(t.Context(), dir)
 	assert.NilError(t, err)
 
-	// Longer than the delay between attempts to take the lock, so that there is a retry.
+	// The hold is longer than lockRetryDelay, so the waiter retries at least once.
 	const holdFor = 150 * time.Millisecond
 	time.AfterFunc(holdFor, func() { _ = held.Unlock() })
 

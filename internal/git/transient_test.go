@@ -23,7 +23,6 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// errOther is an error that the classifier does not know.
 var errOther = errors.New("other")
 
 // timeoutError is a net.Error that says whether it is a timeout.
@@ -114,7 +113,7 @@ func TestIsTransientStatus(t *testing.T) {
 		{http.StatusNotImplemented, false},
 		{http.StatusServiceUnavailable, true},
 		{http.StatusHTTPVersionNotSupported, false},
-		{520, true}, // Not an official status. Cloudflare uses it for an unknown error.
+		{520, true}, // 520 is not an official status. Cloudflare uses it for an unknown error.
 	} {
 		t.Run(strconv.Itoa(tc.status), func(t *testing.T) {
 			assert.Equal(t, stgit.IsTransientStatus(tc.status), tc.want)

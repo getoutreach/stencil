@@ -4,11 +4,9 @@
 
 // Package retry retries a function with backoff.
 //
-// It is a small subset of github.com/getoutreach/services/pkg/retry (Do, DoValue,
-// WithMaxAttempts, WithRetryable, WithBackoff, WithOnRetry, WithLogging, Permanent,
-// RetryAfter, Exponential and Constant), using functional options so it is easy to
-// replace with a shared retry helper later. Port more of that package here when a
-// caller needs it. Delete this package once gobox provides one.
+// It is a small subset of github.com/getoutreach/services/pkg/retry. Port more of
+// that package here when a caller needs it. Delete this package once gobox provides
+// one.
 package retry
 
 import (
@@ -23,12 +21,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ErrInvalidMaxAttempts is returned by Do and DoValue, before fn is called, when
-// WithMaxAttempts is given an n below 1.
+// ErrInvalidMaxAttempts is wrapped in the error that Do and DoValue return, before fn
+// is called, when WithMaxAttempts is given an n below 1.
 var ErrInvalidMaxAttempts = errors.New("retry: WithMaxAttempts: n must be >= 1")
 
-// defaultMaxAttempts is the default maximum total number of calls to fn,
-// including the first.
+// defaultMaxAttempts is the most attempts that Do and DoValue make without WithMaxAttempts.
 const defaultMaxAttempts = 3
 
 // config holds the settings that Options change.
@@ -93,16 +90,15 @@ func WithOnRetry(fn func(ctx context.Context, attempt int, err error, wait time.
 	return func(c *config) { c.onRetry = fn }
 }
 
-// WithLogging makes Do log a warning to log immediately before each sleep between
-// attempts, like "Failed to clone x (attempt 1), retrying in 1s", with the error in
-// the "error" field. operation is a verb phrase that completes "Failed to ...". The
-// log line is written before the WithOnRetry hook runs, and neither replaces the
-// other. The operation and the error are logged as they are, so a caller that has a
-// URL in them must redact it first.
+// WithLogging makes Do log a warning to log before each sleep between attempts, like
+// "Failed to clone x (attempt 1), retrying in 1s", with the error in the "error"
+// field. operation is a verb phrase that completes "Failed to ...". The log line is
+// written before the WithOnRetry hook runs, and neither replaces the other. The
+// operation and the error are logged as they are, so a caller must redact any URL in
+// them first.
 //
-// Unlike WithLogging in services/pkg/retry, it takes the logger and an operation
-// name, and logs a different message and fields, so callers need a small change
-// when this package is replaced by that one.
+// Unlike WithLogging in services/pkg/retry, this one takes the logger and an
+// operation name, and logs a different message and fields.
 func WithLogging(log logrus.FieldLogger, operation string) Option {
 	return func(c *config) {
 		c.logRetry = func(attempt int, err error, wait time.Duration) {
@@ -143,7 +139,6 @@ func (e exponential) delay(attempt int) time.Duration {
 	return time.Duration(d - delta + rand.Float64()*2*delta) //nolint:gosec // Why: jitter does not need a secure source.
 }
 
-// constant is the Strategy that Constant returns.
 type constant time.Duration
 
 // Constant returns a Strategy that waits d before every retry.

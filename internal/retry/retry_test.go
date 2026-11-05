@@ -138,7 +138,6 @@ func TestDoValueWithMaxAttempts(t *testing.T) {
 	assert.Equal(t, calls, 4)
 }
 
-// retryAfterError is an error that asks for a minimum wait before the next attempt.
 type retryAfterError struct {
 	err   error
 	after time.Duration
@@ -232,11 +231,11 @@ func TestRetryAfterSetsAMinimumWait(t *testing.T) {
 		after, want time.Duration
 	}{
 		{"raises the wait", 20 * time.Millisecond, 20 * time.Millisecond},
-		{"never shortens the wait", time.Microsecond, time.Millisecond}, // fast() waits 1ms
+		{"never shortens the wait", time.Microsecond, time.Millisecond},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := waits(t, func(context.Context) error {
-				// Wrapped, to show that RetryAfter is found anywhere in the chain.
+				// The error is wrapped, to show that RetryAfter is found anywhere in the chain.
 				return fmt.Errorf("calling upstream: %w", &retryAfterError{err: errBoom, after: tc.after})
 			}, retry.WithMaxAttempts(2))
 			assert.DeepEqual(t, got, []time.Duration{tc.want})

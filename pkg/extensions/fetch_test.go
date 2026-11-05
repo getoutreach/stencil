@@ -30,8 +30,8 @@ var (
 	errAssetNotFound     = errors.New("failed to find asset")
 )
 
-// request is the request that the errors below come from. go-github keeps it, with
-// the HTTP response, in its errors, and prints it in their messages.
+// request is set on the fake responses because the Error methods of go-github read
+// Response.Request.
 var request = &http.Request{Method: http.MethodGet, URL: &url.URL{}}
 
 // githubError is the error of a request that GitHub answered with status.
@@ -47,9 +47,8 @@ func abuseLimited(retryAfter *time.Duration) error {
 	}
 }
 
-// attempts runs retry.Do with an operation that fails with err each time, and
-// returns the number of calls. Failing with err means that err goes through
-// classifyGitHubError, like the error of release.Fetch.
+// attempts returns how many times retry.Do calls an operation that always fails with
+// err. The error goes through classifyGitHubError, like the error of release.Fetch.
 func attempts(t *testing.T, err error) (calls int) {
 	t.Helper()
 
@@ -77,8 +76,8 @@ func rateLimited(reset time.Time) error {
 	}
 }
 
-// TestClassifyGitHubError checks how often retry.Do calls an operation that fails
-// with err, which is 3 times when it retries, and once when it does not.
+// TestClassifyGitHubError checks that retry.Do calls the operation 3 times for an
+// error that is retried, and once for any other error.
 func TestClassifyGitHubError(t *testing.T) {
 	const retried, notRetried = 3, 1
 
@@ -121,7 +120,6 @@ func TestClassifyGitHubErrorAsksToWaitForARateLimit(t *testing.T) {
 	})
 }
 
-// roundTripFunc is an http.RoundTripper.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
@@ -149,9 +147,9 @@ func withTransport(t *testing.T, status int) *atomic.Int32 {
 }
 
 // fetchWithStatus runs fetchRelease against a GitHub that answers every request
-// with status, and returns the number of requests and the error. Unlike the tests
-// above, it gets its errors from the go-github that gobox uses. It fails if that is
-// not the version that classifyGitHubError imports.
+// with status, and returns the number of requests and the error. Its errors come
+// from the go-github that gobox uses, so the tests that call it fail if
+// classifyGitHubError imports another version of go-github.
 func fetchWithStatus(t *testing.T, status int) (int32, error) {
 	t.Helper()
 
@@ -193,7 +191,7 @@ func TestFetchReleaseDoesNotLogCredentials(t *testing.T) {
 }
 
 func TestFetchReleaseDoesNotReturnCredentials(t *testing.T) {
-	// gobox puts the URL in the error when it cannot find the organization and the repository in it.
+	// gobox puts the whole URL in its error when the path is not /org/repo.
 	_, _, err := fetchRelease(t.Context(), logrus.New(), "",
 		&release.FetchOptions{RepoURL: "https://ghp_secret@github.com/example/repo/extra", Tag: "v1.0.0", AssetName: "asset"})
 

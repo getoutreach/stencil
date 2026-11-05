@@ -247,8 +247,7 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 }
 
 // cloneModule clones a module into cacheDir and returns the filesystem that
-// holds it. It retries transient failures, such as a network error, see
-// stgit.IsTransientError.
+// holds it. It retries transient failures. See stgit.IsTransientError.
 func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (billy.Filesystem, error) {
 	fs := osfs.New(cacheDir)
 
@@ -288,13 +287,12 @@ func (m *Module) FSCacheDir() string {
 	return FSCacheDir(m.PathSlug())
 }
 
-// lockRetryDelay is how long exclusiveLockDirectory waits between attempts to take a lock.
 const lockRetryDelay = 100 * time.Millisecond
 
 // exclusiveLockDirectory creates a new flock lock for the specified directory. It
 // waits for the lock if someone else holds it, until ctx is done.
 func exclusiveLockDirectory(ctx context.Context, dir string) (*flock.Flock, error) {
-	// flock creates the lock file, but not the directory of it.
+	// flock creates the lock file, but not its directory.
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, errors.Wrapf(err, "failed to create directory %q", dir)
 	}

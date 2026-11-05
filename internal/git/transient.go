@@ -14,15 +14,12 @@ import (
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-// IsTransientError reports whether err from an operation on a git remote, such as
-// a clone or a ls-remote, could go away if the operation is tried again. That is a
-// connection error other than a missing host, a timeout, a response that ended
-// early (io.EOF or io.ErrUnexpectedEOF), or an HTTP status that says the server is
-// busy or broken, see IsTransientStatus.
-//
-// It is an allowlist: an error that it does not know, such as a version that does
-// not exist or bad credentials, is not transient, so a retry does not wait for an
-// answer that will not change.
+// IsTransientError reports whether err from an operation on a git remote, such as a
+// clone or an ls-remote, could go away if the operation is tried again. That is a
+// connection error (except an unknown host), a timeout, a response that ended early
+// (io.EOF or io.ErrUnexpectedEOF), or an HTTP status that says the server is busy or
+// broken (see IsTransientStatus). It is an allowlist: any other error, such as a
+// missing version or bad credentials, is not transient.
 func IsTransientError(err error) bool {
 	var dnsErr *net.DNSError
 	var opErr *net.OpError
@@ -49,9 +46,8 @@ func IsTransientError(err error) bool {
 	return false
 }
 
-// IsTransientStatus reports whether an HTTP response with status says that the
-// server is busy or broken, so that the same request could work later: 408, 429
-// and 5xx, except 501 and 505, which a server answers the same way every time.
+// IsTransientStatus reports whether an HTTP status says that the server is busy or
+// broken: 408, 429 and 5xx, except 501 and 505, which a retry does not fix.
 func IsTransientStatus(status int) bool {
 	switch status {
 	case http.StatusRequestTimeout, http.StatusTooManyRequests:
