@@ -233,7 +233,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	}
 
 	h.log.WithField("version", version).WithField("repo", repoURL).Debug("Downloading native extension")
-	a, archiveName, _, err := release.Fetch(ctx, token, &release.FetchOptions{
+	a, archiveName, err := fetchRelease(ctx, h.log, token, &release.FetchOptions{
 		AssetName: filepath.Base(name) + "_*_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz",
 		RepoURL:   repoURL,
 		Tag:       version.Tag,

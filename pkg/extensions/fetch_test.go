@@ -1,0 +1,164 @@
+// Copyright 2026 Outreach Corporation. All Rights Reserved.
+
+// Description: This file contains tests for retrying the download of a release.
+
+package extensions
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/getoutreach/gobox/pkg/cli/updater/release"
+	"github.com/getoutreach/stencil/internal/retry"
+	gogithub "github.com/google/go-github/v84/github"
+	"github.com/sirupsen/logrus"
+	"gotest.tools/v3/assert"
+)
+
+var (
+	errConnectionRefused = errors.New("connection refused")
+	errAssetNotFound     = errors.New("failed to find asset")
+)
+
+// request is the request that the errors below come from. go-github keeps it, with
+// the HTTP response, in its errors, and prints it in their messages.
+var request = &http.Request{Method: http.MethodGet, URL: &url.URL{}}
+
+// githubError is the error of a request that GitHub answered with status.
+func githubError(status int) error {
+	return &gogithub.ErrorResponse{Response: &http.Response{StatusCode: status, Request: request}}
+}
+
+// abuseLimited is the error of a secondary rate limit, with the wait that it asks for, if any.
+func abuseLimited(retryAfter *time.Duration) error {
+	return &gogithub.AbuseRateLimitError{
+		Response:   &http.Response{StatusCode: http.StatusForbidden, Request: request},
+		RetryAfter: retryAfter,
+	}
+}
+
+// attempts runs retry.Do with an operation that fails with err each time, and
+// returns the number of calls and the wait before each retry. Failing with err
+// means that err goes through classifyGitHubError, like the error of release.Fetch.
+func attempts(t *testing.T, err error) (calls int, waits []time.Duration) {
+	t.Helper()
+
+	_ = retry.Do(t.Context(), func(context.Context) error {
+		calls++
+		return classifyGitHubError(err)
+	},
+		retry.WithBackoff(retry.Constant(time.Millisecond)),
+		retry.WithOnRetry(func(_ context.Context, _ int, _ error, wait time.Duration) { waits = append(waits, wait) }))
+	return calls, waits
+}
+
+// rateLimited is the error of a primary rate limit that resets at reset.
+func rateLimited(reset time.Time) error {
+	return &gogithub.RateLimitError{
+		Rate:     gogithub.Rate{Reset: gogithub.Timestamp{Time: reset}},
+		Response: &http.Response{StatusCode: http.StatusForbidden, Request: request},
+	}
+}
+
+// TestClassifyGitHubError checks how often retry.Do calls an operation that fails
+// with err, which is 3 times when it retries, and once when it does not.
+func TestClassifyGitHubError(t *testing.T) {
+	const retried, notRetried = 3, 1
+
+	for _, tc := range []struct {
+		name  string
+		err   error
+		calls int
+	}{
+		{"no error", nil, notRetried},
+		{"server error", githubError(http.StatusServiceUnavailable), retried},
+		{"too many requests", githubError(http.StatusTooManyRequests), retried},
+		{"wrapped server error", fmt.Errorf("failed to get release: %w", githubError(http.StatusBadGateway)), retried},
+		{"connection error", &net.OpError{Op: "dial", Err: errConnectionRefused}, retried},
+		{"abuse rate limit without a wait", abuseLimited(nil), retried},
+		{"release not found", githubError(http.StatusNotFound), notRetried},
+		{"bad credentials", githubError(http.StatusUnauthorized), notRetried},
+		{"error that is not known", errAssetNotFound, notRetried},
+		{"rate limit that lasts too long", rateLimited(time.Now().Add(time.Hour)), notRetried},
+		{"abuse rate limit that lasts too long", abuseLimited(gogithub.Ptr(time.Hour)), notRetried},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls, _ := attempts(t, tc.err)
+			assert.Equal(t, calls, tc.calls)
+		})
+	}
+}
+
+func TestClassifyGitHubErrorWaitsForARateLimit(t *testing.T) {
+	t.Run("rate limit", func(t *testing.T) {
+		calls, waits := attempts(t, rateLimited(time.Now().Add(50*time.Millisecond)))
+		assert.Equal(t, calls, 3)
+		assert.Assert(t, waits[0] > 10*time.Millisecond, "expected a wait until the reset, not the 1ms of the backoff: %v", waits[0])
+	})
+
+	t.Run("abuse rate limit", func(t *testing.T) {
+		calls, waits := attempts(t, abuseLimited(gogithub.Ptr(20*time.Millisecond)))
+		assert.Equal(t, calls, 3)
+		assert.Equal(t, waits[0], 20*time.Millisecond)
+	})
+
+	t.Run("rate limit that reset", func(t *testing.T) {
+		_, waits := attempts(t, rateLimited(time.Now().Add(-time.Minute)))
+		assert.Equal(t, waits[0], time.Millisecond, "expected the wait of the backoff")
+	})
+}
+
+// roundTripFunc is an http.RoundTripper.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// fetchWithStatus runs fetchRelease against a GitHub that answers every request
+// with status, and returns the number of requests and the error. Unlike the tests
+// above, it uses the errors that the version of go-github of gobox returns, so it
+// fails if that is not the version that classifyGitHubError imports.
+func fetchWithStatus(t *testing.T, status int) (int32, error) {
+	t.Helper()
+
+	// release.Fetch has no token here, so it uses the default transport.
+	var requests atomic.Int32
+	original := http.DefaultTransport
+	http.DefaultTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		requests.Add(1)
+		return &http.Response{
+			StatusCode: status,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"message":"test error"}`)),
+			Request:    r,
+		}, nil
+	})
+	t.Cleanup(func() { http.DefaultTransport = original })
+
+	_, _, err := fetchRelease(t.Context(), logrus.New(), "",
+		&release.FetchOptions{RepoURL: "https://github.com/example/repo", Tag: "v1.0.0", AssetName: "asset"},
+		retry.WithBackoff(retry.Constant(time.Millisecond)))
+	return requests.Load(), err
+}
+
+func TestFetchReleaseRetriesTransientErrors(t *testing.T) {
+	requests, err := fetchWithStatus(t, http.StatusServiceUnavailable)
+
+	assert.Assert(t, err != nil)
+	assert.Equal(t, requests, int32(3), "expected the 3 attempts of retry.Do")
+}
+
+func TestFetchReleaseDoesNotRetryPermanentErrors(t *testing.T) {
+	requests, err := fetchWithStatus(t, http.StatusNotFound)
+
+	assert.Assert(t, err != nil)
+	assert.Equal(t, requests, int32(1), "expected no retry, because asking again gives the same answer")
+}

@@ -43,9 +43,16 @@ func IsTransientError(err error) bool {
 	}
 	var httpErr *githttp.Err
 	if errors.As(err, &httpErr) {
-		code := httpErr.StatusCode()
-		return code == http.StatusRequestTimeout || code == http.StatusTooManyRequests || code >= http.StatusInternalServerError
+		return IsTransientStatus(httpErr.StatusCode())
 	}
 
 	return false
+}
+
+// IsTransientStatus reports whether an HTTP response with status says that the
+// server is busy or broken, so that the same request could work later: 408, 429
+// and 5xx.
+func IsTransientStatus(status int) bool {
+	return status == http.StatusRequestTimeout || status == http.StatusTooManyRequests ||
+		status >= http.StatusInternalServerError
 }
