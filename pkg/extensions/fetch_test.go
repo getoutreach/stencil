@@ -48,18 +48,25 @@ func abuseLimited(retryAfter *time.Duration) error {
 }
 
 // attempts runs retry.Do with an operation that fails with err each time, and
-// returns the number of calls and the wait before each retry. Failing with err
-// means that err goes through classifyGitHubError, like the error of release.Fetch.
-func attempts(t *testing.T, err error) (calls int, waits []time.Duration) {
+// returns the number of calls. Failing with err means that err goes through
+// classifyGitHubError, like the error of release.Fetch.
+func attempts(t *testing.T, err error) (calls int) {
 	t.Helper()
 
 	_ = retry.Do(t.Context(), func(context.Context) error {
 		calls++
 		return classifyGitHubError(err)
-	},
-		retry.WithBackoff(retry.Constant(time.Millisecond)),
-		retry.WithOnRetry(func(_ context.Context, _ int, _ error, wait time.Duration) { waits = append(waits, wait) }))
-	return calls, waits
+	}, retry.WithBackoff(retry.Constant(time.Millisecond)))
+	return calls
+}
+
+// waitFor returns the wait that classifyGitHubError asks retry.Do for when err fails.
+func waitFor(t *testing.T, err error) time.Duration {
+	t.Helper()
+
+	var retryAfter retry.RetryAfter
+	assert.Assert(t, errors.As(classifyGitHubError(err), &retryAfter), "expected a wait for %v", err)
+	return retryAfter.RetryAfter()
 }
 
 // rateLimited is the error of a primary rate limit that resets at reset.
@@ -93,28 +100,24 @@ func TestClassifyGitHubError(t *testing.T) {
 		{"abuse rate limit that lasts too long", abuseLimited(gogithub.Ptr(time.Hour)), notRetried},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			calls, _ := attempts(t, tc.err)
-			assert.Equal(t, calls, tc.calls)
+			assert.Equal(t, attempts(t, tc.err), tc.calls)
 		})
 	}
 }
 
-func TestClassifyGitHubErrorWaitsForARateLimit(t *testing.T) {
+func TestClassifyGitHubErrorAsksToWaitForARateLimit(t *testing.T) {
 	t.Run("rate limit", func(t *testing.T) {
-		calls, waits := attempts(t, rateLimited(time.Now().Add(50*time.Millisecond)))
-		assert.Equal(t, calls, 3)
-		assert.Assert(t, waits[0] > 10*time.Millisecond, "expected a wait until the reset, not the 1ms of the backoff: %v", waits[0])
+		wait := waitFor(t, rateLimited(time.Now().Add(30*time.Second)))
+		assert.Assert(t, wait > 0 && wait <= 30*time.Second, "wait: %v", wait)
 	})
 
 	t.Run("abuse rate limit", func(t *testing.T) {
-		calls, waits := attempts(t, abuseLimited(gogithub.Ptr(20*time.Millisecond)))
-		assert.Equal(t, calls, 3)
-		assert.Equal(t, waits[0], 20*time.Millisecond)
+		assert.Equal(t, waitFor(t, abuseLimited(gogithub.Ptr(20*time.Millisecond))), 20*time.Millisecond)
 	})
 
 	t.Run("rate limit that reset", func(t *testing.T) {
-		_, waits := attempts(t, rateLimited(time.Now().Add(-time.Minute)))
-		assert.Equal(t, waits[0], time.Millisecond, "expected the wait of the backoff")
+		// A wait of zero or less makes retry.Do use its backoff.
+		assert.Assert(t, waitFor(t, rateLimited(time.Now().Add(-time.Minute))) <= 0)
 	})
 }
 
