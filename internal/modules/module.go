@@ -147,7 +147,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
 	lockDir := FSLockDir(m.PathSlug())
-	lock, err := exclusiveLockDirectory(lockDir)
+	lock, err := exclusiveLockDirectory(ctx, lockDir)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{},
 			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
@@ -288,25 +288,20 @@ func (m *Module) FSCacheDir() string {
 	return FSCacheDir(m.PathSlug())
 }
 
-// exclusiveLockDirectory creates a new flock lock for the specified directory.
-func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
+// lockRetryDelay is how long exclusiveLockDirectory waits between attempts to take a lock.
+const lockRetryDelay = 100 * time.Millisecond
+
+// exclusiveLockDirectory creates a new flock lock for the specified directory. It
+// waits for the lock if someone else holds it, until ctx is done.
+func exclusiveLockDirectory(ctx context.Context, dir string) (*flock.Flock, error) {
+	// flock creates the lock file, but not the directory of it.
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, errors.Wrapf(err, "failed to create directory %q", dir)
+	}
+
 	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
-	for {
-		locked, err := lock.TryLock()
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil, err
-			}
-
-			if err = os.MkdirAll(dir, 0o755); err != nil {
-				return nil, errors.Wrapf(err, "failed to create directory %q", dir)
-			}
-			continue
-		}
-
-		if locked {
-			break
-		}
+	if _, err := lock.TryLockContext(ctx, lockRetryDelay); err != nil {
+		return nil, err
 	}
 
 	return lock, nil

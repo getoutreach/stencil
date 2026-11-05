@@ -203,7 +203,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
 	moduleID := PathSlug(item.uri, versionID)
 	lockDir := VersionLockDir(moduleID)
-	lock, err := exclusiveLockDirectory(lockDir)
+	lock, err := exclusiveLockDirectory(ctx, lockDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", lockDir)
 	}
