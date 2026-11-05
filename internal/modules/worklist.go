@@ -19,6 +19,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -216,7 +217,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return getCachedVersion(cacheFile)
 	}
 
-	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+	v, err := stgit.ResolveVersion(ctx, list.log, token, resolver.Criteria{
 		URL:           item.uri,
 		Channel:       channel,
 		Constraints:   constraints,
