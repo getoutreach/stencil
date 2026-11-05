@@ -18,6 +18,7 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -25,7 +26,6 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gofrs/flock"
@@ -247,8 +247,8 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 }
 
 // cloneModule clones a module into cacheDir and returns the filesystem that
-// holds it. It retries failures that asking again could fix, such as a network
-// error.
+// holds it. It retries transient failures, such as a network error, see
+// stgit.IsTransientError.
 func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (billy.Filesystem, error) {
 	fs := osfs.New(cacheDir)
 
@@ -267,7 +267,7 @@ func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (
 		_, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts)
 		return err
 	},
-		retry.WithRetryable(isRetryableCloneError),
+		retry.WithRetryable(stgit.IsTransientError),
 		retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
 			logrus.WithError(err).Warnf("Failed to clone %s (attempt %d), retrying in %s", opts.URL, attempt, wait)
 		}),
@@ -280,20 +280,6 @@ func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (
 	}
 
 	return fs, nil
-}
-
-// isRetryableCloneError reports whether err from cloning a module could go away
-// if the clone is tried again. It is false when the version, the repository or the
-// credentials are wrong, or the repository is empty, because a second attempt gives
-// the same error.
-func isRetryableCloneError(err error) bool {
-	// GetFS tries a version that is not a tag as a branch, which needs the first
-	// attempt to return NoMatchingRefSpecError at once.
-	return !errors.Is(err, git.NoMatchingRefSpecError{}) &&
-		!errors.Is(err, transport.ErrRepositoryNotFound) &&
-		!errors.Is(err, transport.ErrAuthenticationRequired) &&
-		!errors.Is(err, transport.ErrAuthorizationFailed) &&
-		!errors.Is(err, transport.ErrEmptyRemoteRepository)
 }
 
 func (m *Module) PathSlug() string {
