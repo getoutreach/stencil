@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/getoutreach/stencil/internal/retry"
+	"github.com/sirupsen/logrus"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
@@ -232,6 +234,24 @@ func TestDoWithoutAttemptLimitStopsOnContext(t *testing.T) {
 	}, fast(), retry.WithoutAttemptLimit())
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, calls, 5)
+}
+
+func TestWithLoggingLogsEachRetryAndKeepsTheOnRetryHook(t *testing.T) {
+	log, hook := logtest.NewNullLogger()
+	hookCalls := 0
+
+	err := retry.Do(t.Context(), func(context.Context) error { return errBoom }, fast(),
+		retry.WithLogging(log, "do the thing"),
+		retry.WithOnRetry(func(context.Context, int, error, time.Duration) { hookCalls++ }))
+	assert.ErrorIs(t, err, errBoom)
+
+	entries := hook.AllEntries()
+	assert.Equal(t, len(entries), 2, "expected one log entry for each of the 2 retries")
+	assert.Equal(t, entries[0].Level, logrus.WarnLevel)
+	assert.Equal(t, entries[0].Message, "Failed to do the thing (attempt 1), retrying in 1ms")
+	assert.Equal(t, entries[1].Message, "Failed to do the thing (attempt 2), retrying in 1ms")
+	assert.Equal(t, entries[0].Data[logrus.ErrorKey], errBoom)
+	assert.Equal(t, hookCalls, 2, "expected WithOnRetry to run as well")
 }
 
 func TestConstantWaitsTheSameBeforeEveryRetry(t *testing.T) {

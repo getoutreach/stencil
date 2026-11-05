@@ -6,8 +6,8 @@
 //
 // It is a small subset of github.com/getoutreach/services/pkg/retry (Do,
 // DoValue, WithMaxAttempts, WithoutAttemptLimit, WithRetryable, WithBackoff,
-// WithOnRetry, Permanent, RetryAfter, Exponential and Constant), using
-// functional options so it is easy to replace with a shared retry helper
+// WithOnRetry, WithLogging, Permanent, RetryAfter, Exponential and Constant),
+// using functional options so it is easy to replace with a shared retry helper
 // later. Port more of that package here when a caller needs it. Delete this
 // package once gobox provides one.
 package retry
@@ -21,6 +21,7 @@ import (
 
 	"github.com/getoutreach/gobox/pkg/async"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrInvalidMaxAttempts is returned by Do and DoValue, before fn is called, when
@@ -45,6 +46,9 @@ type config struct {
 
 	// onRetry, if set, runs immediately before each sleep between attempts.
 	onRetry func(ctx context.Context, attempt int, err error, wait time.Duration)
+
+	// logRetry, if set, runs immediately before each sleep between attempts, before onRetry.
+	logRetry func(attempt int, err error, wait time.Duration)
 
 	// err holds a configuration error (see WithMaxAttempts), returned before the
 	// first call to fn.
@@ -95,6 +99,23 @@ func WithBackoff(s Strategy) Option {
 // error it returned, and wait is the delay before the next attempt.
 func WithOnRetry(fn func(ctx context.Context, attempt int, err error, wait time.Duration)) Option {
 	return func(c *config) { c.onRetry = fn }
+}
+
+// WithLogging makes Do log a warning to log immediately before each sleep between
+// attempts, like "Failed to clone x (attempt 1), retrying in 1s", with the error in
+// the "error" field. operation is a verb phrase that completes "Failed to ...". The
+// log line is written before the WithOnRetry hook runs, and neither replaces the
+// other.
+//
+// Unlike WithLogging in services/pkg/retry, it takes the logger and an operation
+// name, and logs a different message and fields, so callers need a small change
+// when this package is replaced by that one.
+func WithLogging(log logrus.FieldLogger, operation string) Option {
+	return func(c *config) {
+		c.logRetry = func(attempt int, err error, wait time.Duration) {
+			log.WithError(err).Warnf("Failed to %s (attempt %d), retrying in %s", operation, attempt, wait)
+		}
+	}
 }
 
 // Strategy describes a backoff curve: how long to wait before a given retry.
@@ -215,6 +236,9 @@ func Do(ctx context.Context, fn func(context.Context) error, opts ...Option) err
 		var ra RetryAfter
 		if errors.As(err, &ra) {
 			wait = max(wait, ra.RetryAfter())
+		}
+		if c.logRetry != nil {
+			c.logRetry(attempt, err, wait)
 		}
 		if c.onRetry != nil {
 			c.onRetry(ctx, attempt, err, wait)

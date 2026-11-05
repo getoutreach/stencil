@@ -268,9 +268,7 @@ func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (
 		return err
 	},
 		retry.WithRetryable(stgit.IsTransientError),
-		retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
-			logrus.WithError(err).Warnf("Failed to clone %s (attempt %d), retrying in %s", opts.URL, attempt, wait)
-		}),
+		retry.WithLogging(logrus.StandardLogger(), "clone "+opts.URL),
 	)
 	if err != nil {
 		// Do not leave a partial checkout behind: useCache would take it for a
