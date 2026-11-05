@@ -64,6 +64,11 @@ func classifyGitHubError(err error) error {
 	case errors.As(err, &rateLimit):
 		return afterRateLimit(err, time.Until(rateLimit.Rate.Reset.Time))
 	case errors.As(err, &abuse):
+		// Without a wait, GitHub asks for at least a minute. That is the longest that
+		// stencil waits, so the error is not retried.
+		if abuse.RetryAfter == nil {
+			return retry.Permanent(err)
+		}
 		return afterRateLimit(err, abuse.GetRetryAfter())
 	case errors.As(err, &response) && response.Response != nil:
 		if stgit.IsTransientStatus(response.Response.StatusCode) {
@@ -77,8 +82,8 @@ func classifyGitHubError(err error) error {
 }
 
 // afterRateLimit marks err, a rate limit error, to be retried after wait. It is
-// permanent when wait is longer than maxRateLimitWait. When wait is zero or less,
-// because the limit has reset or GitHub gave no wait, retry.Do uses its backoff.
+// permanent when wait is longer than maxRateLimitWait. When the limit has already
+// reset, wait is not positive and retry.Do uses its backoff.
 func afterRateLimit(err error, wait time.Duration) error {
 	if wait > maxRateLimitWait {
 		return retry.Permanent(err)
