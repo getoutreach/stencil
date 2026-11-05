@@ -18,7 +18,7 @@ import (
 // a clone or a ls-remote, could go away if the operation is tried again. That is a
 // connection error other than a missing host, a timeout, a response that ended
 // early (io.EOF or io.ErrUnexpectedEOF), or an HTTP status that says the server is
-// busy or broken (408, 429 and 5xx).
+// busy or broken, see IsTransientStatus.
 //
 // It is an allowlist: an error that it does not know, such as a version that does
 // not exist or bad credentials, is not transient, so a retry does not wait for an
@@ -51,8 +51,13 @@ func IsTransientError(err error) bool {
 
 // IsTransientStatus reports whether an HTTP response with status says that the
 // server is busy or broken, so that the same request could work later: 408, 429
-// and 5xx.
+// and 5xx, except 501 and 505, which a server answers the same way every time.
 func IsTransientStatus(status int) bool {
-	return status == http.StatusRequestTimeout || status == http.StatusTooManyRequests ||
-		status >= http.StatusInternalServerError
+	switch status {
+	case http.StatusRequestTimeout, http.StatusTooManyRequests:
+		return true
+	case http.StatusNotImplemented, http.StatusHTTPVersionNotSupported:
+		return false
+	}
+	return status >= http.StatusInternalServerError
 }

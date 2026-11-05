@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
 
 	stgit "github.com/getoutreach/stencil/internal/git"
@@ -72,6 +73,7 @@ func TestIsTransientErrorFromGoGit(t *testing.T) {
 		want   bool
 	}{
 		{http.StatusInternalServerError, true},
+		{http.StatusNotImplemented, false},
 		{http.StatusRequestTimeout, true},
 		{http.StatusTooManyRequests, true},
 		{http.StatusUnauthorized, false},
@@ -98,4 +100,24 @@ func TestIsTransientErrorFromGoGit(t *testing.T) {
 		assert.Assert(t, err != nil)
 		assert.Assert(t, stgit.IsTransientError(err), "error: %v", err)
 	})
+}
+
+func TestIsTransientStatus(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		want   bool
+	}{
+		{http.StatusNotFound, false},
+		{http.StatusRequestTimeout, true},
+		{http.StatusTooManyRequests, true},
+		{http.StatusInternalServerError, true},
+		{http.StatusNotImplemented, false},
+		{http.StatusServiceUnavailable, true},
+		{http.StatusHTTPVersionNotSupported, false},
+		{520, true}, // Not an official status. Cloudflare uses it for an unknown error.
+	} {
+		t.Run(strconv.Itoa(tc.status), func(t *testing.T) {
+			assert.Equal(t, stgit.IsTransientStatus(tc.status), tc.want)
+		})
+	}
 }
