@@ -139,6 +139,7 @@ func (e exponential) delay(attempt int) time.Duration {
 	return time.Duration(d - delta + rand.Float64()*2*delta) //nolint:gosec // Why: jitter does not need a secure source.
 }
 
+// constant is the Strategy that Constant returns.
 type constant time.Duration
 
 // Constant returns a Strategy that waits d before every retry.

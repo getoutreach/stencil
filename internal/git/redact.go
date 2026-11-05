@@ -6,6 +6,8 @@ package git
 
 import "regexp"
 
+// userinfoPattern matches "://" and the user information after it, including the "@".
+// It stops at the first "/", "?" or "#", so an "@" in the path or query is not matched.
 var userinfoPattern = regexp.MustCompile(`://[^/?#]*@`)
 
 // RedactURL returns rawURL without its user information, so that it can be logged.
@@ -15,6 +17,7 @@ func RedactURL(rawURL string) string {
 	return userinfoPattern.ReplaceAllString(rawURL, "://")
 }
 
+// redactedError is the error that RedactError returns.
 type redactedError struct{ err error }
 
 func (e redactedError) Error() string { return RedactURL(e.err.Error()) }

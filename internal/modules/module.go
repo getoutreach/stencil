@@ -287,6 +287,8 @@ func (m *Module) FSCacheDir() string {
 	return FSCacheDir(m.PathSlug())
 }
 
+// lockRetryDelay is how long exclusiveLockDirectory waits between attempts to take
+// the lock.
 const lockRetryDelay = 100 * time.Millisecond
 
 // exclusiveLockDirectory creates a new flock lock for the specified directory. It
