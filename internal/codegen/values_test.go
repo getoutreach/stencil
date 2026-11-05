@@ -267,18 +267,49 @@ func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
 	assert.Equal(t, branch, "trunk")
 }
 
+// newValuesIn runs NewValues with dir as the working directory.
+func newValuesIn(t *testing.T, dir string) *Values {
+	t.Helper()
+	t.Chdir(dir)
+	return NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+}
+
 func TestValuesInSubdirectoryOfRepository(t *testing.T) {
 	clone := newClonedRepository(t)
+	// An untracked file makes the enclosing repository dirty.
+	assert.NilError(t, os.WriteFile(filepath.Join(clone, "untracked"), nil, 0o600))
 	subdir := filepath.Join(clone, "nested", "dir")
 	assert.NilError(t, os.MkdirAll(subdir, 0o755))
-	t.Chdir(subdir)
 
-	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+	vals := newValuesIn(t, subdir)
 
-	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
-	assert.Assert(t, vals.Git.Commit != "", "expected the commit of the repository above the working directory")
+	// The enclosing repository does not describe a project nested in it.
+	assert.Equal(t, vals.Git.Ref, "")
+	assert.Equal(t, vals.Git.Commit, "")
+	assert.Equal(t, vals.Git.Dirty, false)
 
 	branch, err := vals.Git.DefaultBranch()
 	assert.NilError(t, err)
 	assert.Equal(t, branch, "trunk")
+}
+
+func TestValuesAtRepositoryRoot(t *testing.T) {
+	clone := newClonedRepository(t)
+
+	vals := newValuesIn(t, clone)
+	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
+	assert.Assert(t, vals.Git.Commit != "", "expected the commit of the repository")
+	assert.Equal(t, vals.Git.Dirty, false)
+
+	assert.NilError(t, os.WriteFile(filepath.Join(clone, "untracked"), nil, 0o600))
+	assert.Equal(t, newValuesIn(t, clone).Git.Dirty, true)
+}
+
+func TestValuesAtRepositoryRootThroughSymlink(t *testing.T) {
+	clone := newClonedRepository(t)
+	link := filepath.Join(t.TempDir(), "link")
+	assert.NilError(t, os.Symlink(clone, link))
+
+	vals := newValuesIn(t, link)
+	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
 }
