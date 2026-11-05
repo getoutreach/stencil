@@ -48,6 +48,13 @@ type gitServer struct {
 func newGitServer(t *testing.T, failFirst int32) *gitServer {
 	t.Helper()
 
+	execPath, err := exec.CommandContext(t.Context(), "git", "--exec-path").Output()
+	assert.NilError(t, err)
+	backendPath := filepath.Join(strings.TrimSpace(string(execPath)), "git-http-backend")
+	if _, err := os.Stat(backendPath); err != nil {
+		t.Skipf("git-http-backend is not installed: %v", err)
+	}
+
 	work := filepath.Join(t.TempDir(), "work")
 	assert.NilError(t, os.Mkdir(work, 0o755))
 	runGit(t, work, "init", "-b", "main")
@@ -59,11 +66,8 @@ func newGitServer(t *testing.T, failFirst int32) *gitServer {
 	root := t.TempDir()
 	runGit(t, root, "clone", "--bare", work, "repo.git")
 
-	gitPath, err := exec.LookPath("git")
-	assert.NilError(t, err)
 	backend := &cgi.Handler{
-		Path:       gitPath,
-		Args:       []string{"http-backend"},
+		Path:       backendPath,
 		Env:        []string{"GIT_PROJECT_ROOT=" + root, "GIT_HTTP_EXPORT_ALL=1"},
 		InheritEnv: []string{"PATH"},
 	}
