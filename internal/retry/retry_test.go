@@ -159,34 +159,14 @@ func waits(t *testing.T, fn func(context.Context) error, opts ...retry.Option) [
 	return got
 }
 
-// TestDoCallCounts checks how many times fn is called under combinations of
-// the options that limit the attempts. fn fails until call number succeedOn
-// (0 means it always fails).
-func TestDoCallCounts(t *testing.T) {
-	never := func(error) bool { return false }
-	for _, tc := range []struct {
-		name      string
-		opts      []retry.Option
-		succeedOn int
-		want      int
-	}{
-		{"error that is not retryable", []retry.Option{retry.WithRetryable(never)}, 0, 1},
-		{"without attempt limit", []retry.Option{retry.WithoutAttemptLimit()}, 10, 10},
-		{"max attempts after without attempt limit", []retry.Option{retry.WithoutAttemptLimit(), retry.WithMaxAttempts(2)}, 0, 2},
-		{"without attempt limit after max attempts", []retry.Option{retry.WithMaxAttempts(2), retry.WithoutAttemptLimit()}, 6, 6},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			calls := 0
-			_ = retry.Do(t.Context(), func(context.Context) error {
-				calls++
-				if calls == tc.succeedOn {
-					return nil
-				}
-				return errBoom
-			}, append([]retry.Option{fast()}, tc.opts...)...)
-			assert.Equal(t, calls, tc.want)
-		})
-	}
+func TestDoWithRetryableStopsOnFalse(t *testing.T) {
+	calls := 0
+	err := retry.Do(t.Context(), func(context.Context) error {
+		calls++
+		return errBoom
+	}, fast(), retry.WithRetryable(func(error) bool { return false }))
+	assert.Equal(t, err, errBoom)
+	assert.Equal(t, calls, 1, "expected no retry for an error that is not retryable")
 }
 
 func TestDoWithRetryableRetriesOnTrue(t *testing.T) {
@@ -220,20 +200,6 @@ func TestDoWithRetryableIsNotAskedAboutPermanentOrContextErrors(t *testing.T) {
 	assert.ErrorIs(t, err, context.Canceled)
 
 	assert.Equal(t, asked, 0)
-}
-
-func TestDoWithoutAttemptLimitStopsOnContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	calls := 0
-	err := retry.Do(ctx, func(context.Context) error {
-		calls++
-		if calls == 5 {
-			cancel()
-		}
-		return errBoom
-	}, fast(), retry.WithoutAttemptLimit())
-	assert.ErrorIs(t, err, context.Canceled)
-	assert.Equal(t, calls, 5)
 }
 
 func TestWithLoggingLogsEachRetryAndKeepsTheOnRetryHook(t *testing.T) {

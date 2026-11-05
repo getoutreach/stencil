@@ -4,12 +4,11 @@
 
 // Package retry retries a function with backoff.
 //
-// It is a small subset of github.com/getoutreach/services/pkg/retry (Do,
-// DoValue, WithMaxAttempts, WithoutAttemptLimit, WithRetryable, WithBackoff,
-// WithOnRetry, WithLogging, Permanent, RetryAfter, Exponential and Constant),
-// using functional options so it is easy to replace with a shared retry helper
-// later. Port more of that package here when a caller needs it. Delete this
-// package once gobox provides one.
+// It is a small subset of github.com/getoutreach/services/pkg/retry (Do, DoValue,
+// WithMaxAttempts, WithRetryable, WithBackoff, WithOnRetry, WithLogging, Permanent,
+// RetryAfter, Exponential and Constant), using functional options so it is easy to
+// replace with a shared retry helper later. Port more of that package here when a
+// caller needs it. Delete this package once gobox provides one.
 package retry
 
 import (
@@ -71,13 +70,6 @@ func WithMaxAttempts(n int) Option {
 		c.err = nil
 		c.maxAttempts = n
 	}
-}
-
-// WithoutAttemptLimit removes the attempt cap, so only ctx, Permanent or
-// WithRetryable end the retries. Always use it with a ctx that can be canceled
-// or has a deadline. The last of WithMaxAttempts and WithoutAttemptLimit wins.
-func WithoutAttemptLimit() Option {
-	return func(c *config) { c.maxAttempts = math.MaxInt }
 }
 
 // WithRetryable sets the function that decides whether an error from fn is
@@ -186,10 +178,9 @@ func Permanent(err error) error {
 
 // Do calls fn until it succeeds, returns an error wrapped by Permanent, ctx is
 // done, WithRetryable returns false, or the attempt budget (3 by default, see
-// WithMaxAttempts; none with WithoutAttemptLimit) is used up, in which case it
-// returns the last error from fn. An invalid option (see
-// WithMaxAttempts) is returned before fn is called. Each error from fn is
-// handled in this order:
+// WithMaxAttempts) is used up, in which case it returns the last error from fn.
+// An invalid option (see WithMaxAttempts) is returned before fn is called. Each
+// error from fn is handled in this order:
 //
 //  1. ctx is done: stop and return ctx.Err().
 //  2. The error is wrapped by Permanent: stop and return the unwrapped error.
