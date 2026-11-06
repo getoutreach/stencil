@@ -19,6 +19,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -202,7 +203,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 	versionID := fmt.Sprintf("ch_%s_cons_%v", channel, constraints)
 	moduleID := PathSlug(item.uri, versionID)
 	lockDir := VersionLockDir(moduleID)
-	lock, err := exclusiveLockDirectory(lockDir)
+	lock, err := exclusiveLockDirectory(ctx, lockDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to lock module version cache dir %q", lockDir)
 	}
@@ -216,7 +217,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 		return getCachedVersion(cacheFile)
 	}
 
-	v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+	v, err := stgit.ResolveVersion(ctx, list.log, token, resolver.Criteria{
 		URL:           item.uri,
 		Channel:       channel,
 		Constraints:   constraints,

@@ -31,13 +31,7 @@ func TestValues(t *testing.T) {
 	tmpDir, err := os.MkdirTemp(t.TempDir(), "stencil-values-test")
 	assert.NilError(t, err, "expected os.MkdirTemp() not to fail")
 
-	wd, err := os.Getwd()
-	assert.NilError(t, err, "expected os.Getwd() not to fail")
-
-	// Change directory to the temporary directory, and restore the original
-	// working directory when we're done.
-	os.Chdir(tmpDir)
-	defer func() { os.Chdir(wd) }()
+	t.Chdir(tmpDir)
 
 	// Clone from an upstream repository so that the default branch can be
 	// determined from the "origin" remote.
@@ -68,7 +62,12 @@ func TestValues(t *testing.T) {
 		Name: "testing",
 	}
 
-	boxConf, _ := box.LoadBox()
+	// NewValues uses an empty box config when it cannot load one. Do the same, so the
+	// test does not need a box config on disk.
+	boxConf, err := box.LoadBox()
+	if err != nil {
+		boxConf = &box.Config{}
+	}
 
 	vals := NewValues(context.Background(), sm, []*modules.Module{
 		{

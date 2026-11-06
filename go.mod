@@ -18,6 +18,7 @@ require (
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/gofrs/flock v0.13.1
 	github.com/google/go-cmp v0.7.0
+	github.com/google/go-github/v84 v84.0.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.8.0
@@ -36,7 +37,6 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/fynelabs/selfupdate v0.2.1 // indirect
-	github.com/google/go-github/v84 v84.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect

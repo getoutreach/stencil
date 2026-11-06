@@ -20,6 +20,8 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
+	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
@@ -65,7 +67,8 @@ type Module struct {
 	// Version is the version of this module
 	Version string
 
-	// fsMu guards fs.
+	// fsMu guards fs and serializes clones into the module cache directory,
+	// because each clone attempt first removes that directory.
 	fsMu sync.Mutex
 
 	// fs is a cached filesystem
@@ -163,8 +166,8 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 //
 // The manifest is read once per Module and then cached, so edits to a local
 // module's manifest.yaml are not seen by an existing Module. Errors are not
-// cached. Each call returns a copy, so callers may modify the result, except
-// for the slice behind Type.Types(). It is safe for concurrent use.
+// cached. Each call returns a copy that callers may modify, except for the
+// slice inside Type, which is shared. It is safe for concurrent use.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
 	cached, err := m.cachedManifest(ctx)
 	if err != nil {
@@ -186,7 +189,11 @@ func (m *Module) Argument(ctx context.Context, name string) (configuration.Argum
 	}
 
 	arg, ok := cached.Arguments[name]
-	return cloneArgument(&arg), ok, nil
+	if !ok {
+		return configuration.Argument{}, false, nil
+	}
+
+	return cloneArgument(&arg), true, nil
 }
 
 // ImportsModule returns whether this module's manifest lists the module with
@@ -231,26 +238,73 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	err = os.RemoveAll(cacheDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
+	opts := &git.CloneOptions{
+		URL:               m.URI,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		Depth:             1,
 	}
 
-	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
-	}
-
-	fs := osfs.New(cacheDir)
-	if err := m.cloneInto(ctx, fs); err != nil {
-		// A partial clone must not be kept: the next call would take it as a
-		// valid cache and never retry the clone.
-		if rmErr := os.RemoveAll(cacheDir); rmErr != nil {
-			logrus.WithError(rmErr).Warnf("failed to remove partial module cache directory %q", cacheDir)
+	if token, err := github.GetToken(); err == nil {
+		opts.Auth = &githttp.BasicAuth{
+			Username: "x-access-token",
+			Password: string(token),
 		}
-		return nil, err
+	} else {
+		logrus.WithError(err).Warn("failed to get github token, will use an unauthenticated client")
+	}
+
+	if m.Version != "" {
+		opts.ReferenceName = plumbing.NewTagReferenceName(m.Version)
+		opts.SingleBranch = true
+	}
+
+	fs, err := cloneModule(ctx, cacheDir, opts)
+	if err != nil {
+		// if tag not found try as a branch
+		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
+			return nil, err
+		}
+
+		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
+		if fs, err = cloneModule(ctx, cacheDir, opts); err != nil {
+			return nil, errors.Wrap(err, "failed to find version as branch/tag")
+		}
 	}
 
 	m.fs = fs
+	return m.fs, nil
+}
+
+// cloneModule clones a module into cacheDir and returns the filesystem that
+// holds it. It retries transient failures. See stgit.IsTransientError.
+func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (billy.Filesystem, error) {
+	fs := osfs.New(cacheDir)
+
+	err := retry.Do(ctx, func(ctx context.Context) error {
+		// A failed attempt can leave a partial checkout, so every attempt starts
+		// from an empty directory. Failing to prepare the directory is not retried.
+		if err := os.RemoveAll(cacheDir); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir))
+		}
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to create module cache directory %q", cacheDir))
+		}
+
+		// We don't use the git object here because all we care about is
+		// the underlying filesystem object.
+		_, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts)
+		return stgit.RedactError(err)
+	},
+		retry.WithRetryable(stgit.IsTransientError),
+		retry.WithLogging(logrus.StandardLogger(), "clone "+stgit.RedactURL(opts.URL)),
+	)
+	if err != nil {
+		// Do not leave a partial checkout behind: useCache would take it for a
+		// module that was cloned in full. The error that matters is the clone's.
+		_ = os.RemoveAll(cacheDir)
+		return nil, err
+	}
+
 	return fs, nil
 }
 
@@ -280,51 +334,11 @@ func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRep
 	return m.manifest, nil
 }
 
-// cloneInto clones this module's repository into fs. It treats the version as a
-// tag, and as a branch if no such tag exists.
-func (m *Module) cloneInto(ctx context.Context, fs billy.Filesystem) error {
-	opts := &git.CloneOptions{
-		URL:               m.URI,
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		Depth:             1,
-	}
-
-	if token, err := github.GetToken(); err == nil {
-		opts.Auth = &githttp.BasicAuth{
-			Username: "x-access-token",
-			Password: string(token),
-		}
-	} else {
-		logrus.WithError(err).Warn("failed to get github token, will use an unauthenticated client")
-	}
-
-	if m.Version != "" {
-		opts.ReferenceName = plumbing.NewTagReferenceName(m.Version)
-		opts.SingleBranch = true
-	}
-
-	// We don't use the git object here because all we care about is
-	// the underlying filesystem object, which was created earlier
-	if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
-		// if tag not found try as a branch
-		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
-			return err
-		}
-
-		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
-		if _, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts); err != nil {
-			return errors.Wrap(err, "failed to find version as branch/tag")
-		}
-	}
-
-	return nil
-}
-
 // loadManifest downloads the module if not already downloaded and parses its
 // manifest.yaml, without consulting the cache.
 func (m *Module) loadManifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
 	lockDir := FSLockDir(m.PathSlug())
-	lock, err := exclusiveLockDirectory(lockDir)
+	lock, err := exclusiveLockDirectory(ctx, lockDir)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{},
 			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
@@ -360,25 +374,21 @@ func (m *Module) loadManifest(ctx context.Context) (configuration.TemplateReposi
 	return manifest, nil
 }
 
-// exclusiveLockDirectory creates a new flock lock for the specified directory.
-func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
+// lockRetryDelay is how long exclusiveLockDirectory waits between attempts to take
+// the lock.
+const lockRetryDelay = 100 * time.Millisecond
+
+// exclusiveLockDirectory creates a new flock lock for the specified directory. It
+// waits for the lock if someone else holds it, until ctx is done.
+func exclusiveLockDirectory(ctx context.Context, dir string) (*flock.Flock, error) {
+	// flock creates the lock file, but not its directory.
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, errors.Wrapf(err, "failed to create directory %q", dir)
+	}
+
 	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
-	for {
-		locked, err := lock.TryLock()
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil, err
-			}
-
-			if err = os.MkdirAll(dir, 0o755); err != nil {
-				return nil, errors.Wrapf(err, "failed to create directory %q", dir)
-			}
-			continue
-		}
-
-		if locked {
-			break
-		}
+	if _, err := lock.TryLockContext(ctx, lockRetryDelay); err != nil {
+		return nil, err
 	}
 
 	return lock, nil

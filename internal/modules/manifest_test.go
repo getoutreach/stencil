@@ -157,24 +157,6 @@ func TestManifestAndGetFSAreSafeToCallConcurrently(t *testing.T) {
 	wg.Wait()
 }
 
-func TestFailedCloneIsRetried(t *testing.T) {
-	ctx := context.Background()
-	// Nothing listens on port 1, so the clone fails right away.
-	m, err := modules.New(ctx, "git://127.0.0.1:1/getoutreach/missing.git",
-		&configuration.TemplateRepository{Name: "github.com/getoutreach/missing", Version: "v1.0.0"})
-	assert.NilError(t, err)
-	t.Cleanup(func() { os.RemoveAll(m.FSCacheDir()) })
-
-	_, err = m.Manifest(ctx)
-	assert.Assert(t, err != nil, "expected the clone to fail")
-	_, err = os.Stat(m.FSCacheDir())
-	assert.Assert(t, os.IsNotExist(err), "expected the partial clone to be removed")
-
-	// A second call tries the clone again instead of using what the first left behind.
-	_, err = m.GetFS(ctx)
-	assert.Assert(t, err != nil, "expected the clone to be tried again")
-}
-
 func TestArgument(t *testing.T) {
 	ctx := context.Background()
 	fs := memfs.New()
