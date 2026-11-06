@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/getoutreach/stencil/internal/dotnotation"
+	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/pkg/errors"
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -64,7 +65,7 @@ func (s *TplStencil) Arg(pth string) (any, error) {
 	// can even get a context passed to them
 	ctx := context.TODO()
 
-	mf, err := s.t.Module.Manifest(ctx)
+	arg, ok, err := s.t.Module.Argument(ctx, pth)
 	if err != nil {
 		// In theory this should never happen because we've
 		// already parsed the manifest. But, just in case
@@ -72,10 +73,9 @@ func (s *TplStencil) Arg(pth string) (any, error) {
 		return nil, err
 	}
 
-	if _, ok := mf.Arguments[pth]; !ok {
+	if !ok {
 		return "", fmt.Errorf("%w: module %q argument %q", ErrArgNotListed, s.t.Module.Name, pth)
 	}
-	arg := mf.Arguments[pth]
 
 	// If there's a "from" we should handle that now before anything else,
 	// so that its definition is used.
@@ -166,40 +166,28 @@ func (s *TplStencil) resolveDefault(pth string, arg *configuration.Argument) (an
 
 // resolveFrom resoles the "from" field of an argument.
 func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configuration.Argument) (*configuration.Argument, error) {
-	foundModuleInDeps := false
-	ourMf, err := s.t.Module.Manifest(ctx)
+	// Ensure that the module imports the referenced module
+	imports, err := s.t.Module.ImportsModule(ctx, arg.From)
 	if err != nil {
 		return nil, err
 	}
-
-	// Ensure that the module imports the referenced module
-	for _, m := range ourMf.Modules {
-		if m.Name == arg.From {
-			foundModuleInDeps = true
-		}
-	}
-	if !foundModuleInDeps {
+	if !imports {
 		return nil, fmt.Errorf(
 			"%w: module %q argument %q references an argument in module %q",
 			ErrArgFromNotDependency, s.t.Module.Name, pth, arg.From,
 		)
 	}
 
-	// Get the manifest for the referenced module
-	var fromMf *configuration.TemplateRepositoryManifest
+	var fromModule *modules.Module
 	for _, m := range s.s.modules {
 		if m.Name == arg.From {
-			mf, err := m.Manifest(ctx)
-			if err != nil {
-				return nil, err
-			}
-			fromMf = &mf
+			fromModule = m
 
 			// Found the module, break
 			break
 		}
 	}
-	if fromMf == nil {
+	if fromModule == nil {
 		return nil, fmt.Errorf(
 			"%w: module %q argument %q references an argument in module %q",
 			ErrArgFromNotImported, s.t.Module.Name, pth, arg.From,
@@ -207,7 +195,10 @@ func (s *TplStencil) resolveFrom(ctx context.Context, pth string, arg *configura
 	}
 
 	// Ensure that the module imported exposes that argument
-	fromArg, ok := fromMf.Arguments[pth]
+	fromArg, ok, err := fromModule.Argument(ctx, pth)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, fmt.Errorf(
 			"%w: module %q argument %q references an argument in module %q",
