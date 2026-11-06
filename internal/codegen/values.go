@@ -9,7 +9,6 @@ package codegen
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/getoutreach/gobox/pkg/app"
 	"github.com/getoutreach/gobox/pkg/box"
@@ -176,9 +175,7 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	} else {
 		vals.Git.defaultBranch = sync.OnceValues(func() (string, error) {
 			db, err := stencilgit.GetDefaultBranchWithRetry(ctx, "",
-				retry.WithOnRetry(func(_ context.Context, attempt int, err error, wait time.Duration) {
-					log.Warnf("Failed to get default branch (attempt %d), retrying in %s: %v", attempt, wait, err)
-				}))
+				retry.WithLogging(log, "get default branch"))
 			return db, errors.Wrap(err, "failed to get default branch")
 		})
 

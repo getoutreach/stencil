@@ -18,6 +18,8 @@ import (
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
+	"github.com/getoutreach/stencil/internal/retry"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/go-git/go-billy/v5"
@@ -145,7 +147,7 @@ func (m *Module) RegisterExtensions(ctx context.Context, log logrus.FieldLogger,
 // configuration.TemplateRepositoryManifest of this module.
 func (m *Module) Manifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
 	lockDir := FSLockDir(m.PathSlug())
-	lock, err := exclusiveLockDirectory(lockDir)
+	lock, err := exclusiveLockDirectory(ctx, lockDir)
 	if err != nil {
 		return configuration.TemplateRepositoryManifest{},
 			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
@@ -207,16 +209,6 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		return m.fs, nil
 	}
 
-	err = os.RemoveAll(cacheDir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir)
-	}
-
-	if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, errors.Wrapf(err, "failed to create module cache directory %q", cacheDir)
-	}
-
-	m.fs = osfs.New(cacheDir)
 	opts := &git.CloneOptions{
 		URL:               m.URI,
 		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
@@ -237,21 +229,54 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		opts.SingleBranch = true
 	}
 
-	// We don't use the git object here because all we care about is
-	// the underlying filesystem object, which was created earlier
-	if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
+	fs, err := cloneModule(ctx, cacheDir, opts)
+	if err != nil {
 		// if tag not found try as a branch
 		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
 			return nil, err
 		}
 
 		opts.ReferenceName = plumbing.NewBranchReferenceName(m.Version)
-		if _, err := git.CloneContext(ctx, memory.NewStorage(), m.fs, opts); err != nil {
+		if fs, err = cloneModule(ctx, cacheDir, opts); err != nil {
 			return nil, errors.Wrap(err, "failed to find version as branch/tag")
 		}
 	}
 
+	m.fs = fs
 	return m.fs, nil
+}
+
+// cloneModule clones a module into cacheDir and returns the filesystem that
+// holds it. It retries transient failures. See stgit.IsTransientError.
+func cloneModule(ctx context.Context, cacheDir string, opts *git.CloneOptions) (billy.Filesystem, error) {
+	fs := osfs.New(cacheDir)
+
+	err := retry.Do(ctx, func(ctx context.Context) error {
+		// A failed attempt can leave a partial checkout, so every attempt starts
+		// from an empty directory. Failing to prepare the directory is not retried.
+		if err := os.RemoveAll(cacheDir); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to remove stale module cache directory %q", cacheDir))
+		}
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+			return retry.Permanent(errors.Wrapf(err, "failed to create module cache directory %q", cacheDir))
+		}
+
+		// We don't use the git object here because all we care about is
+		// the underlying filesystem object.
+		_, err := git.CloneContext(ctx, memory.NewStorage(), fs, opts)
+		return stgit.RedactError(err)
+	},
+		retry.WithRetryable(stgit.IsTransientError),
+		retry.WithLogging(logrus.StandardLogger(), "clone "+stgit.RedactURL(opts.URL)),
+	)
+	if err != nil {
+		// Do not leave a partial checkout behind: useCache would take it for a
+		// module that was cloned in full. The error that matters is the clone's.
+		_ = os.RemoveAll(cacheDir)
+		return nil, err
+	}
+
+	return fs, nil
 }
 
 func (m *Module) PathSlug() string {
@@ -262,25 +287,21 @@ func (m *Module) FSCacheDir() string {
 	return FSCacheDir(m.PathSlug())
 }
 
-// exclusiveLockDirectory creates a new flock lock for the specified directory.
-func exclusiveLockDirectory(dir string) (*flock.Flock, error) {
+// lockRetryDelay is how long exclusiveLockDirectory waits between attempts to take
+// the lock.
+const lockRetryDelay = 100 * time.Millisecond
+
+// exclusiveLockDirectory creates a new flock lock for the specified directory. It
+// waits for the lock if someone else holds it, until ctx is done.
+func exclusiveLockDirectory(ctx context.Context, dir string) (*flock.Flock, error) {
+	// flock creates the lock file, but not its directory.
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, errors.Wrapf(err, "failed to create directory %q", dir)
+	}
+
 	lock := flock.New(filepath.Join(dir, "ex_dir.lock"))
-	for {
-		locked, err := lock.TryLock()
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil, err
-			}
-
-			if err = os.MkdirAll(dir, 0o755); err != nil {
-				return nil, errors.Wrapf(err, "failed to create directory %q", dir)
-			}
-			continue
-		}
-
-		if locked {
-			break
-		}
+	if _, err := lock.TryLockContext(ctx, lockRetryDelay); err != nil {
+		return nil, err
 	}
 
 	return lock, nil

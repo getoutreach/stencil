@@ -21,6 +21,7 @@ import (
 	"github.com/getoutreach/gobox/pkg/cli/updater/archive"
 	"github.com/getoutreach/gobox/pkg/cli/updater/release"
 	"github.com/getoutreach/gobox/pkg/cli/updater/resolver"
+	stgit "github.com/getoutreach/stencil/internal/git"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -129,26 +130,15 @@ func (h *Host) RegisterInprocExtension(name string, ext apiv1.Implementation) {
 }
 
 // getVersionWithCommit retrieves a new version with the commit present.
-func getVersionWithCommit(ctx context.Context, token cfg.SecretData, repoURL string,
+func getVersionWithCommit(ctx context.Context, log logrus.FieldLogger, token cfg.SecretData, repoURL string,
 	version *resolver.Version) (*resolver.Version, error) {
-	var v *resolver.Version
-	var err error
+	criteria := resolver.Criteria{URL: repoURL, Constraints: []string{version.Tag}}
 	// We assume that if the tag does not comply with semver it is a channel (e.g. unstable).
 	if _, err := semver.ParseTolerant(version.Tag); err != nil {
-		v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
-			URL:     repoURL,
-			Channel: version.Tag,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get latest version")
-		}
-		return v, nil
+		criteria = resolver.Criteria{URL: repoURL, Channel: version.Tag}
 	}
 
-	v, err = resolver.Resolve(ctx, token, &resolver.Criteria{
-		URL:         repoURL,
-		Constraints: []string{version.Tag},
-	})
+	v, err := stgit.ResolveVersion(ctx, log, token, criteria)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get latest version")
 	}
@@ -218,7 +208,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	repoURL := "https://" + name
 
 	if version.Tag == "" {
-		v, err := resolver.Resolve(ctx, token, &resolver.Criteria{
+		v, err := stgit.ResolveVersion(ctx, h.log, token, resolver.Criteria{
 			URL: repoURL,
 		})
 		if err != nil {
@@ -228,7 +218,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	}
 
 	if version.Commit == "" {
-		v, err := getVersionWithCommit(ctx, token, repoURL, version)
+		v, err := getVersionWithCommit(ctx, h.log, token, repoURL, version)
 		if err != nil {
 			return "", errors.Wrap(err, "retrieving commit")
 		}
@@ -243,7 +233,7 @@ func (h *Host) downloadFromRemote(ctx context.Context, name string,
 	}
 
 	h.log.WithField("version", version).WithField("repo", repoURL).Debug("Downloading native extension")
-	a, archiveName, _, err := release.Fetch(ctx, token, &release.FetchOptions{
+	a, archiveName, err := fetchRelease(ctx, h.log, token, &release.FetchOptions{
 		AssetName: filepath.Base(name) + "_*_" + runtime.GOOS + "_" + runtime.GOARCH + ".tar.gz",
 		RepoURL:   repoURL,
 		Tag:       version.Tag,
