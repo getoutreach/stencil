@@ -43,10 +43,10 @@ type runtime struct {
 	Modules modulesSlice
 }
 
-// git contains information about the current git repository
-// that is being ran in. Ref, Commit, and Dirty are only set when the working
-// directory is the root of the repository, while DefaultBranch also works from
-// a subdirectory.
+// git contains information about the git repository that contains the working
+// directory. Ref, Commit, and Dirty are only set when the working directory is
+// the root of that repository, while DefaultBranch also works from a
+// subdirectory.
 type git struct {
 	// Ref is the current ref of the Git repository, this
 	// is in the refs/<type>/<name> format
