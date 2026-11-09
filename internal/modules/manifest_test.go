@@ -5,7 +5,6 @@
 package modules_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -60,7 +59,7 @@ arguments:
 `
 
 func TestManifestIsParsedOncePerModule(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := &countingFS{Filesystem: memfs.New()}
 	writeManifest(t, fs)
 	m := modules.NewWithFS(ctx, "test", fs)
@@ -79,7 +78,7 @@ func TestManifestIsParsedOncePerModule(t *testing.T) {
 }
 
 func TestManifestErrorsAreNotCached(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := memfs.New()
 	m := modules.NewWithFS(ctx, "test", fs)
 
@@ -93,7 +92,7 @@ func TestManifestErrorsAreNotCached(t *testing.T) {
 }
 
 func TestManifestNameMismatchIsAnError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := memfs.New()
 	writeManifest(t, fs)
 	m := modules.NewWithFS(ctx, "other", fs)
@@ -103,7 +102,7 @@ func TestManifestNameMismatchIsAnError(t *testing.T) {
 }
 
 func TestManifestReturnsIndependentCopies(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := memfs.New()
 	writeManifest(t, fs)
 	m := modules.NewWithFS(ctx, "test", fs)
@@ -134,7 +133,7 @@ func TestManifestReturnsIndependentCopies(t *testing.T) {
 }
 
 func TestManifestAndGetFSAreSafeToCallConcurrently(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	dir := t.TempDir()
 	assert.NilError(t, os.WriteFile(filepath.Join(dir, "manifest.yaml"), []byte(testManifest), 0o600))
 
@@ -158,7 +157,7 @@ func TestManifestAndGetFSAreSafeToCallConcurrently(t *testing.T) {
 }
 
 func TestArgument(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := memfs.New()
 	writeManifest(t, fs)
 	m := modules.NewWithFS(ctx, "test", fs)
@@ -182,7 +181,7 @@ func TestArgument(t *testing.T) {
 }
 
 func TestImportsModule(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	fs := memfs.New()
 	writeManifest(t, fs)
 	m := modules.NewWithFS(ctx, "test", fs)
