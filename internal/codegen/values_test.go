@@ -141,7 +141,12 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 		"not a git repository": {
 			setup: func(t *testing.T) string {
 				t.Helper()
-				return t.TempDir()
+				dir := t.TempDir()
+				// Parent directories are searched, so this needs a directory outside any repository.
+				if _, err := gogit.PlainOpenWithOptions(dir, &gogit.PlainOpenOptions{DetectDotGit: true}); err == nil {
+					t.Skipf("the temporary directory %q is inside a git repository", dir)
+				}
+				return dir
 			},
 			wantErr: "repository does not exist",
 		},
@@ -238,7 +243,10 @@ func TestNewValuesDoesNotLookUpTheDefaultBranch(t *testing.T) {
 	assert.Equal(t, len(hook.AllEntries()), 0, "expected no lookup until a template reads the default branch")
 }
 
-func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
+// newClonedRepository clones a new upstream repository that has one empty
+// commit on the branch "trunk", and returns the path of the clone.
+func newClonedRepository(t *testing.T) string {
+	t.Helper()
 	upstream := t.TempDir()
 	gitInDir(t, upstream, "init", "-q", "-b", "trunk")
 	gitInDir(t, upstream, "-c", "user.name=Stencil", "-c", "user.email=email@example.com",
@@ -246,10 +254,61 @@ func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
 
 	parent := t.TempDir()
 	gitInDir(t, parent, "clone", "-q", upstream, "clone")
-	t.Chdir(filepath.Join(parent, "clone"))
+	return filepath.Join(parent, "clone")
+}
+
+func TestDefaultBranchIsReadFromOrigin(t *testing.T) {
+	t.Chdir(newClonedRepository(t))
 
 	vals := NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
 	branch, err := vals.Git.DefaultBranch()
 	assert.NilError(t, err)
 	assert.Equal(t, branch, "trunk")
+}
+
+// newValuesIn runs NewValues with dir as the working directory.
+func newValuesIn(t *testing.T, dir string) *Values {
+	t.Helper()
+	t.Chdir(dir)
+	return NewValues(t.Context(), &configuration.ServiceManifest{Name: "testing"}, nil, logrus.New())
+}
+
+func TestValuesInSubdirectoryOfRepository(t *testing.T) {
+	clone := newClonedRepository(t)
+	// An untracked file makes the enclosing repository dirty.
+	assert.NilError(t, os.WriteFile(filepath.Join(clone, "untracked"), nil, 0o600))
+	subdir := filepath.Join(clone, "nested", "dir")
+	assert.NilError(t, os.MkdirAll(subdir, 0o755))
+
+	vals := newValuesIn(t, subdir)
+
+	// The enclosing repository does not describe a project nested in it.
+	assert.Equal(t, vals.Git.Ref, "")
+	assert.Equal(t, vals.Git.Commit, "")
+	assert.Equal(t, vals.Git.Dirty, false)
+
+	branch, err := vals.Git.DefaultBranch()
+	assert.NilError(t, err)
+	assert.Equal(t, branch, "trunk")
+}
+
+func TestValuesAtRepositoryRoot(t *testing.T) {
+	clone := newClonedRepository(t)
+
+	vals := newValuesIn(t, clone)
+	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
+	assert.Assert(t, vals.Git.Commit != "", "expected the commit of the repository")
+	assert.Equal(t, vals.Git.Dirty, false)
+
+	assert.NilError(t, os.WriteFile(filepath.Join(clone, "untracked"), nil, 0o600))
+	assert.Equal(t, newValuesIn(t, clone).Git.Dirty, true)
+}
+
+func TestValuesAtRepositoryRootThroughSymlink(t *testing.T) {
+	clone := newClonedRepository(t)
+	link := filepath.Join(t.TempDir(), "link")
+	assert.NilError(t, os.Symlink(clone, link))
+
+	vals := newValuesIn(t, link)
+	assert.Equal(t, vals.Git.Ref, "refs/heads/trunk")
 }

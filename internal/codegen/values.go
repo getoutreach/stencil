@@ -8,6 +8,7 @@ package codegen
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -42,8 +43,10 @@ type runtime struct {
 	Modules modulesSlice
 }
 
-// git contains information about the current git repository
-// that is being ran in.
+// git contains information about the git repository that contains the working
+// directory. Ref, Commit, and Dirty are only set when the working directory is
+// the root of that repository, while DefaultBranch also works from a
+// subdirectory.
 type git struct {
 	// Ref is the current ref of the Git repository, this
 	// is in the refs/<type>/<name> format
@@ -165,12 +168,13 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		vals.Runtime.Box = &box.Config{}
 	}
 
-	// If we're a repository, add repository information
-	r, err := gogit.PlainOpen("")
+	// If we're in a repository, add repository information. Parent directories
+	// are searched too, so the default branch is found from a subdirectory.
+	r, err := gogit.PlainOpenWithOptions("", &gogit.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		// Keep the cause (e.g. a git extension go-git doesn't support) so that a
 		// template reading .Git.DefaultBranch can say why it failed.
-		openErr := errors.Wrap(err, "failed to open git repository in the current directory")
+		openErr := errors.Wrap(err, "failed to open git repository in the current or a parent directory")
 		vals.Git.defaultBranch = func() (string, error) { return "", openErr }
 	} else {
 		vals.Git.defaultBranch = sync.OnceValues(func() (string, error) {
@@ -179,14 +183,16 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 			return db, errors.Wrap(err, "failed to get default branch")
 		})
 
-		// Add HEAD information
-		if pref, err := r.Head(); err == nil {
-			vals.Git.Ref = pref.Name().String()
-			vals.Git.Commit = pref.Hash().String()
-		}
+		// A project nested in a larger repository gets no HEAD or status
+		// information, which would change with unrelated work.
+		if wrk, err := r.Worktree(); err == nil && isWorkingDirectory(wrk.Filesystem.Root()) {
+			// Add HEAD information
+			if pref, err := r.Head(); err == nil {
+				vals.Git.Ref = pref.Name().String()
+				vals.Git.Commit = pref.Hash().String()
+			}
 
-		// Check if the worktree is clean
-		if wrk, err := r.Worktree(); err == nil {
+			// Check if the worktree is clean
 			if stat, err := wrk.Status(); err == nil {
 				vals.Git.Dirty = !stat.IsClean()
 			}
@@ -194,6 +200,20 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	return vals
+}
+
+// isWorkingDirectory returns whether dir is the current working directory.
+func isWorkingDirectory(dir string) bool {
+	dirInfo, err := os.Stat(dir)
+	if err != nil {
+		return false
+	}
+	wdInfo, err := os.Stat(".")
+	if err != nil {
+		return false
+	}
+
+	return os.SameFile(dirInfo, wdInfo)
 }
 
 // Copy returns a copy of the current values.
