@@ -9,6 +9,7 @@ package rendertest_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -80,4 +81,22 @@ func TestSnapshotOfAFailedRender(t *testing.T) {
 
 	result := suite.NewTemplate("args.tpl").Run(t)
 	assertFatal(t, func(tb *recordingTB) { result.Snapshot(tb) })
+}
+
+// TestSnapshotsInUpdateMode runs the tests of the update mode, which are
+// built only with the rendertest_update_snapshots build tag, so that every
+// test run covers them.
+func TestSnapshotsInUpdateMode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the package again with another build tag")
+	}
+	t.Parallel()
+
+	// TestMain changed to testdata/templates, two directories under the
+	// package.
+	cmd := exec.CommandContext(t.Context(), "go", "test", "-tags=rendertest_update_snapshots",
+		"-run=^TestSnapshotsAreUpdated$", ".")
+	cmd.Dir = filepath.Join("..", "..")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "update mode tests failed:\n%s", out)
 }
