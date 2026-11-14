@@ -66,6 +66,9 @@ type TemplateBuilder struct {
 	// boxConfig is the box config that templates see
 	boxConfig *box.Config
 
+	// git holds the .Git values that templates see
+	git gitConfig
+
 	// extensions are the in-process extensions, by name
 	extensions map[string]apiv1.Implementation
 
@@ -85,6 +88,7 @@ func (s *Suite) NewTemplate(path string) *TemplateBuilder {
 		hooks:         map[string][]any{},
 		existingFiles: map[string][]byte{},
 		extensions:    map[string]apiv1.Implementation{},
+		git:           gitConfig{defaultBranch: "main"},
 	}
 }
 
@@ -145,6 +149,15 @@ func (b *TemplateBuilder) WithExistingFiles(files map[string][]byte) *TemplateBu
 	return b
 }
 
+// WithGitValues sets the .Git values that templates see. The defaults are
+// an empty ref and commit, the default branch main and a clean working tree.
+func (b *TemplateBuilder) WithGitValues(opts ...GitOption) *TemplateBuilder {
+	for _, opt := range opts {
+		opt(&b.git)
+	}
+	return b
+}
+
 // WithBoxConfig sets the box config that templates see as .Runtime.Box. The
 // default is an empty config.
 func (b *TemplateBuilder) WithBoxConfig(c *box.Config) *TemplateBuilder {
@@ -201,8 +214,7 @@ func (b *TemplateBuilder) Run(tb testing.TB) *Result {
 	opts := make([]codegen.StencilOption, 0, 4+len(b.hooks))
 	opts = append(opts,
 		codegen.WithFS(fs),
-		// An empty ref and commit, the default branch main and a clean tree.
-		codegen.WithGitInfo("", "", "main", false),
+		codegen.WithGitInfo(b.git.ref, b.git.commit, b.git.defaultBranch, b.git.dirty),
 		codegen.WithBoxConfig(boxConfig),
 		codegen.WithCommandRunner(runner),
 	)

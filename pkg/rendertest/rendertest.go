@@ -26,12 +26,13 @@
 //			WithArgs(rendertest.Arg("name", "my-service")).
 //			Run(t)
 //
-//		if result.Error() != nil {
-//			t.Fatal(result.Error())
-//		}
-//		f := result.File("deployment.yaml")
-//		// ...
+//		result.HasNoError(t)
+//		result.HasFile(t, "deployment.yaml").Contains(t, "my-service")
 //	}
+//
+// Assertions call t.Helper. An assertion whose return value is needed to go
+// on, such as Result.HasFile, fails the test with Fatal. Other assertions,
+// such as FileResult.Contains, fail it with Error.
 //
 // Only the templates of the module under test are rendered: the template
 // under test and the helper templates passed to TemplateBuilder.WithTemplates.
