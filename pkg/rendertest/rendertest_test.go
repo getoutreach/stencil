@@ -140,15 +140,12 @@ func TestBlocks(t *testing.T) {
 func TestBlocksAndExistingFileAtTheSamePath(t *testing.T) {
 	t.Parallel()
 
-	ft := &fatalRecorder{T: t}
-	func() {
-		defer func() { _ = recover() }()
+	assertFatal(t, func(tb *recordingTB) {
 		suite.NewTemplate("blocks.tpl").
 			WithBlocks(map[string]string{"custom": "value"}).
 			WithExistingFile("blocks", []byte("existing")).
-			Run(ft)
-	}()
-	assert.Assert(t, ft.fatal, "expected Run to fail the test")
+			Run(tb)
+	})
 }
 
 func TestTemplatePathIsCleaned(t *testing.T) {
@@ -163,12 +160,7 @@ func TestTemplateThatIsNotRendered(t *testing.T) {
 	t.Parallel()
 
 	// The engine renders only files with the .tpl extension.
-	ft := &fatalRecorder{T: t}
-	func() {
-		defer func() { _ = recover() }()
-		suite.NewTemplate("not_a_template.txt").Run(ft)
-	}()
-	assert.Assert(t, ft.fatal, "expected Run to fail the test")
+	assertFatal(t, func(tb *recordingTB) { suite.NewTemplate("not_a_template.txt").Run(tb) })
 }
 
 func TestExistingFiles(t *testing.T) {
@@ -253,24 +245,6 @@ func TestWithManifestKeepsItsArguments(t *testing.T) {
 	f = renderOne(t, suite.NewTemplate("args.tpl").WithManifest(m).WithArgs(rendertest.Arg("name", "from-args")))
 	assert.Equal(t, f.String(), "name=from-args\n")
 	assert.Equal(t, m.Arguments["name"], "from-manifest", "expected the manifest not to be modified")
-}
-
-// fatalRecorder is a testing.TB that records a call to Fatal or Fatalf and
-// stops the caller with a panic.
-type fatalRecorder struct {
-	*testing.T
-
-	fatal bool
-}
-
-func (r *fatalRecorder) Fatal(...any) {
-	r.fatal = true
-	panic("fatal")
-}
-
-func (r *fatalRecorder) Fatalf(string, ...any) {
-	r.fatal = true
-	panic("fatal")
 }
 
 func BenchmarkSingleTemplate(b *testing.B) {
