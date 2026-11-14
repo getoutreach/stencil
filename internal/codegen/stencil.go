@@ -47,12 +47,20 @@ type Stencil struct {
 }
 
 // NewStencil creates a new, fully initialized Stencil renderer function.
+//
+// The Stencil renders with clones of mods, so that renders by different
+// Stencils that share modules do not change each other's template sets.
 func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
+	clones := make([]*modules.Module, len(mods))
+	for i, mod := range mods {
+		clones[i] = mod.Clone()
+	}
+
 	return &Stencil{
 		log:         log,
 		m:           m,
 		ext:         extensions.NewHost(log),
-		modules:     mods,
+		modules:     clones,
 		isFirstPass: true,
 		sharedData:  newSharedData(),
 	}

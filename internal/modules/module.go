@@ -67,6 +67,12 @@ type Module struct {
 	// Version is the version of this module
 	Version string
 
+	// cache is shared with the clones of this module.
+	cache *moduleCache
+}
+
+// moduleCache holds the data of a Module that is loaded on first use.
+type moduleCache struct {
 	// fsMu guards fs and serializes clones into the module cache directory,
 	// because each clone attempt first removes that directory.
 	fsMu sync.Mutex
@@ -120,6 +126,7 @@ func New(ctx context.Context, uri string, tr *configuration.TemplateRepository) 
 		Name:    tr.Name,
 		URI:     uri,
 		Version: tr.Version,
+		cache:   &moduleCache{},
 	}, nil
 }
 
@@ -131,13 +138,32 @@ func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
 		Name:    name,
 		Version: "vfs",
 	})
-	m.fs = fs
+	m.cache.fs = fs
 	return m
 }
 
 // GetTemplate returns the go template for this module.
 func (m *Module) GetTemplate() *template.Template {
 	return m.t
+}
+
+// Clone returns a copy of the module with its own template set, so that
+// templates parsed into, or functions set on, the copy do not change this
+// module. The filesystem and the parsed manifest are shared.
+func (m *Module) Clone() *Module {
+	t, err := m.t.Clone()
+	if err != nil {
+		// text/template's Clone never returns an error.
+		panic(errors.Wrapf(err, "failed to clone the template set of module %q", m.Name))
+	}
+
+	return &Module{
+		t:       t,
+		Name:    m.Name,
+		URI:     m.URI,
+		Version: m.Version,
+		cache:   m.cache,
+	}
 }
 
 // RegisterExtensions registers all extensions provided
@@ -214,11 +240,12 @@ func (m *Module) ImportsModule(ctx context.Context, importPath string) (bool, er
 // Otherwise, it clones the module from a remote git repository into a temporary cache directory
 // on the OS filesystem. This allows the module to be used as a billy.Filesystem.
 func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
-	m.fsMu.Lock()
-	defer m.fsMu.Unlock()
+	c := m.cache
+	c.fsMu.Lock()
+	defer c.fsMu.Unlock()
 
-	if m.fs != nil {
-		return m.fs, nil
+	if c.fs != nil {
+		return c.fs, nil
 	}
 
 	u, err := giturls.Parse(m.URI)
@@ -227,15 +254,15 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 	}
 
 	if u.Scheme == "file" {
-		m.fs = osfs.New(strings.TrimPrefix(m.URI, "file://"))
-		return m.fs, nil
+		c.fs = osfs.New(strings.TrimPrefix(m.URI, "file://"))
+		return c.fs, nil
 	}
 
 	cacheDir := m.FSCacheDir()
 
 	if useCache(cacheDir) {
-		m.fs = osfs.New(cacheDir)
-		return m.fs, nil
+		c.fs = osfs.New(cacheDir)
+		return c.fs, nil
 	}
 
 	opts := &git.CloneOptions{
@@ -271,8 +298,8 @@ func (m *Module) GetFS(ctx context.Context) (billy.Filesystem, error) {
 		}
 	}
 
-	m.fs = fs
-	return m.fs, nil
+	c.fs = fs
+	return c.fs, nil
 }
 
 // cloneModule clones a module into cacheDir and returns the filesystem that
@@ -320,18 +347,19 @@ func (m *Module) FSCacheDir() string {
 // The lock is held during the load so that concurrent callers do not parse
 // the same manifest more than once. The result must not be modified.
 func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRepositoryManifest, error) {
-	m.manifestMu.Lock()
-	defer m.manifestMu.Unlock()
+	c := m.cache
+	c.manifestMu.Lock()
+	defer c.manifestMu.Unlock()
 
-	if m.manifest == nil {
+	if c.manifest == nil {
 		manifest, err := m.loadManifest(ctx)
 		if err != nil {
 			return nil, err
 		}
-		m.manifest = &manifest
+		c.manifest = &manifest
 	}
 
-	return m.manifest, nil
+	return c.manifest, nil
 }
 
 // loadManifest downloads the module if not already downloaded and parses its

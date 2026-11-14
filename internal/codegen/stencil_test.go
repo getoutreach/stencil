@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -12,6 +13,7 @@ import (
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/stencil"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -19,21 +21,10 @@ import (
 func TestBasicE2ERender(t *testing.T) {
 	ctx := context.Background()
 
-	// create stub manifest
-	fs := createFakeModuleFSWithManifest(t, "name: testing")
-
-	// create a stub template
-	f, err := fs.Create("test-template.tpl")
-	assert.NilError(t, err, "failed to create stub template")
-	f.Write([]byte("{{ .Config.Name }}"))
-	f.Close()
-
 	st := NewStencil(&configuration.ServiceManifest{
 		Name:      "test",
 		Arguments: map[string]any{},
-	}, []*modules.Module{
-		modules.NewWithFS(ctx, "testing", fs),
-	}, logrus.New())
+	}, []*modules.Module{newSharedTestModule(t)}, logrus.New())
 
 	tpls, err := st.Render(ctx, logrus.New())
 	assert.NilError(t, err, "expected Render() to not fail")
@@ -140,4 +131,48 @@ func TestStencilPostRunError(t *testing.T) {
 	)
 
 	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
+}
+
+// newSharedTestModule returns a module named "testing" with one template,
+// test-template.tpl, that renders the service name.
+func newSharedTestModule(t *testing.T) *modules.Module {
+	t.Helper()
+
+	fs := createFakeModuleFSWithManifest(t, "name: testing")
+	assert.NilError(t, util.WriteFile(fs, "test-template.tpl", []byte("{{ .Config.Name }}"), 0o644),
+		"failed to create stub template")
+
+	return modules.NewWithFS(t.Context(), "testing", fs)
+}
+
+func TestNewStencilDoesNotChangeTheModuleTemplateSet(t *testing.T) {
+	m := newSharedTestModule(t)
+
+	st := NewStencil(&configuration.ServiceManifest{Name: "test"}, []*modules.Module{m}, logrus.New())
+	_, err := st.Render(t.Context(), logrus.New())
+	assert.NilError(t, err, "expected Render() to not fail")
+
+	assert.Assert(t, m.GetTemplate().Lookup("testing/test-template.tpl") == nil,
+		"expected the render to parse templates into a clone of the module")
+}
+
+func TestStencilsThatShareAModuleRenderConcurrently(t *testing.T) {
+	m := newSharedTestModule(t)
+
+	var wg sync.WaitGroup
+	for i := range 8 {
+		wg.Go(func() {
+			name := fmt.Sprintf("service-%d", i)
+			st := NewStencil(&configuration.ServiceManifest{Name: name}, []*modules.Module{m}, logrus.New())
+			tpls, err := st.Render(t.Context(), logrus.New())
+			if !assert.Check(t, err, "expected Render() to not fail") {
+				return
+			}
+			if !assert.Check(t, len(tpls) == 1 && len(tpls[0].Files) == 1, "expected one rendered file") {
+				return
+			}
+			assert.Check(t, tpls[0].Files[0].String() == name, "expected the file to hold its own service name")
+		})
+	}
+	wg.Wait()
 }

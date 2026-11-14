@@ -123,6 +123,12 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 				continue
 			}
 
+			// Resolve these modules only once. The flag is set here, before the
+			// next pop, because only this goroutine reads or writes it.
+			if alwaysSatisfiesConstraints(opts, item) {
+				item.inProgressResolution.dontResolve = true
+			}
+
 			// resolve the module in a goroutine
 			g.Go(func() error { return work(ctx, opts, item, &wl, log) })
 		}
@@ -142,6 +148,12 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 	return modules, nil
 }
 
+// alwaysSatisfiesConstraints returns whether the item is a local module or an
+// in-memory replacement, which are treated as always satisfying constraints.
+func alwaysSatisfiesConstraints(opts *ModuleResolveOptions, item *workItem) bool {
+	return uriIsLocal(item.uri) || opts.Replacements[item.importPath] != nil
+}
+
 // work does the actual work of resolving a module.
 func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *workList,
 	log logrus.FieldLogger,
@@ -151,7 +163,7 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 
 	// if we're not using a local or in-memory replaced module, resolve the version
 	// (local modules & in-memory modules should be treated as always satisfying constraints)
-	if !uriIsLocal(item.uri) && opts.Replacements[item.importPath] == nil {
+	if !alwaysSatisfiesConstraints(opts, item) {
 		var err error
 		version, err = wl.getLatestModuleForConstraints(ctx, item, opts.Token)
 		if err != nil {
@@ -171,9 +183,6 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 		}
 
 		version.Branch = version.Tag
-
-		// don't attempt to resolve this module again
-		item.inProgressResolution.dontResolve = true
 	}
 
 	// if we have a replacement for the module in-memory, use that instead

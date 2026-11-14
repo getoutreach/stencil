@@ -6,6 +6,7 @@
 package codegen
 
 import (
+	"maps"
 	"text/template"
 
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -27,8 +28,9 @@ func NewFuncMap(st *Stencil, t *Template, log logrus.FieldLogger) template.FuncM
 		tplf = &TplFile{t.Files[0], t, log}
 	}
 
-	// build the function map
-	funcs := Default
+	// Build the function map on a copy, because Default is shared by every
+	// render and must not be modified.
+	funcs := maps.Clone(Default)
 	funcs["stencil"] = func() *TplStencil { return tplst }
 	funcs["file"] = func() *TplFile { return tplf }
 	funcs["extensions"] = func() *extensions.ExtensionCaller { return st.extCaller }
