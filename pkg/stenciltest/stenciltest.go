@@ -18,6 +18,7 @@ import (
 	"github.com/bradleyjkemp/cupaloy"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/internal/codegen"
+	"github.com/getoutreach/stencil/internal/inprocext"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -118,9 +119,9 @@ func (t *Template) AddModule(tr *configuration.TemplateRepository) *Template {
 //
 // Note: even though input extension is registered inproc, its response to ExecuteTemplateFunction
 // will be encoded as JSON and decoded back as a plain inteface{} to simulate the GRPC transport
-// layer between stencil and the same extension. Refer to the inprocExt struct docs for details.
+// layer between stencil and the same extension. Refer to the inprocext package for details.
 func (t *Template) Ext(name string, ext apiv1.Implementation) *Template {
-	t.exts[name] = inprocExt{ext: ext}
+	t.exts[name] = inprocext.Wrap(ext)
 	return t
 }
 
