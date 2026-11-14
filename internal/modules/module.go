@@ -80,6 +80,10 @@ type moduleCache struct {
 	// fs is a cached filesystem
 	fs billy.Filesystem
 
+	// inMemory is whether fs was given at creation, so that nothing is
+	// downloaded to the module cache directory
+	inMemory bool
+
 	// manifestMu guards manifest and serializes the first load of it.
 	manifestMu sync.Mutex
 
@@ -139,6 +143,7 @@ func NewWithFS(ctx context.Context, name string, fs billy.Filesystem) *Module {
 		Version: "vfs",
 	})
 	m.cache.fs = fs
+	m.cache.inMemory = true
 	return m
 }
 
@@ -365,15 +370,20 @@ func (m *Module) cachedManifest(ctx context.Context) (*configuration.TemplateRep
 // loadManifest downloads the module if not already downloaded and parses its
 // manifest.yaml, without consulting the cache.
 func (m *Module) loadManifest(ctx context.Context) (configuration.TemplateRepositoryManifest, error) {
-	lockDir := FSLockDir(m.PathSlug())
-	lock, err := exclusiveLockDirectory(ctx, lockDir)
-	if err != nil {
-		return configuration.TemplateRepositoryManifest{},
-			errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
-	}
+	// The lock guards the module cache directory, which in-memory modules
+	// do not use. Without this, renders of in-memory modules with the same
+	// name wait for each other.
+	if !m.cache.inMemory {
+		lockDir := FSLockDir(m.PathSlug())
+		lock, err := exclusiveLockDirectory(ctx, lockDir)
+		if err != nil {
+			return configuration.TemplateRepositoryManifest{},
+				errors.Wrapf(err, "failed to lock module cache directory %q", lockDir)
+		}
 
-	//nolint:errcheck // Why: Unlock error can be safely ignored here
-	defer lock.Unlock()
+		//nolint:errcheck // Why: Unlock error can be safely ignored here
+		defer lock.Unlock()
+	}
 
 	fs, err := m.GetFS(ctx)
 	if err != nil {
