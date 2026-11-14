@@ -1,0 +1,8 @@
+name: github.com/example/dep
+arguments:
+  shared:
+    schema:
+      type: string
+postRunCommand:
+  - name: dep command
+    command: echo dep
