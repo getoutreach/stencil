@@ -76,15 +76,6 @@ func assertPasses(t *testing.T, fn func(tb *recordingTB)) {
 	assert.Assert(t, !r.fatal && len(r.errors) == 0, "expected no failure, got %q", r.errors)
 }
 
-// assertErrors checks that fn reports a failure with Error, not Fatal.
-func assertErrors(t *testing.T, fn func(tb *recordingTB)) {
-	t.Helper()
-
-	r := record(t, fn)
-	assert.Assert(t, !r.fatal, "expected Error, got Fatal: %q", r.errors)
-	assert.Equal(t, len(r.errors), 1, "expected one failure")
-}
-
 // assertFatal checks that fn reports a failure with Fatal.
 func assertFatal(t *testing.T, fn func(tb *recordingTB)) {
 	t.Helper()
