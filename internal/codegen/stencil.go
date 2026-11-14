@@ -20,6 +20,8 @@ import (
 	"github.com/getoutreach/stencil/pkg/extensions"
 	"github.com/getoutreach/stencil/pkg/extensions/apiv1"
 	"github.com/getoutreach/stencil/pkg/stencil"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/mitchellh/hashstructure/v2"
 	"github.com/pkg/errors"
@@ -44,19 +46,35 @@ type Stencil struct {
 
 	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
+
+	// fs is the filesystem that templates read existing files from
+	fs billy.Filesystem
+}
+
+// StencilOption configures a Stencil created by NewStencil.
+type StencilOption func(*Stencil)
+
+// WithFS sets the filesystem that templates read existing files from, such
+// as the blocks of the files that they render. Paths are relative to its
+// root. The default is the current working directory.
+func WithFS(fs billy.Filesystem) StencilOption {
+	return func(s *Stencil) {
+		s.fs = fs
+	}
 }
 
 // NewStencil creates a new, fully initialized Stencil renderer function.
 //
 // The Stencil renders with clones of mods, so that renders by different
 // Stencils that share modules do not change each other's template sets.
-func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Stencil {
+func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger,
+	opts ...StencilOption) *Stencil {
 	clones := make([]*modules.Module, len(mods))
 	for i, mod := range mods {
 		clones[i] = mod.Clone()
 	}
 
-	return &Stencil{
+	s := &Stencil{
 		log:         log,
 		m:           m,
 		ext:         extensions.NewHost(log),
@@ -64,6 +82,29 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 		isFirstPass: true,
 		sharedData:  newSharedData(),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	if s.fs == nil {
+		s.fs = workingDirectoryFS()
+	}
+
+	return s
+}
+
+// workingDirectoryFS returns a filesystem rooted at the current working
+// directory. An absolute path resolves under that directory, and a path that
+// leaves it with ".." fails.
+func workingDirectoryFS() billy.Filesystem {
+	cwd, err := os.Getwd()
+	if err != nil {
+		// A relative root resolves against the working directory when a file
+		// is opened.
+		cwd = "."
+	}
+
+	return osfs.New(cwd)
 }
 
 // hashModuleHookValue hashes the module hook value using the

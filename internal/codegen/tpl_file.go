@@ -137,7 +137,7 @@ func (f *TplFile) Path() string {
 //	{{- stencil.ApplyTemplate "command" | file.SetContents }}
 //	{{- end }}
 func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out, err error) {
-	f.f, err = NewFile(path, mode, modTime)
+	f.f, err = NewFile(f.f.fs, path, mode, modTime)
 	if err != nil {
 		return err, err
 	}

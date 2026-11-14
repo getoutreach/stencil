@@ -244,7 +244,7 @@ func TestCommand_writeFileDelete(t *testing.T) {
 			if tt.exists {
 				assert.NilError(t, os.WriteFile(path, []byte("contents"), 0o644))
 			}
-			f, err := codegen.NewFile(path, 0o644, time.Now())
+			f, err := codegen.NewFile(osfs.New("/"), path, 0o644, time.Now())
 			assert.NilError(t, err)
 			f.Deleted = true
 			f.Skipped = tt.skipped
@@ -264,7 +264,7 @@ func TestCommand_writeFileDelete(t *testing.T) {
 
 func TestCommand_writeFileDeleteError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "dir")
-	f, err := codegen.NewFile(path, 0o644, time.Now())
+	f, err := codegen.NewFile(osfs.New("/"), path, 0o644, time.Now())
 	assert.NilError(t, err)
 	f.Deleted = true
 

@@ -88,7 +88,7 @@ func (t *Template) Parse(st *Stencil) error {
 // are rendered onto the Files field of the template struct.
 func (t *Template) Render(st *Stencil, vals *Values) error {
 	if len(t.Files) == 0 {
-		f, err := NewFile(strings.TrimSuffix(t.Path, ".tpl"), t.mode, t.modTime)
+		f, err := NewFile(st.fs, strings.TrimSuffix(t.Path, ".tpl"), t.mode, t.modTime)
 		if err != nil {
 			return err
 		}

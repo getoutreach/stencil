@@ -8,6 +8,8 @@ package codegen
 import (
 	"os"
 	"time"
+
+	"github.com/go-git/go-billy/v5"
 )
 
 // _ ensures that we implement the os.FileInfo interface.
@@ -51,18 +53,21 @@ type File struct {
 	// Warnings is an array of warnings that were created
 	// while rendering this template
 	Warnings []string
+
+	// fs is the filesystem that existing files are read from
+	fs billy.Filesystem
 }
 
-// NewFile creates a new file, an existing file at the given path is
+// NewFile creates a new file, an existing file at the given path in fs is
 // parsed to read blocks from, if it exists. An error is returned if
 // the file is unable to be read for a reason other than not existing.
-func NewFile(path string, mode os.FileMode, modTime time.Time) (*File, error) {
-	blocks, err := parseBlocks(path)
+func NewFile(fs billy.Filesystem, path string, mode os.FileMode, modTime time.Time) (*File, error) {
+	blocks, err := parseBlocks(fs, path)
 	if err != nil {
 		return nil, err
 	}
 
-	return &File{path: path, mode: mode, modTime: modTime, blocks: blocks}, nil
+	return &File{fs: fs, path: path, mode: mode, modTime: modTime, blocks: blocks}, nil
 }
 
 // Block returns the contents of a given block.
@@ -83,7 +88,7 @@ func (f *File) AddDeprecationNotice(msg string) {
 // SetPath updates the path of this file. This causes
 // the blocks to be parsed again.
 func (f *File) SetPath(path string) error {
-	blocks, err := parseBlocks(path)
+	blocks, err := parseBlocks(f.fs, path)
 	if err != nil {
 		return err
 	}

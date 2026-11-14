@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/pkg/errors"
 )
 
@@ -45,10 +46,10 @@ var BlockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-z
 // internal/lint/templates.classify depends on these indices.
 var V2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 _]+\))?>>`)
 
-// parseBlocks reads the blocks from an existing file.
-func parseBlocks(filePath string) (map[string]string, error) {
+// parseBlocks reads the blocks from an existing file in fs.
+func parseBlocks(fs billy.Filesystem, filePath string) (map[string]string, error) {
 	blocks := make(map[string]string)
-	f, err := os.Open(filePath)
+	f, err := fs.Open(filePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return make(map[string]string), nil
 	} else if err != nil {

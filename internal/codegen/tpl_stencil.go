@@ -271,7 +271,8 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 
 	// ensure that the file is within the current directory
 	// and not attempting to escape it
-	if _, err := osfs.New(cwd).Stat(fpath); err != nil {
+	fs := osfs.New(cwd)
+	if _, err := fs.Stat(fpath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return map[string]string{}, nil
 		}
@@ -279,7 +280,7 @@ func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
 		return nil, err
 	}
 
-	data, err := parseBlocks(fpath)
+	data, err := parseBlocks(fs, fpath)
 	if err != nil {
 		return nil, err
 	}

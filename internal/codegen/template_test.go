@@ -16,6 +16,7 @@ import (
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 )
@@ -126,7 +127,8 @@ func TestGeneratedBlock(t *testing.T) {
 	m := modules.NewWithFS(context.Background(), "testing", fs)
 
 	log := logrus.New()
-	st := NewStencil(sm, []*modules.Module{m}, log)
+	outFS := osfs.New(tempDir)
+	st := NewStencil(sm, []*modules.Module{m}, log, WithFS(outFS))
 	assert.NilError(t, os.WriteFile(fakeFilePath, []byte(fakeGeneratedBlockFile), 0o644),
 		"failed to write generated file")
 
@@ -134,7 +136,7 @@ func TestGeneratedBlock(t *testing.T) {
 		time.Now(), []byte(generatedBlockTemplate), log)
 	assert.NilError(t, err, "failed to create template")
 
-	tplf, err := NewFile(fakeFilePath, 0o644, time.Now())
+	tplf, err := NewFile(outFS, "generated-block.txt", 0o644, time.Now())
 	assert.NilError(t, err, "failed to create file")
 
 	// Add the file (fake) to the template so that the template uses it for blocks
