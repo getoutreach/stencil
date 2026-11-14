@@ -133,16 +133,23 @@ func TestStencilPostRunError(t *testing.T) {
 	assert.ErrorContains(t, st.PostRun(ctx, logger), errMsg)
 }
 
-// newSharedTestModule returns a module named "testing" with one template,
-// test-template.tpl, that renders the service name.
-func newSharedTestModule(t *testing.T) *modules.Module {
+// newTestModule returns a module named "testing" with one template,
+// test-template.tpl, that has the given contents.
+func newTestModule(t *testing.T, contents string) *modules.Module {
 	t.Helper()
 
 	fs := createFakeModuleFSWithManifest(t, "name: testing")
-	assert.NilError(t, util.WriteFile(fs, "test-template.tpl", []byte("{{ .Config.Name }}"), 0o644),
+	assert.NilError(t, util.WriteFile(fs, "test-template.tpl", []byte(contents), 0o644),
 		"failed to create stub template")
 
 	return modules.NewWithFS(t.Context(), "testing", fs)
+}
+
+// newSharedTestModule returns a module from newTestModule whose template
+// renders the service name.
+func newSharedTestModule(t *testing.T) *modules.Module {
+	t.Helper()
+	return newTestModule(t, "{{ .Config.Name }}")
 }
 
 func TestNewStencilDoesNotChangeTheModuleTemplateSet(t *testing.T) {
