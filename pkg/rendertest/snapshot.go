@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 // updateSnapshots is whether Snapshot writes snapshots instead of comparing
@@ -102,9 +104,26 @@ func (fr *FileResult) snapshot(tb testing.TB, fail func(format string, args ...a
 	}
 
 	if !bytes.Equal(want, fr.contents) {
-		fail("snapshot mismatch for %s\n\n%s\nTo update snapshots, run: %s",
-			fr.path, unifiedDiff(filepath.ToSlash(p), "rendered output", string(want), fr.String()), updateSnapshotsCommand)
+		//nolint:errcheck // Why: It writes to a bytes.Buffer, which cannot fail.
+		diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+			A:        splitLines(string(want)),
+			B:        splitLines(fr.String()),
+			FromFile: filepath.ToSlash(p),
+			ToFile:   "rendered output",
+			Context:  3,
+		})
+		fail("snapshot mismatch for %s\n\n%s\nTo update snapshots, run: %s", fr.path, diff, updateSnapshotsCommand)
 		return false
 	}
 	return true
+}
+
+// splitLines splits s into lines that keep their line endings.
+// difflib.SplitLines adds an empty last line, which the diff would show.
+func splitLines(s string) []string {
+	lines := strings.SplitAfter(s, "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines
 }

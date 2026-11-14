@@ -55,7 +55,7 @@ func TestSnapshotsMismatch(t *testing.T) {
 		"snapshot mismatch for dir/two.txt\n\n" +
 			"--- testdata/snapshots/TestSnapshotsMismatch/dir/two.txt\n" +
 			"+++ rendered output\n" +
-			"@@ -1,1 +1,1 @@\n" +
+			"@@ -1 +1 @@\n" +
 			"-old\n" +
 			"+two\n" +
 			"\nTo update snapshots, run: mise run rendertest:update-snapshots",
