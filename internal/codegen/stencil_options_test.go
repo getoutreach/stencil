@@ -6,6 +6,8 @@
 package codegen
 
 import (
+	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -177,4 +179,62 @@ func TestWithGitInfoAndWithBoxConfig(t *testing.T) {
 	)
 	assert.NilError(t, err)
 	assert.Equal(t, files[0].String(), "refs/heads/feature abc123 true trunk example")
+}
+
+// errCommandFailed is the error of a failed command.
+var errCommandFailed = errors.New("failed")
+
+// commandRecorder records the commands that it is asked to run.
+type commandRecorder struct {
+	names, commands []string
+	err             error
+}
+
+func (r *commandRecorder) Run(_ context.Context, name, command string) error {
+	r.names = append(r.names, name)
+	r.commands = append(r.commands, command)
+	return r.err
+}
+
+func TestWithCommandRunner(t *testing.T) {
+	fs := createFakeModuleFSWithManifest(t, "name: testing\npostRunCommand:\n  - name: hello\n    command: echo hello\n")
+	newStencil := func(r CommandRunner) *Stencil {
+		return NewStencil(&configuration.ServiceManifest{Name: "test"},
+			[]*modules.Module{modules.NewWithFS(t.Context(), "testing", fs)}, logrus.New(), WithCommandRunner(r))
+	}
+
+	r := &commandRecorder{}
+	assert.NilError(t, newStencil(r).PostRun(t.Context(), logrus.New()))
+	assert.DeepEqual(t, r.names, []string{"hello"})
+	assert.DeepEqual(t, r.commands, []string{"echo hello"})
+
+	r = &commandRecorder{err: errCommandFailed}
+	assert.ErrorContains(t, newStencil(r).PostRun(t.Context(), logrus.New()), "failed to run post run command")
+}
+
+func TestDefaultCommandRunner(t *testing.T) {
+	assert.NilError(t, defaultCommandRunner{}.Run(t.Context(), "true", "true"))
+	assert.ErrorContains(t, defaultCommandRunner{}.Run(t.Context(), "false", "exit 3"), "exit status 3")
+}
+
+func TestWithModuleHook(t *testing.T) {
+	st := NewStencil(&configuration.ServiceManifest{Name: "test"},
+		[]*modules.Module{newTestModule(t, `{{ range stencil.GetModuleHook "seeded" }}{{ . }} {{ end }}`)}, logrus.New(),
+		WithModuleHook("testing", "seeded", []any{"a"}),
+		WithModuleHook("testing", "seeded", []any{"b"}),
+	)
+	tpls, err := st.Render(t.Context(), logrus.New())
+	assert.NilError(t, err)
+	// The render sorts hook values by their hash.
+	assert.Equal(t, tpls[0].Files[0].String(), "b a ")
+	assert.DeepEqual(t, st.ModuleHooks(), map[string][]any{"testing/seeded": {"b", "a"}})
+}
+
+func TestExportedParseBlocks(t *testing.T) {
+	blocks, err := ParseBlocks([]byte(existingBlockFile))
+	assert.NilError(t, err)
+	assert.DeepEqual(t, blocks, map[string]string{"custom": "existing value"})
+
+	_, err = ParseBlocks([]byte("## <<Stencil::Block(dangling)>>\n"))
+	assert.ErrorIs(t, err, ErrBlockParse)
 }

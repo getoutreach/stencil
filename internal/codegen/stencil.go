@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/getoutreach/gobox/pkg/app"
@@ -56,6 +57,29 @@ type Stencil struct {
 
 	// boxConfig, when set, is used instead of loading the box config
 	boxConfig *box.Config
+
+	// runner runs the post-run commands of modules
+	runner CommandRunner
+}
+
+// CommandRunner runs the post-run commands of modules.
+type CommandRunner interface {
+	// Run runs command, a bash script. name is the name of the command in
+	// the module manifest.
+	Run(ctx context.Context, name, command string) error
+}
+
+// defaultCommandRunner runs commands with bash, connected to the standard
+// streams of this process.
+type defaultCommandRunner struct{}
+
+// Run implements CommandRunner.
+func (defaultCommandRunner) Run(ctx context.Context, _, command string) error {
+	cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", command)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return cmd.Run()
 }
 
 // StencilOption configures a Stencil created by NewStencil.
@@ -81,6 +105,23 @@ func WithGitInfo(ref, commit, defaultBranch string, dirty bool) StencilOption {
 			Dirty:         dirty,
 			defaultBranch: func() (string, error) { return defaultBranch, nil },
 		}
+	}
+}
+
+// WithCommandRunner sets the runner of the post-run commands of modules. The
+// default runs them with bash.
+func WithCommandRunner(r CommandRunner) StencilOption {
+	return func(s *Stencil) {
+		s.runner = r
+	}
+}
+
+// WithModuleHook adds values to the hook name of module before rendering,
+// as if a template that is not rendered had added them with
+// stencil.AddToModuleHook.
+func WithModuleHook(module, name string, values []any) StencilOption {
+	return func(s *Stencil) {
+		s.sharedData.addToModuleHook(module, name, values)
 	}
 }
 
@@ -117,6 +158,9 @@ func NewStencil(m *configuration.ServiceManifest, mods []*modules.Module, log lo
 
 	if s.fs == nil {
 		s.fs = workingDirectoryFS()
+	}
+	if s.runner == nil {
+		s.runner = defaultCommandRunner{}
 	}
 
 	return s
@@ -184,6 +228,17 @@ func newSharedData() *sharedData {
 		moduleHooks: make(map[string]*moduleHook),
 		globals:     make(map[string]global),
 	}
+}
+
+// addToModuleHook appends values to the hook name of module.
+func (d *sharedData) addToModuleHook(module, name string, values []any) {
+	k := d.key(module, name)
+	h, ok := d.moduleHooks[k]
+	if !ok {
+		h = &moduleHook{}
+		d.moduleHooks[k] = h
+	}
+	h.values = append(h.values, values...)
 }
 
 // key returns the key name for data stored in both modulesHooks and globals.
@@ -330,12 +385,7 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 
 		for _, cmdStr := range mf.PostRunCommand {
 			log.Infof(" - %s", cmdStr.Name)
-			//nolint:gosec // Why: This is by design
-			cmd := exec.CommandContext(ctx, "/usr/bin/env", "bash", "-c", cmdStr.Command)
-			cmd.Stdin = os.Stdin
-			cmd.Stderr = os.Stderr
-			cmd.Stdout = os.Stdout
-			if err := cmd.Run(); err != nil {
+			if err := s.runner.Run(ctx, cmdStr.Name, cmdStr.Command); err != nil {
 				return errors.Wrapf(err, "failed to run post run command for module %s and command %s", m.Name, cmdStr.Command)
 			}
 		}
@@ -348,6 +398,16 @@ func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 // rendering templates.
 func (s *Stencil) Close() error {
 	return errors.Wrap(s.ext.Close(), "failed to close native extensions")
+}
+
+// ModuleHooks returns the values of all module hooks, by module and hook name
+// joined with "/". It includes values added with WithModuleHook.
+func (s *Stencil) ModuleHooks() map[string][]any {
+	hooks := make(map[string][]any, len(s.sharedData.moduleHooks))
+	for k, h := range s.sharedData.moduleHooks {
+		hooks[k] = slices.Clone(h.values)
+	}
+	return hooks
 }
 
 // sortModuleHooks sorts the module hooks by their hash.
