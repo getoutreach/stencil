@@ -41,6 +41,14 @@
 // Each render uses its own in-memory filesystem, so tests can call
 // t.Parallel.
 //
+// # Snapshots
+//
+// Result.Snapshot and FileResult.Snapshot compare rendered files with the
+// files in testdata/snapshots/<test name>/<file path>. go test only compares
+// and never writes snapshots. To write them, run the tests with the
+// rendertest_update_snapshots build tag, for example with
+// "mise run rendertest:update-snapshots".
+//
 // # Argument fixtures
 //
 // ArgOption values set template arguments, and can be combined. A module can
