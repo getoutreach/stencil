@@ -1,4 +1,10 @@
-package stenciltest
+// Copyright 2026 Outreach Corporation. All Rights Reserved.
+
+// Description: This file wraps in-process extensions so that their
+// responses are encoded like those of extensions run as plugins.
+
+// Package inprocext wraps extensions that tests register in process.
+package inprocext
 
 import (
 	"encoding/json"
@@ -25,6 +31,12 @@ import (
 // different if json tags are set on the struct, and many more.
 type inprocExt struct {
 	ext apiv1.Implementation
+}
+
+// Wrap returns ext wrapped so that every response of ExecuteTemplateFunction
+// is encoded to JSON and decoded again, as the plugin transport does.
+func Wrap(ext apiv1.Implementation) apiv1.Implementation {
+	return inprocExt{ext: ext}
 }
 
 // GetConfig delegates the call as is.
