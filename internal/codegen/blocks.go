@@ -6,7 +6,9 @@ package codegen
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -46,9 +48,13 @@ var BlockPattern = regexp.MustCompile(`^\s*(///|###|<!---)\s*([a-zA-Z ]+)\(([a-z
 // internal/lint/templates.classify depends on these indices.
 var V2BlockPattern = regexp.MustCompile(`^\s*(//|##|--|<!--)\s{0,1}<<(/?)Stencil::([a-zA-Z ]+)(\([a-zA-Z0-9 _]+\))?>>`)
 
+// ParseBlocks returns the contents of the blocks in contents, by name.
+func ParseBlocks(contents []byte) (map[string]string, error) {
+	return readBlocks(bytes.NewReader(contents), "contents")
+}
+
 // parseBlocks reads the blocks from an existing file in fs.
 func parseBlocks(fs billy.Filesystem, filePath string) (map[string]string, error) {
-	blocks := make(map[string]string)
 	f, err := fs.Open(filePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return make(map[string]string), nil
@@ -57,8 +63,14 @@ func parseBlocks(fs billy.Filesystem, filePath string) (map[string]string, error
 	}
 	defer f.Close()
 
+	return readBlocks(f, filePath)
+}
+
+// readBlocks reads the blocks from r. filePath names r in errors.
+func readBlocks(r io.Reader, filePath string) (map[string]string, error) {
+	blocks := make(map[string]string)
 	var curBlockName string
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	for i := 0; scanner.Scan(); i++ {
 		line := scanner.Text()
 		matches := BlockPattern.FindStringSubmatch(line)

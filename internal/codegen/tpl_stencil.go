@@ -155,12 +155,7 @@ func (s *TplStencil) AddToModuleHook(module, name string, data any) (out, err er
 		interfaceSlice[i] = v.Index(i).Interface()
 	}
 
-	// if set, append, otherwise assign
-	if _, ok := s.s.sharedData.moduleHooks[k]; ok {
-		s.s.sharedData.moduleHooks[k].values = append(s.s.sharedData.moduleHooks[k].values, interfaceSlice...)
-	} else {
-		s.s.sharedData.moduleHooks[k] = &moduleHook{values: interfaceSlice}
-	}
+	s.s.sharedData.addToModuleHook(module, name, interfaceSlice)
 
 	return nil, nil
 }
