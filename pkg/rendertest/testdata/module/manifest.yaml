@@ -1,0 +1,16 @@
+name: github.com/example/module
+modules:
+  - name: github.com/example/dep
+arguments:
+  name:
+    required: true
+    schema:
+      type: string
+  kubernetes:
+    schema:
+      type: object
+  shared:
+    from: github.com/example/dep
+postRunCommand:
+  - name: module command
+    command: echo module
