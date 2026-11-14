@@ -9,12 +9,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -189,6 +187,8 @@ func (s *TplStencil) ReadFile(name string) (string, error) {
 		return "", errors.Errorf("file %q does not exist", name)
 	}
 
+	defer f.Close()
+
 	b, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
@@ -264,28 +264,7 @@ func (s *TplStencil) ApplyTemplate(name string, dataSli ...any) (string, error) 
 //	  {{- $data }}
 //	{{- end }}
 func (s *TplStencil) ReadBlocks(fpath string) (map[string]string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	// ensure that the file is within the current directory
-	// and not attempting to escape it
-	fs := osfs.New(cwd)
-	if _, err := fs.Stat(fpath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return map[string]string{}, nil
-		}
-
-		return nil, err
-	}
-
-	data, err := parseBlocks(fs, fpath)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return parseBlocks(s.s.fs, fpath)
 }
 
 // Debug logs the provided arguments under the DEBUG log level (must run stencil with --debug).
@@ -301,12 +280,7 @@ func (s *TplStencil) Debug(args ...any) error {
 // exists returns a billy.File if the file exists, and true. If it doesn't,
 // nil is returned and false.
 func (s *TplStencil) exists(name string) (billy.File, bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, false
-	}
-
-	f, err := osfs.New(cwd).Open(name)
+	f, err := s.s.fs.Open(name)
 	if err != nil {
 		return nil, false
 	}
