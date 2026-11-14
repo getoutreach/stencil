@@ -140,8 +140,15 @@ type Values struct {
 // The default branch is looked up on first use, so ctx must stay valid until
 // all templates have been rendered.
 func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module, log logrus.FieldLogger) *Values {
+	return newValues(ctx, sm, mods, log, nil, nil)
+}
+
+// newValues is NewValues with optional git and box data. When gitInfo is set,
+// it is used instead of reading the git repository. When boxConfig is set, it
+// is used instead of loading the box config.
+func newValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*modules.Module,
+	log logrus.FieldLogger, gitInfo *git, boxConfig *box.Config) *Values {
 	vals := &Values{
-		Git: git{},
 		Runtime: runtime{
 			Generator:        app.Info().Name,
 			GeneratorVersion: app.Info().Version,
@@ -162,10 +169,15 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 		})
 	}
 
-	var err error
-	vals.Runtime.Box, err = box.LoadBox()
-	if err != nil {
-		vals.Runtime.Box = &box.Config{}
+	vals.Runtime.Box = boxConfig
+	if boxConfig == nil {
+		vals.Runtime.Box = loadBox()
+	}
+
+	if gitInfo != nil {
+		// The copy shares the defaultBranch func.
+		vals.Git = *gitInfo
+		return vals
 	}
 
 	// If we're in a repository, add repository information. Parent directories
@@ -200,6 +212,15 @@ func NewValues(ctx context.Context, sm *configuration.ServiceManifest, mods []*m
 	}
 
 	return vals
+}
+
+// loadBox returns the box config, or an empty one if it cannot be loaded.
+func loadBox() *box.Config {
+	b, err := box.LoadBox()
+	if err != nil {
+		return &box.Config{}
+	}
+	return b
 }
 
 // isWorkingDirectory returns whether dir is the current working directory.

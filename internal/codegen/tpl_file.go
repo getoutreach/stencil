@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -98,7 +99,7 @@ func (f *TplFile) Delete() error {
 //	{{ $_ := file.Static }}
 func (f *TplFile) Static() (out, err error) {
 	// if the file already exists, skip it
-	if _, err := os.Stat(f.f.path); err == nil {
+	if _, err := f.f.fs.Stat(f.f.path); err == nil {
 		f.log.WithField("template", f.t.Path).WithField("path", f.f.path).
 			Debug("Skipping static file because it already exists")
 		err := f.Skip("Static file, output already exists")
@@ -150,7 +151,7 @@ func (f *TplFile) Create(path string, mode os.FileMode, modTime time.Time) (out,
 //
 //	{{ file.RemoveAll "path" }}
 func (f *TplFile) RemoveAll(path string) (out, err error) {
-	if err := os.RemoveAll(path); err != nil {
+	if err := util.RemoveAll(f.f.fs, path); err != nil {
 		return err, err
 	}
 	return nil, nil

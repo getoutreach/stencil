@@ -15,6 +15,7 @@ import (
 	"sort"
 
 	"github.com/getoutreach/gobox/pkg/app"
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/getoutreach/stencil/pkg/extensions"
@@ -47,19 +48,47 @@ type Stencil struct {
 	// sharedData is the store for module hook data and globals
 	sharedData *sharedData
 
-	// fs is the filesystem that templates read existing files from
+	// fs is the filesystem that templates read and remove existing files in
 	fs billy.Filesystem
+
+	// gitInfo, when set, is used instead of reading the git repository
+	gitInfo *git
+
+	// boxConfig, when set, is used instead of loading the box config
+	boxConfig *box.Config
 }
 
 // StencilOption configures a Stencil created by NewStencil.
 type StencilOption func(*Stencil)
 
-// WithFS sets the filesystem that templates read existing files from, such
-// as the blocks of the files that they render. Paths are relative to its
-// root. The default is the current working directory.
+// WithFS sets the filesystem that templates read and remove existing files
+// in: the blocks of the files that they render, stencil.ReadFile,
+// stencil.Exists, stencil.ReadBlocks, file.Static and file.RemoveAll. Paths
+// are relative to its root. The default is the current working directory.
 func WithFS(fs billy.Filesystem) StencilOption {
 	return func(s *Stencil) {
 		s.fs = fs
+	}
+}
+
+// WithGitInfo sets the .Git values of templates, and skips all git
+// operations. .Git.DefaultBranch returns defaultBranch.
+func WithGitInfo(ref, commit, defaultBranch string, dirty bool) StencilOption {
+	return func(s *Stencil) {
+		s.gitInfo = &git{
+			Ref:           ref,
+			Commit:        commit,
+			Dirty:         dirty,
+			defaultBranch: func() (string, error) { return defaultBranch, nil },
+		}
+	}
+}
+
+// WithBoxConfig sets the .Runtime.Box value of templates, and skips loading
+// the box config.
+func WithBoxConfig(b *box.Config) StencilOption {
+	return func(s *Stencil) {
+		s.boxConfig = b
 	}
 }
 
@@ -240,7 +269,7 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 	}
 
 	log.Debug("Creating values for template")
-	vals := NewValues(ctx, s.m, s.modules, log)
+	vals := newValues(ctx, s.m, s.modules, log, s.gitInfo, s.boxConfig)
 	log.Debug("Finished creating values")
 
 	warnings, err := s.deprecatedArgumentWarnings(ctx)

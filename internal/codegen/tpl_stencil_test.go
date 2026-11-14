@@ -6,6 +6,7 @@
 package codegen
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -56,11 +57,10 @@ func TestTplStencil_ReadBlocks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &TplStencil{}
+			s := &TplStencil{s: NewStencil(&configuration.ServiceManifest{}, nil, logrus.New())}
 			got, err := s.ReadBlocks(tt.args.fpath)
 
-			// String checking because errors.Is isn't working
-			if (tt.wantErr != nil) && err.Error() != tt.wantErr.Error() {
+			if (tt.wantErr != nil) && !errors.Is(err, tt.wantErr) {
 				t.Errorf("TplStencil.ReadBlocks() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

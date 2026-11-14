@@ -1,7 +1,7 @@
 // Copyright 2026 Outreach Corporation. All Rights Reserved.
 
-// Description: This file contains tests for the filesystem that templates
-// read existing files from.
+// Description: This file contains tests for the Stencil options that
+// replace file, git and box access.
 
 package codegen
 
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/box"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
 	"github.com/go-git/go-billy/v5"
@@ -30,6 +31,15 @@ const existingBlockFile = `## <<Stencil::Block(custom)>>
 existing value
 ## <</Stencil::Block>>
 `
+
+// newMemFS returns an in-memory filesystem with one file.
+func newMemFS(t *testing.T, path, contents string) billy.Filesystem {
+	t.Helper()
+
+	fs := memfs.New()
+	assert.NilError(t, util.WriteFile(fs, path, []byte(contents), 0o644))
+	return fs
+}
 
 // renderTemplate renders the module from newTestModule with the given
 // template contents and options, and returns the rendered files.
@@ -70,10 +80,7 @@ func TestWithFSReadsBlocksFromTheFilesystem(t *testing.T) {
 			dir := t.TempDir()
 			t.Chdir(dir)
 
-			fs := memfs.New()
-			assert.NilError(t, util.WriteFile(fs, tt.path, []byte(existingBlockFile), 0o644))
-
-			files, err := renderTemplate(t, tt.template, WithFS(fs))
+			files, err := renderTemplate(t, tt.template, WithFS(newMemFS(t, tt.path, existingBlockFile)))
 			assert.NilError(t, err)
 			assert.Equal(t, len(files), 1)
 			assert.Equal(t, files[0].Name(), tt.path)
@@ -125,4 +132,71 @@ func TestAbsoluteFilePathResolvesUnderTheWorkingDirectory(t *testing.T) {
 	files, err = renderTemplate(t, `{{ $_ := file.SetPath "`+outside+`" }}`+blockTemplate)
 	assert.NilError(t, err)
 	assert.Equal(t, files[0].String(), "## <<Stencil::Block(custom)>>\n\n## <</Stencil::Block>>\n")
+}
+
+func TestTemplateFunctionsUseTheFilesystem(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		want     string
+	}{
+		{name: "stencil.ReadFile", template: `{{ stencil.ReadFile "existing.txt" }}`, want: existingBlockFile},
+		{name: "stencil.Exists", template: `{{ stencil.Exists "existing.txt" }} {{ stencil.Exists "on-disk.txt" }}`, want: "true false"},
+		{name: "stencil.ReadBlocks", template: `{{ index (stencil.ReadBlocks "existing.txt") "custom" }}`, want: "existing value"},
+		{name: "stencil.ReadBlocks of a missing file", template: `{{ len (stencil.ReadBlocks "on-disk.txt") }}`, want: "0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// on-disk.txt is only in the working directory, so a function
+			// that reads the real filesystem finds it.
+			t.Chdir(t.TempDir())
+			assert.NilError(t, os.WriteFile("on-disk.txt", []byte(existingBlockFile), 0o644))
+
+			files, err := renderTemplate(t, tt.template, WithFS(newMemFS(t, "existing.txt", existingBlockFile)))
+			assert.NilError(t, err)
+			assert.Equal(t, files[0].String(), tt.want)
+		})
+	}
+}
+
+func TestFileStaticUsesTheFilesystem(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	files, err := renderTemplate(t, `{{ $_ := file.Static }}`, WithFS(newMemFS(t, "test-template", "existing")))
+	assert.NilError(t, err)
+	assert.Assert(t, files[0].Skipped, "expected a static file that exists in the filesystem to be skipped")
+
+	files, err = renderTemplate(t, `{{ $_ := file.Static }}`, WithFS(memfs.New()))
+	assert.NilError(t, err)
+	assert.Assert(t, !files[0].Skipped, "expected a static file that does not exist to be rendered")
+}
+
+func TestFileRemoveAllUsesTheFilesystem(t *testing.T) {
+	t.Chdir(t.TempDir())
+	assert.NilError(t, os.MkdirAll("dir", 0o755))
+	assert.NilError(t, os.WriteFile("dir/file.txt", []byte("on disk"), 0o644))
+
+	fs := newMemFS(t, "dir/file.txt", "in memory")
+
+	_, err := renderTemplate(t, `{{ file.RemoveAll "dir" }}`, WithFS(fs))
+	assert.NilError(t, err)
+
+	_, err = fs.Stat("dir")
+	assert.ErrorIs(t, err, os.ErrNotExist, "expected the directory to be removed from the filesystem")
+	_, err = os.Stat("dir/file.txt")
+	assert.NilError(t, err, "expected the directory on disk to be kept")
+}
+
+func TestWithGitInfoAndWithBoxConfig(t *testing.T) {
+	// The working directory is not a git repository, so reading git data
+	// would leave the ref empty and fail the default branch lookup.
+	t.Chdir(t.TempDir())
+
+	files, err := renderTemplate(t,
+		`{{ .Git.Ref }} {{ .Git.Commit }} {{ .Git.Dirty }} {{ .Git.DefaultBranch }} {{ .Runtime.Box.Org }}`,
+		WithGitInfo("refs/heads/feature", "abc123", "trunk", true),
+		WithBoxConfig(&box.Config{Org: "example"}),
+	)
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "refs/heads/feature abc123 true trunk example")
 }
