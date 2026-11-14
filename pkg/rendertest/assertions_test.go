@@ -15,6 +15,15 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+// assertErrors checks that fn reports a failure with Error, not Fatal.
+func assertErrors(t *testing.T, fn func(tb *recordingTB)) {
+	t.Helper()
+
+	r := record(t, fn)
+	assert.Assert(t, !r.fatal, "expected Error, got Fatal: %q", r.errors)
+	assert.Equal(t, len(r.errors), 1, "expected one failure")
+}
+
 func TestResultAssertions(t *testing.T) {
 	t.Parallel()
 
