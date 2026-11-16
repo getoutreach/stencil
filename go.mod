@@ -1,8 +1,6 @@
 module github.com/getoutreach/stencil
 
-go 1.25.0
-
-toolchain go1.25.7
+go 1.26.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0
@@ -16,7 +14,7 @@ require (
 	github.com/getoutreach/gobox v1.116.1
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.2
-	github.com/gofrs/flock v0.13.1
+	github.com/gofrs/flock v0.13.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v84 v84.0.0
 	github.com/hashicorp/go-hclog v1.6.3
@@ -145,7 +143,7 @@ require (
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
