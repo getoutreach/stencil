@@ -12,22 +12,45 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestLoadResolvesReplacedDependencies(t *testing.T) {
-	s := NewSuite(nil,
+// newTestSuite returns a Suite for the module under test, with the local
+// directories of its dependencies.
+func newTestSuite() *Suite {
+	return NewSuite(nil,
 		WithManifestPath("../module/manifest.yaml"),
-		WithModuleReplacements(map[string]string{"github.com/example/dep": "../dep"}),
+		WithModuleReplacements(map[string]string{
+			"github.com/example/dep":     "../dep",
+			"github.com/example/another": "../another",
+		}),
 	)
+}
+
+func TestLoadResolvesReplacedDependencies(t *testing.T) {
+	s := newTestSuite()
 	assert.NilError(t, s.load(t.Context()))
 
 	assert.Equal(t, s.name, "github.com/example/module")
-	assert.Equal(t, len(s.deps), 1)
-	assert.Equal(t, s.deps[0].Name, "github.com/example/dep")
+	assert.Equal(t, len(s.deps), 2)
 	assert.Equal(t, s.deps[0].Version, "local")
 
 	fs, err := s.deps[0].GetFS(t.Context())
 	assert.NilError(t, err)
 	_, err = fs.Stat("templates")
 	assert.NilError(t, err, "expected the dependency to have an empty templates directory")
+}
+
+func TestLoadSortsDependencies(t *testing.T) {
+	// The engine returns modules in a random order, so one load could be
+	// sorted by chance.
+	for range 20 {
+		s := newTestSuite()
+		assert.NilError(t, s.load(t.Context()))
+
+		names := make([]string, 0, len(s.deps))
+		for _, d := range s.deps {
+			names = append(names, d.Name)
+		}
+		assert.DeepEqual(t, names, []string{"github.com/example/another", "github.com/example/dep"})
+	}
 }
 
 func TestLoadWithoutModuleResolution(t *testing.T) {

@@ -6,12 +6,14 @@
 package rendertest
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -208,6 +210,10 @@ func (s *Suite) resolveDependencies(ctx context.Context) ([]*modules.Module, err
 		}
 		deps = append(deps, dep)
 	}
+
+	// GetModulesForService returns modules in a random order. A fixed order
+	// keeps renders, such as one that ranges over .Runtime.Modules, stable.
+	slices.SortFunc(deps, func(a, b *modules.Module) int { return cmp.Compare(a.Name, b.Name) })
 
 	return deps, nil
 }

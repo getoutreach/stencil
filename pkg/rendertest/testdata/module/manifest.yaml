@@ -1,6 +1,7 @@
 name: github.com/example/module
 modules:
   - name: github.com/example/dep
+  - name: github.com/example/another
 arguments:
   name:
     required: true

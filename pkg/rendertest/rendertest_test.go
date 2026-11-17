@@ -29,7 +29,10 @@ func TestMain(m *testing.M) {
 
 	suite = rendertest.NewSuite(m,
 		rendertest.WithManifestPath("../module/manifest.yaml"),
-		rendertest.WithModuleReplacements(map[string]string{"github.com/example/dep": "../dep"}),
+		rendertest.WithModuleReplacements(map[string]string{
+			"github.com/example/dep":     "../dep",
+			"github.com/example/another": "../another",
+		}),
 	)
 	os.Exit(suite.Run())
 }
