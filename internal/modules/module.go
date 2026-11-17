@@ -49,7 +49,9 @@ var ErrImportPathMismatch = errors.New("module declares a different import path 
 // ModuleCacheTTL defines the time-to-live duration for the module cache.
 const ModuleCacheTTL = 30 * time.Minute
 
-// Module is a stencil module that contains template files.
+// Module is a stencil module that contains template files. Create one with New
+// or NewWithFS. The zero value is not usable: Clone, Manifest and GetFS panic
+// on it.
 type Module struct {
 	// t is a shared go-template that is used for this module. This is important
 	// because this allows us to call shared templates across a single module.
