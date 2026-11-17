@@ -18,7 +18,7 @@ type ErrorResult struct {
 	err error
 }
 
-// Error returns the render error.
+// Error returns the render error. To assert on it, see Is and As.
 func (er *ErrorResult) Error() error {
 	return er.err
 }

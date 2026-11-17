@@ -43,22 +43,25 @@ func newFileResult(f *codegen.File) *FileResult {
 	}
 }
 
-// Path returns the path of the file.
+// Path returns the path of the file, relative to the root of the generated
+// repository.
 func (fr *FileResult) Path() string {
 	return fr.path
 }
 
-// Contents returns the rendered contents of the file.
+// Contents returns the rendered contents. The slice belongs to the result, so
+// do not modify it.
 func (fr *FileResult) Contents() []byte {
 	return fr.contents
 }
 
-// String returns the rendered contents of the file.
+// String returns the rendered contents. It makes *FileResult a fmt.Stringer.
 func (fr *FileResult) String() string {
 	return string(fr.contents)
 }
 
-// Mode returns the mode of the file.
+// Mode returns the file mode. It is the permission bits of the template file,
+// or the mode that the template passed to file.Create.
 func (fr *FileResult) Mode() os.FileMode {
 	return fr.mode
 }
