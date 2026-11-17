@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/getoutreach/stencil/pkg/rendertest"
 	"gotest.tools/v3/assert"
 )
 
@@ -83,22 +84,29 @@ func TestSnapshotOfAFailedRender(t *testing.T) {
 	assertFatal(t, func(tb *recordingTB) { result.Snapshot(tb) })
 }
 
-// TestSnapshotsInUpdateMode runs the tests of the update mode, which are
-// built only with the rendertest_update_snapshots build tag, so that every
-// test run covers them.
-func TestSnapshotsInUpdateMode(t *testing.T) {
-	if testing.Short() {
-		t.Skip("builds the package again with another build tag")
-	}
-	t.Parallel()
+func TestSnapshotsAreUpdated(t *testing.T) {
+	result := renderTwo(t)
+	// An outdated snapshot is replaced.
+	writeSnapshot(t, t.Name(), "one.txt", "old\n")
+	rendertest.SetUpdateSnapshots(t, true)
 
-	// TestMain changed to testdata/templates, two directories under the
-	// package.
-	cmd := exec.CommandContext(t.Context(), "go", "test", "-tags=rendertest_update_snapshots",
-		"-run=^TestSnapshotsAreUpdated$", ".")
-	cmd.Dir = filepath.Join("..", "..")
-	out, err := cmd.CombinedOutput()
-	assert.NilError(t, err, "update mode tests failed:\n%s", out)
+	assertPasses(t, func(tb *recordingTB) { result.Snapshot(tb) })
+
+	for path, want := range map[string]string{"one.txt": "one\n", "dir/two.txt": "two\n"} {
+		b, err := os.ReadFile(filepath.Join("testdata", "snapshots", t.Name(), path))
+		assert.NilError(t, err)
+		assert.Equal(t, string(b), want)
+	}
+}
+
+func TestUpdateModeIsOffWithoutTheBuildTag(t *testing.T) {
+	assert.Assert(t, !rendertest.UpdateSnapshots())
+
+	t.Run("set", func(t *testing.T) {
+		rendertest.SetUpdateSnapshots(t, true)
+		assert.Assert(t, rendertest.UpdateSnapshots())
+	})
+	assert.Assert(t, !rendertest.UpdateSnapshots(), "expected the mode to be restored when the subtest ended")
 }
 
 func TestSnapshotOfAResultWithoutFiles(t *testing.T) {
@@ -110,4 +118,21 @@ func TestSnapshotOfAResultWithoutFiles(t *testing.T) {
 	assert.Assert(t, r.fatal, "expected Fatal")
 	assert.Equal(t, len(r.errors), 1)
 	assert.Assert(t, strings.Contains(r.errors[0], "wrote no file"), r.errors[0])
+}
+
+// TestUpdateTagInChildBuild runs TestUpdateTagTurnsOnUpdateMode with the build
+// tag in a child go test.
+func TestUpdateTagInChildBuild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the package again with another build tag")
+	}
+	t.Parallel()
+
+	// TestMain changed to testdata/templates, two directories under the
+	// package.
+	cmd := exec.CommandContext(t.Context(), "go", "test", "-tags=rendertest_update_snapshots",
+		"-run=^TestUpdateTagTurnsOnUpdateMode$", ".")
+	cmd.Dir = filepath.Join("..", "..")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "tests with the build tag failed:\n%s", out)
 }
