@@ -8,6 +8,7 @@ package rendertest_test
 import (
 	"io/fs"
 	"os"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -49,6 +50,18 @@ func TestResultAssertionsOnARenderError(t *testing.T) {
 	assertErrors(t, func(tb *recordingTB) { result.HasNoError(tb) })
 	assertFatal(t, func(tb *recordingTB) { result.HasFile(tb, "args") })
 	assertPasses(t, func(tb *recordingTB) { assert.Assert(t, result.HasError(tb).Error() != nil) })
+
+	// A failed render has no files, so these must not pass or fail on that.
+	for name, fn := range map[string]func(tb *recordingTB){
+		"HasNoFile":     func(tb *recordingTB) { result.HasNoFile(tb, "args") },
+		"AssertDeleted": func(tb *recordingTB) { result.AssertDeleted(tb, "args") },
+		"AssertSkipped": func(tb *recordingTB) { result.AssertSkipped(tb, "args") },
+	} {
+		r := record(t, fn)
+		assert.Assert(t, !r.fatal, name)
+		assert.Equal(t, len(r.errors), 1, name)
+		assert.Assert(t, strings.Contains(r.errors[0], "the render failed"), "%s: %s", name, r.errors[0])
+	}
 }
 
 func TestErrorResult(t *testing.T) {

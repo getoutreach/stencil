@@ -33,29 +33,54 @@ func (r *Result) HasFile(tb testing.TB, path string) *FileResult {
 	return f
 }
 
+// reportRenderError fails the assertion that expected what, a printf format
+// with args, if the render failed, and returns whether it did. A failed render
+// has no files, so the assertions on files could not tell it from a template
+// that does not write the file.
+func (r *Result) reportRenderError(tb testing.TB, what string, args ...any) bool {
+	tb.Helper()
+
+	if r.err == nil {
+		return false
+	}
+	tb.Errorf("expected "+what+", but the render failed: %v", append(args, r.err)...)
+	return true
+}
+
 // HasNoFile checks that there is no rendered file at path. Deleted and
-// skipped files are not rendered files.
+// skipped files are not rendered files. It fails if the render failed.
 func (r *Result) HasNoFile(tb testing.TB, path string) {
 	tb.Helper()
 
+	if r.reportRenderError(tb, "no file %q", path) {
+		return
+	}
 	if r.File(path) != nil {
 		tb.Errorf("expected no file %q", path)
 	}
 }
 
-// AssertDeleted checks that the template deleted the file at path.
+// AssertDeleted checks that the template deleted the file at path. It fails if
+// the render failed.
 func (r *Result) AssertDeleted(tb testing.TB, path string) {
 	tb.Helper()
 
+	if r.reportRenderError(tb, "file %q to be deleted", path) {
+		return
+	}
 	if !slices.Contains(r.deletedPaths, path) {
 		tb.Errorf("expected file %q to be deleted, got deleted files %q", path, r.deletedPaths)
 	}
 }
 
-// AssertSkipped checks that the template skipped the file at path.
+// AssertSkipped checks that the template skipped the file at path. It fails if
+// the render failed.
 func (r *Result) AssertSkipped(tb testing.TB, path string) {
 	tb.Helper()
 
+	if r.reportRenderError(tb, "file %q to be skipped", path) {
+		return
+	}
 	if !slices.Contains(r.skippedPaths, path) {
 		tb.Errorf("expected file %q to be skipped, got skipped files %q", path, r.skippedPaths)
 	}
