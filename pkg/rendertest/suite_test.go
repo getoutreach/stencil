@@ -39,8 +39,8 @@ func TestLoadResolvesReplacedDependencies(t *testing.T) {
 }
 
 func TestLoadSortsDependencies(t *testing.T) {
-	// The engine returns modules in a random order, so one load could be
-	// sorted by chance.
+	// The suite relies on the engine to sort the modules. The engine once
+	// returned them in a random order, so one load could be sorted by chance.
 	for range 20 {
 		s := newTestSuite()
 		assert.NilError(t, s.load(t.Context()))
