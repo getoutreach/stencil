@@ -100,3 +100,14 @@ func TestSnapshotsInUpdateMode(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 	assert.NilError(t, err, "update mode tests failed:\n%s", out)
 }
+
+func TestSnapshotOfAResultWithoutFiles(t *testing.T) {
+	t.Parallel()
+
+	result := suite.NewTemplate("nothing.tpl").Run(t)
+	assert.NilError(t, result.Error())
+	r := record(t, func(tb *recordingTB) { result.Snapshot(tb) })
+	assert.Assert(t, r.fatal, "expected Fatal")
+	assert.Equal(t, len(r.errors), 1)
+	assert.Assert(t, strings.Contains(r.errors[0], "wrote no file"), r.errors[0])
+}

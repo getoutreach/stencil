@@ -45,14 +45,18 @@ func safePath(p string) string {
 
 // Snapshot compares every rendered file with its snapshot, at
 // testdata/snapshots/<test name>/<file path>. It reports each missing or
-// different snapshot with Error, and then calls FailNow if there was one. A
-// test that is built with the rendertest_update_snapshots build tag writes
-// the snapshots instead.
+// different snapshot with Error, and then calls FailNow if there was one. It
+// fails with Fatal if the render failed or wrote no file. A test that is built
+// with the rendertest_update_snapshots build tag writes the snapshots instead.
 func (r *Result) Snapshot(tb testing.TB) {
 	tb.Helper()
 
 	if r.err != nil {
 		tb.Fatalf("cannot compare snapshots, the render failed: %v", r.err)
+	}
+	if len(r.files) == 0 {
+		tb.Fatalf("cannot compare snapshots, the render wrote no file (deleted: %q, skipped: %q)",
+			r.deletedPaths, r.skippedPaths)
 	}
 
 	ok := true
