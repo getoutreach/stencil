@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -73,13 +74,14 @@ type TemplateBuilder struct {
 	templates []string
 }
 
-// NewTemplate returns a TemplateBuilder for the template at path. The path is
-// relative to the working directory of the test, which for a module's
-// template tests is its templates directory.
-func (s *Suite) NewTemplate(path string) *TemplateBuilder {
+// NewTemplate returns a TemplateBuilder for the template at tplPath. The path
+// is relative to the working directory of the test, which for a module's
+// template tests is its templates directory. It is cleaned, so "./a.tpl" and
+// "a.tpl" are the same template.
+func (s *Suite) NewTemplate(tplPath string) *TemplateBuilder {
 	return &TemplateBuilder{
 		suite:         s,
-		path:          path,
+		path:          path.Clean(filepath.ToSlash(tplPath)),
 		args:          map[string]any{},
 		blocks:        map[string]string{},
 		hooks:         map[string][]any{},
@@ -134,8 +136,8 @@ func (b *TemplateBuilder) WithHooks(hooks map[string][]any) *TemplateBuilder {
 
 // WithExistingFile sets a file that exists before the render, at a path
 // relative to the root of the generated repository.
-func (b *TemplateBuilder) WithExistingFile(path string, contents []byte) *TemplateBuilder {
-	b.existingFiles[path] = contents
+func (b *TemplateBuilder) WithExistingFile(filePath string, contents []byte) *TemplateBuilder {
+	b.existingFiles[filePath] = contents
 	return b
 }
 
@@ -169,7 +171,8 @@ func (b *TemplateBuilder) WithTemplates(paths ...string) *TemplateBuilder {
 }
 
 // Run renders the template and returns the Result. A render error is in the
-// Result, while a failure to set up the render fails the test.
+// Result, while a failure to set up the render fails the test. That includes a
+// template that the engine does not render.
 func (b *TemplateBuilder) Run(tb testing.TB) *Result {
 	tb.Helper()
 
@@ -216,25 +219,32 @@ func (b *TemplateBuilder) Run(tb testing.TB) *Result {
 		st.RegisterInprocExtensions(name, ext)
 	}
 
-	return b.render(ctx, st, log, runner)
+	r, found := b.render(ctx, st, log, runner)
+	if r.err == nil && !found {
+		tb.Fatalf("rendertest: the template %q was not rendered, "+
+			"its path must end with .tpl and be inside the working directory of the test", b.path)
+	}
+	return r
 }
 
-// render renders with st and returns the Result.
+// render renders with st and returns the Result. found is whether the
+// template under test was among the rendered templates.
 func (b *TemplateBuilder) render(ctx context.Context, st *codegen.Stencil, log logrus.FieldLogger,
-	runner *commandRecorder) *Result {
+	runner *commandRecorder) (r *Result, found bool) {
 	tpls, err := st.Render(ctx, log)
 	if err != nil {
-		return &Result{err: err}
+		return &Result{err: err}, false
 	}
 	if err := st.PostRun(ctx, log); err != nil {
-		return &Result{err: err}
+		return &Result{err: err}, false
 	}
 
-	r := &Result{postRunCommands: runner.commands, hookValues: st.ModuleHooks()}
+	r = &Result{postRunCommands: runner.commands, hookValues: st.ModuleHooks()}
 	for _, tpl := range tpls {
-		if tpl.Path != filepath.ToSlash(b.path) {
+		if tpl.Path != b.path {
 			continue
 		}
+		found = true
 		for _, f := range tpl.Files {
 			switch {
 			case f.Deleted:
@@ -246,7 +256,7 @@ func (b *TemplateBuilder) render(ctx context.Context, st *codegen.Stencil, log l
 			}
 		}
 	}
-	return r
+	return r, found
 }
 
 // newFS returns an in-memory filesystem with the existing files and the
@@ -263,7 +273,7 @@ func (b *TemplateBuilder) newFS() (billy.Filesystem, error) {
 		return fs, nil
 	}
 
-	p := strings.TrimSuffix(filepath.ToSlash(b.path), ".tpl")
+	p := strings.TrimSuffix(b.path, ".tpl")
 	if _, ok := b.existingFiles[p]; ok {
 		return nil, fmt.Errorf("%w: %q", errBlocksAndExistingFile, p)
 	}

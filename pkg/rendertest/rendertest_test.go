@@ -148,6 +148,26 @@ func TestBlocksAndExistingFileAtTheSamePath(t *testing.T) {
 	assert.Assert(t, ft.fatal, "expected Run to fail the test")
 }
 
+func TestTemplatePathIsCleaned(t *testing.T) {
+	t.Parallel()
+
+	f := renderOne(t, suite.NewTemplate("./args.tpl").WithArgs(rendertest.Arg("name", "my-service")))
+	assert.Equal(t, f.Path(), "args")
+	assert.Equal(t, f.String(), "name=my-service\n")
+}
+
+func TestTemplateThatIsNotRendered(t *testing.T) {
+	t.Parallel()
+
+	// The engine renders only files with the .tpl extension.
+	ft := &fatalRecorder{T: t}
+	func() {
+		defer func() { _ = recover() }()
+		suite.NewTemplate("not_a_template.txt").Run(ft)
+	}()
+	assert.Assert(t, ft.fatal, "expected Run to fail the test")
+}
+
 func TestExistingFiles(t *testing.T) {
 	t.Parallel()
 
