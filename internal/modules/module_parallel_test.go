@@ -109,3 +109,26 @@ func TestReplacedModuleInADiamondIsResolvedOnce(t *testing.T) {
 		assert.Equal(t, resolved, 1, "expected the shared module to be resolved once")
 	}
 }
+
+func TestGetModulesForServiceReturnsModulesSortedByName(t *testing.T) {
+	// The resolved modules are kept in a map, so one call could be sorted by
+	// chance.
+	for range 20 {
+		mods, err := modules.GetModulesForService(t.Context(), &modules.ModuleResolveOptions{
+			Module: newReplacedModule(t, "top", "c", "a", "b"),
+			Replacements: map[string]*modules.Module{
+				"a": newReplacedModule(t, "a"),
+				"b": newReplacedModule(t, "b"),
+				"c": newReplacedModule(t, "c"),
+			},
+			Log: logrus.New(),
+		})
+		assert.NilError(t, err)
+
+		names := make([]string, 0, len(mods))
+		for _, m := range mods {
+			names = append(names, m.Name)
+		}
+		assert.DeepEqual(t, names, []string{"a", "b", "c", "top"})
+	}
+}

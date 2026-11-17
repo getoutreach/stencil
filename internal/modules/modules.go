@@ -9,7 +9,9 @@
 package modules
 
 import (
+	"cmp"
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/getoutreach/gobox/pkg/cfg"
@@ -140,11 +142,13 @@ func GetModulesForService(ctx context.Context, opts *ModuleResolveOptions) ([]*M
 		// check if we have any more modules to resolve
 	}
 
-	// convert the resolved modules to a list of modules
+	// convert the resolved modules to a list of modules, sorted by name so that
+	// the order is the same on every run
 	modules := make([]*Module, 0, len(wl.resolved))
 	for _, m := range wl.resolved {
 		modules = append(modules, m.Module)
 	}
+	slices.SortFunc(modules, func(a, b *Module) int { return cmp.Compare(a.Name, b.Name) })
 	return modules, nil
 }
 
