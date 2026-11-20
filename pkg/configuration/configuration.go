@@ -123,7 +123,9 @@ type TemplateRepositoryManifest struct {
 
 	// PostRunCommand is a command to be ran after rendering and post-processors
 	// have been ran on the project. The commands of a module run in the order of
-	// this list, after those of the modules that it depends on.
+	// this list, after those of the modules that it depends on. If modules depend
+	// on each other in a cycle, Stencil logs a warning and runs the module with the
+	// lowest name before the other modules of the cycle.
 	PostRunCommand []*PostRunCommandSpec `yaml:"postRunCommand,omitempty"`
 
 	// Arguments are a declaration of arguments to the template generator

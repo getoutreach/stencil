@@ -18,14 +18,14 @@ import (
 // SortByDependencies returns mods ordered so that each module comes after the
 // modules in mods that its manifest lists in modules. Among modules that are
 // ready at the same time, the one with the lowest name comes first, so the
-// order is the same on every run. The names in mods must be different, and
-// mods is not modified.
+// order is the same on every run. The names in mods must be different, log
+// must not be nil, and mods is not modified.
 //
 // If modules depend on each other in a cycle, they can not all come after
 // their dependencies. SortByDependencies logs a warning that names the modules
-// of the cycle and puts the one with the lowest name first. It breaks only a
-// cycle that waits for no module outside it, so a cycle that depends on
-// another cycle comes after that cycle.
+// of the cycle and puts the one with the lowest name before the others. It
+// breaks only a cycle that waits for no module outside it, so a cycle that
+// depends on another cycle comes after that cycle.
 func SortByDependencies(ctx context.Context, mods []*Module, log logrus.FieldLogger) ([]*Module, error) {
 	remaining := slices.Clone(mods)
 	slices.SortFunc(remaining, func(a, b *Module) int { return cmp.Compare(a.Name, b.Name) })
