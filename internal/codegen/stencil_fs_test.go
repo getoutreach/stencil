@@ -7,6 +7,7 @@ package codegen
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/getoutreach/stencil/internal/modules"
@@ -103,4 +104,25 @@ func TestFilePathCannotLeaveTheWorkingDirectory(t *testing.T) {
 
 	_, err := renderTemplate(t, `{{ $_ := file.SetPath "../outside.txt" }}`)
 	assert.ErrorIs(t, err, billy.ErrCrossedBoundary)
+}
+
+func TestAbsoluteFilePathResolvesUnderTheWorkingDirectory(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	assert.NilError(t, os.WriteFile("set-path.txt", []byte(existingBlockFile), 0o644))
+
+	// The root of the default filesystem is the working directory.
+	files, err := renderTemplate(t, `{{ $_ := file.SetPath "/set-path.txt" }}`+blockTemplate)
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].Name(), "/set-path.txt")
+	assert.Equal(t, files[0].String(), existingBlockFile)
+
+	// A file with that absolute path on the real disk is not read, so the block
+	// stays empty.
+	outside := filepath.Join(t.TempDir(), "outside.txt")
+	assert.NilError(t, os.WriteFile(outside, []byte(existingBlockFile), 0o644))
+
+	files, err = renderTemplate(t, `{{ $_ := file.SetPath "`+outside+`" }}`+blockTemplate)
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "## <<Stencil::Block(custom)>>\n\n## <</Stencil::Block>>\n")
 }
