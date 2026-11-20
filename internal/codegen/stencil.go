@@ -374,11 +374,11 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 }
 
 // PostRun runs all post run commands specified in the modules that
-// this service depends on.
+// this service depends on. modules.SortByDependencies gives the order of the
+// modules.
 func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 	log.Info("Running post-run command(s)")
 
-	// The commands of a module run after those of the modules that it depends on.
 	mods, err := modules.SortByDependencies(ctx, s.modules, log)
 	if err != nil {
 		return err

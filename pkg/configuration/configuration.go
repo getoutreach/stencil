@@ -122,7 +122,8 @@ type TemplateRepositoryManifest struct {
 	Type TemplateRepositoryTypes `yaml:"type,omitempty"`
 
 	// PostRunCommand is a command to be ran after rendering and post-processors
-	// have been ran on the project
+	// have been ran on the project. The commands of a module run in the order of
+	// this list, after those of the modules that it depends on.
 	PostRunCommand []*PostRunCommandSpec `yaml:"postRunCommand,omitempty"`
 
 	// Arguments are a declaration of arguments to the template generator
