@@ -200,3 +200,34 @@ func TestWithGitInfoAndWithBoxConfig(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, files[0].String(), "refs/heads/feature abc123 true trunk example")
 }
+
+func TestWithGitInfoReplacesTheGitRepository(t *testing.T) {
+	t.Chdir(newClonedRepository(t))
+
+	// Without the option, the values come from the repository.
+	files, err := renderTemplate(t, `{{ .Git.Ref }} {{ .Git.DefaultBranch }} {{ len .Git.Commit }}`)
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "refs/heads/trunk trunk 40")
+
+	files, err = renderTemplate(t, `{{ .Git.Ref }} {{ .Git.DefaultBranch }} {{ .Git.Commit }}`,
+		WithGitInfo("refs/heads/option", "optionsha", "other-branch", false))
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "refs/heads/option other-branch optionsha")
+}
+
+func TestWithBoxConfigReplacesTheBoxConfigOnDisk(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	boxDir := filepath.Join(home, box.BoxConfigPath)
+	assert.NilError(t, os.MkdirAll(boxDir, 0o755))
+	assert.NilError(t, os.WriteFile(filepath.Join(boxDir, box.BoxConfigFile), []byte("config:\n  org: from-disk\n"), 0o644))
+
+	// Without the option, the config is read from the file.
+	files, err := renderTemplate(t, `{{ .Runtime.Box.Org }}`)
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "from-disk")
+
+	files, err = renderTemplate(t, `{{ .Runtime.Box.Org }}`, WithBoxConfig(&box.Config{Org: "from-option"}))
+	assert.NilError(t, err)
+	assert.Equal(t, files[0].String(), "from-option")
+}
