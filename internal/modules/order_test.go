@@ -11,6 +11,7 @@ import (
 
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
@@ -60,10 +61,10 @@ func TestSortByDependencies(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		mods        []*modules.Module
-		want        []string
-		wantWarning string // empty if there is no cycle
+		name         string
+		mods         []*modules.Module
+		want         []string
+		wantWarnings []string // empty if there is no cycle
 	}{
 		{
 			name: "no dependencies sorts by name",
@@ -115,8 +116,8 @@ func TestSortByDependencies(t *testing.T) {
 				newReplacedModule(t, "a", "b"), newReplacedModule(t, "b", "c"), newReplacedModule(t, "c", "a"),
 				newReplacedModule(t, "d", "a"), newReplacedModule(t, "e"),
 			},
-			want:        []string{"e", "a", "c", "b", "d"},
-			wantWarning: "modules depend on each other in a cycle (a -> b -> c -> a), running a first",
+			want:         []string{"e", "a", "c", "b", "d"},
+			wantWarnings: []string{"modules depend on each other in a cycle (a, b, c), running a first"},
 		},
 		{
 			// a is the lowest name, but it only imports b, which is in a cycle with
@@ -125,8 +126,22 @@ func TestSortByDependencies(t *testing.T) {
 			mods: []*modules.Module{
 				newReplacedModule(t, "a", "b"), newReplacedModule(t, "b", "c"), newReplacedModule(t, "c", "b"),
 			},
-			want:        []string{"b", "a", "c"},
-			wantWarning: "modules depend on each other in a cycle (b -> c -> b), running b first",
+			want:         []string{"b", "a", "c"},
+			wantWarnings: []string{"modules depend on each other in a cycle (b, c), running b first"},
+		},
+		{
+			// a and b are a cycle, and a also imports d, which is in another cycle
+			// with e. The cycle of d and e is broken first, so that a comes after d.
+			name: "cycle that depends on another cycle",
+			mods: []*modules.Module{
+				newReplacedModule(t, "a", "b", "d"), newReplacedModule(t, "b", "a"),
+				newReplacedModule(t, "d", "e"), newReplacedModule(t, "e", "d"),
+			},
+			want: []string{"d", "e", "a", "b"},
+			wantWarnings: []string{
+				"modules depend on each other in a cycle (d, e), running d first",
+				"modules depend on each other in a cycle (a, b), running a first",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -136,11 +151,7 @@ func TestSortByDependencies(t *testing.T) {
 			got, warnings := sortNames(t, tt.mods)
 			assert.DeepEqual(t, got, tt.want)
 
-			wantWarnings := []string{}
-			if tt.wantWarning != "" {
-				wantWarnings = []string{tt.wantWarning}
-			}
-			assert.DeepEqual(t, warnings, wantWarnings)
+			assert.DeepEqual(t, warnings, tt.wantWarnings, cmpopts.EquateEmpty())
 		})
 	}
 }

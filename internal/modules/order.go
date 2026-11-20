@@ -8,6 +8,7 @@ package modules
 import (
 	"cmp"
 	"context"
+	"maps"
 	"slices"
 	"strings"
 
@@ -21,8 +22,10 @@ import (
 // mods is not modified.
 //
 // If modules depend on each other in a cycle, they can not all come after
-// their dependencies. SortByDependencies logs a warning that names the cycle
-// and puts the module of the cycle with the lowest name first.
+// their dependencies. SortByDependencies logs a warning that names the modules
+// of the cycle and puts the one with the lowest name first. It breaks only a
+// cycle that waits for no module outside it, so a cycle that depends on
+// another cycle comes after that cycle.
 func SortByDependencies(ctx context.Context, mods []*Module, log logrus.FieldLogger) ([]*Module, error) {
 	remaining := slices.Clone(mods)
 	slices.SortFunc(remaining, func(a, b *Module) int { return cmp.Compare(a.Name, b.Name) })
@@ -46,26 +49,33 @@ func SortByDependencies(ctx context.Context, mods []*Module, log logrus.FieldLog
 	}
 
 	done := make(map[string]bool, len(remaining))
-	// blocker returns a dependency of name that is not in the result yet, or
-	// "" if there is none.
-	blocker := func(name string) string {
-		for _, d := range deps[name] {
-			if !done[d] {
-				return d
+
+	// reachable returns the modules that name depends on, directly or through
+	// other modules, and that are not in the result yet.
+	reachable := func(name string) map[string]bool {
+		seen := map[string]bool{}
+		for stack := []string{name}; len(stack) > 0; {
+			current := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			for _, d := range deps[current] {
+				if !done[d] && !seen[d] {
+					seen[d] = true
+					stack = append(stack, d)
+				}
 			}
 		}
-		return ""
+		return seen
 	}
 
 	result := make([]*Module, 0, len(remaining))
 	for len(remaining) > 0 {
-		i := slices.IndexFunc(remaining, func(m *Module) bool { return blocker(m.Name) == "" })
+		i := slices.IndexFunc(remaining, func(m *Module) bool { return len(reachable(m.Name)) == 0 })
 		if i < 0 {
 			// Every module waits for another one, so there is a cycle.
-			cycle := findCycle(remaining[0].Name, blocker)
-			first := slices.Min(cycle)
+			cycle := findCycle(remaining, reachable)
+			first := cycle[0]
 			log.Warnf("modules depend on each other in a cycle (%s), running %s first",
-				strings.Join(slices.Concat(cycle, cycle[:1]), " -> "), first)
+				strings.Join(cycle, ", "), first)
 			i = slices.IndexFunc(remaining, func(m *Module) bool { return m.Name == first })
 		}
 
@@ -77,15 +87,17 @@ func SortByDependencies(ctx context.Context, mods []*Module, log logrus.FieldLog
 	return result, nil
 }
 
-// findCycle follows the blockers from start until a name repeats, and returns
-// the names of the cycle in dependency order. Every blocker is a module that
-// is not in the result yet and also has a blocker, so the walk ends in a cycle.
-func findCycle(start string, blocker func(string) string) []string {
-	var path []string
-	for name := start; ; name = blocker(name) {
-		if i := slices.Index(path, name); i >= 0 {
-			return path[i:]
+// findCycle returns the sorted names of the modules in the lowest-named cycle
+// that waits for no module outside it. A module is in such a cycle if every
+// module that it reaches reaches it back.
+func findCycle(remaining []*Module, reachable func(string) map[string]bool) []string {
+	for _, m := range remaining {
+		names := slices.Sorted(maps.Keys(reachable(m.Name)))
+		if !slices.ContainsFunc(names, func(name string) bool { return !reachable(name)[m.Name] }) {
+			return names
 		}
-		path = append(path, name)
 	}
+
+	// Every module waits for another one, so a cycle is always found above.
+	return []string{remaining[0].Name}
 }

@@ -58,7 +58,7 @@ func TestPostRunOrder(t *testing.T) {
 			want: []string{
 				"echo x:one", "echo x:two", "echo y:one", "echo y:two", "echo z:one", "echo z:two",
 			},
-			wantWarning: "modules depend on each other in a cycle (x -> y -> x), running x first",
+			wantWarning: "modules depend on each other in a cycle (x, y), running x first",
 		},
 	}
 	for _, tt := range tests {
