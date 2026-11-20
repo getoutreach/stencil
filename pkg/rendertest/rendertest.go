@@ -64,6 +64,62 @@
 //	func Defaults() rendertest.ArgOption {
 //		return rendertest.Args(Name("my-service"), rendertest.NestedArg("kubernetes.replicas", 1))
 //	}
+//
+// # Migrating from stenciltest
+//
+// Packages stenciltest and rendertest can be used in the same Go module, so a
+// module can migrate one test at a time. To migrate a module:
+//
+//  1. Add a TestMain that creates the Suite, as shown at the top of this page.
+//  2. Convert each test, as described below.
+//  3. Optionally, move the arguments that tests share into a fixture package.
+//  4. Write the snapshots with the command in the Snapshots section, then
+//     review and commit the files in testdata/snapshots.
+//  5. When all tests of the module are converted, remove the imports of
+//     stenciltest, the .snapshots directory and the cupaloy dependency.
+//
+// A stenciltest test:
+//
+//	func TestDeployment(t *testing.T) {
+//		st := stenciltest.New(t, "deployment.yaml.tpl")
+//		st.Args(map[string]any{"name": "my-service"})
+//		st.Run(stenciltest.RegenerateSnapshots())
+//	}
+//
+// becomes:
+//
+//	func TestDeployment(t *testing.T) {
+//		result := suite.NewTemplate("deployment.yaml.tpl").
+//			WithRawArgs(map[string]any{"name": "my-service"}).
+//			Run(t)
+//
+//		result.Snapshot(t)
+//	}
+//
+// The common calls of a stenciltest.Template map to these:
+//
+//   - stenciltest.New(t, path, helpers...) is suite.NewTemplate(path), with
+//     TemplateBuilder.WithTemplates(helpers...) for the helper templates.
+//   - Template.Args(args) is TemplateBuilder.WithRawArgs(args), or
+//     TemplateBuilder.WithArgs with argument fixtures.
+//   - Template.Ext(name, ext) is TemplateBuilder.WithExtension(name, ext).
+//   - Template.ErrorContains(msg) is a check of Result.Error, which is the
+//     render error.
+//   - Template.Run(stenciltest.RegenerateSnapshots()) is TemplateBuilder.Run(t)
+//     followed by Result.Snapshot(t).
+//
+// Three behaviors differ:
+//
+//   - stenciltest overwrites a changed snapshot on every run where the CI
+//     environment variable is empty. That run fails, and the next run passes
+//     without a review of the change. rendertest writes snapshots only when it
+//     is built with the rendertest_update_snapshots build tag.
+//   - stenciltest renders the templates of every module in the dependency
+//     tree, so those templates write the hook values of dependency modules.
+//     rendertest renders only the template under test and the helper
+//     templates, and TemplateBuilder.WithHooks sets those hook values.
+//   - Snapshots are in testdata/snapshots/<test name>/<file path>, with the
+//     exact contents of the file, and not in .snapshots.
 package rendertest
 
 import "strings"
