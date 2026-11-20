@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/gobox/pkg/cli/github"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -52,6 +53,9 @@ type Suite struct {
 
 	// deps are the dependency modules. They have a manifest and no templates.
 	deps []*modules.Module
+
+	// getToken looks up the GitHub token. Tests replace it.
+	getToken func() (cfg.SecretData, error)
 }
 
 // SuiteOption configures a Suite.
@@ -86,7 +90,7 @@ func WithoutModuleResolution() SuiteOption {
 // NewSuite returns a Suite for the tests that m runs. Call Run to load it
 // and run the tests.
 func NewSuite(m *testing.M, opts ...SuiteOption) *Suite {
-	s := &Suite{m: m, resolveModules: true}
+	s := &Suite{m: m, resolveModules: true, getToken: github.GetToken}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -170,15 +174,10 @@ func (s *Suite) resolveDependencies(ctx context.Context) ([]*modules.Module, err
 		replacements[name] = m
 	}
 
-	token, err := github.GetToken()
-	if err != nil {
-		token = ""
-	}
-
 	log := logrus.New()
 	log.SetLevel(logrus.WarnLevel)
 	resolved, err := modules.GetModulesForService(ctx, &modules.ModuleResolveOptions{
-		Token:        token,
+		TokenFunc:    s.getToken,
 		Module:       self,
 		Replacements: replacements,
 		Log:          log,

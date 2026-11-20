@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/cfg"
 	"gotest.tools/v3/assert"
 )
 
@@ -74,4 +75,16 @@ func TestDefaultManifestPath(t *testing.T) {
 	want, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "manifest.yaml"))
 	assert.NilError(t, err)
 	assert.Equal(t, p, want)
+}
+
+func TestLoadWithAllDependenciesReplacedDoesNotAskForAToken(t *testing.T) {
+	tokenAsked := false
+	s := newTestSuite()
+	s.getToken = func() (cfg.SecretData, error) {
+		tokenAsked = true
+		return "", nil
+	}
+	assert.NilError(t, s.load(t.Context()))
+
+	assert.Assert(t, !tokenAsked, "expected no GitHub token to be asked for")
 }
