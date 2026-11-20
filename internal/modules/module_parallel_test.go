@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/getoutreach/gobox/pkg/cfg"
 	"github.com/getoutreach/stencil/internal/modules"
 	"github.com/getoutreach/stencil/internal/modules/modulestest"
 	"github.com/getoutreach/stencil/pkg/configuration"
@@ -131,4 +132,22 @@ func TestGetModulesForServiceReturnsModulesSortedByName(t *testing.T) {
 		}
 		assert.DeepEqual(t, names, []string{"a", "b", "c", "top"})
 	}
+}
+
+func TestGetModulesForServiceDoesNotAskForATokenWhenAllModulesAreReplaced(t *testing.T) {
+	tokenAsked := false
+	_, err := modules.GetModulesForService(t.Context(), &modules.ModuleResolveOptions{
+		Module: newReplacedModule(t, "top", "a", "b"),
+		Replacements: map[string]*modules.Module{
+			"a": newReplacedModule(t, "a", "b"),
+			"b": newReplacedModule(t, "b"),
+		},
+		TokenFunc: func() (cfg.SecretData, error) {
+			tokenAsked = true
+			return "", nil
+		},
+		Log: logrus.New(),
+	})
+	assert.NilError(t, err)
+	assert.Assert(t, !tokenAsked, "expected no token to be asked for")
 }

@@ -74,6 +74,13 @@ type ModuleResolveOptions struct {
 	// Token is the token to use to resolve modules
 	Token cfg.SecretData
 
+	// TokenFunc takes the place of Token. It is called at most once, when the
+	// first module that is not local or replaced is resolved.
+	TokenFunc func() (cfg.SecretData, error)
+
+	tokenOnce sync.Once
+	token     cfg.SecretData
+
 	// Log is the logger to use
 	Log logrus.FieldLogger
 
@@ -96,6 +103,23 @@ type ModuleResolveOptions struct {
 	// ConcurrentResolvers is the number of concurrent resolvers to use
 	// when resolving modules.
 	ConcurrentResolvers int
+}
+
+// resolveToken returns the token to resolve modules with, from TokenFunc if it
+// is set. If TokenFunc fails, modules are resolved without a token.
+func (o *ModuleResolveOptions) resolveToken() cfg.SecretData {
+	o.tokenOnce.Do(func() {
+		o.token = o.Token
+		if o.TokenFunc == nil {
+			return
+		}
+
+		var err error
+		if o.token, err = o.TokenFunc(); err != nil && o.Log != nil {
+			o.Log.WithError(err).Debug("failed to get a token, resolving modules without one")
+		}
+	})
+	return o.token
 }
 
 // GetModulesForService returns a list of modules that have been resolved from the provided
@@ -169,7 +193,7 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 	// (local modules & in-memory modules should be treated as always satisfying constraints)
 	if !alwaysSatisfiesConstraints(opts, item) {
 		var err error
-		version, err = wl.getLatestModuleForConstraints(ctx, item, opts.Token)
+		version, err = wl.getLatestModuleForConstraints(ctx, item, opts.resolveToken())
 		if err != nil {
 			return err
 		}
