@@ -377,7 +377,14 @@ func (s *Stencil) Render(ctx context.Context, log logrus.FieldLogger) ([]*Templa
 // this service depends on.
 func (s *Stencil) PostRun(ctx context.Context, log logrus.FieldLogger) error {
 	log.Info("Running post-run command(s)")
-	for _, m := range s.modules {
+
+	// The commands of a module run after those of the modules that it depends on.
+	mods, err := modules.SortByDependencies(ctx, s.modules, log)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mods {
 		mf, err := m.Manifest(ctx)
 		if err != nil {
 			return err
