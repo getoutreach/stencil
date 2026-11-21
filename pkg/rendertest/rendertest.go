@@ -99,7 +99,9 @@
 // The common calls of a stenciltest.Template map to these:
 //
 //   - stenciltest.New(t, path, helpers...) is suite.NewTemplate(path), with
-//     TemplateBuilder.WithTemplates(helpers...) for the helper templates.
+//     TemplateBuilder.WithTemplates(helpers...) for the helper templates. To
+//     load all templates of the module as helpers, pass FindTemplates(t, ".")
+//     to WithTemplates.
 //   - Template.Args(args) is TemplateBuilder.WithRawArgs(args), or
 //     TemplateBuilder.WithArgs with argument fixtures.
 //   - Template.Ext(name, ext) is TemplateBuilder.WithExtension(name, ext).
