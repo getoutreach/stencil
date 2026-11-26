@@ -150,7 +150,18 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 			},
 			wantErr: "repository does not exist",
 		},
-		"unsupported git extension": {
+		"git extension not valid for repository format version 0": {
+			setup: func(t *testing.T) string {
+				t.Helper()
+				dir := t.TempDir()
+				gitInDir(t, dir, "init", "-q")
+				gitInDir(t, dir, "config", "core.repositoryformatversion", "0")
+				gitInDir(t, dir, "config", "extensions.objectFormat", "sha256")
+				return dir
+			},
+			wantErr: "does not support extension",
+		},
+		"git extension unknown to go-git": {
 			setup: func(t *testing.T) string {
 				t.Helper()
 				dir := t.TempDir()
@@ -159,7 +170,7 @@ func TestDefaultBranchWithoutOpenableRepository(t *testing.T) {
 				gitInDir(t, dir, "config", "extensions.worktreeConfig", "true")
 				return dir
 			},
-			wantErr: "does not support extension",
+			wantErr: "unknown extension",
 		},
 	}
 	for name, tt := range tests {
