@@ -36,7 +36,7 @@ func TestValues(t *testing.T) {
 	// Clone from an upstream repository so that the default branch can be
 	// determined from the "origin" remote.
 	upstream, err := gogit.PlainInitWithOptions(t.TempDir(), &gogit.PlainInitOptions{
-		InitOptions: gogit.InitOptions{DefaultBranch: plumbing.Main},
+		DefaultBranch: plumbing.Main,
 	})
 	assert.NilError(t, err, "expected gogit.PlainInitWithOptions() not to fail")
 

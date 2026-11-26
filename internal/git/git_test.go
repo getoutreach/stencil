@@ -26,8 +26,8 @@ func createTempGitRepo(t *testing.T, defaultBranch plumbing.ReferenceName) strin
 	t.Helper()
 	repoDir := t.TempDir()
 	repo, err := git.PlainInitWithOptions(repoDir, &git.PlainInitOptions{
-		InitOptions: git.InitOptions{DefaultBranch: defaultBranch},
-		Bare:        false,
+		DefaultBranch: defaultBranch,
+		Bare:          false,
 	})
 	assert.NilError(t, err)
 	wt, err := repo.Worktree()
@@ -111,7 +111,7 @@ func TestGetDefaultBranchWithoutOriginRemote(t *testing.T) {
 	t.Run("uses the branch HEAD names when there are no commits yet", func(t *testing.T) {
 		repoDir := t.TempDir()
 		_, err := git.PlainInitWithOptions(repoDir, &git.PlainInitOptions{
-			InitOptions: git.InitOptions{DefaultBranch: plumbing.NewBranchReferenceName("develop")},
+			DefaultBranch: plumbing.NewBranchReferenceName("develop"),
 		})
 		assert.NilError(t, err)
 

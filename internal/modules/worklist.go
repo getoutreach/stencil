@@ -238,7 +238,7 @@ func (list *workList) getLatestModuleForConstraints(ctx context.Context, item *w
 				wants = "(channel) " + h.channel
 			}
 
-			errorStringSb226.WriteString(fmt.Sprintln(history[i].parentModule, "wants", wants))
+			fmt.Fprintln(&errorStringSb226, history[i].parentModule, "wants", wants)
 		}
 		errorString += errorStringSb226.String()
 		return nil, errors.Wrapf(err, "failed to resolve module '%s' with constraints\n%s", m.conf.Name, errorString)

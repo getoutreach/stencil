@@ -39,12 +39,10 @@ func IsTransientError(err error) bool {
 	}
 
 	// go-git wraps the HTTP error, and its wrapper has no Unwrap method.
-	var unexpected *plumbing.UnexpectedError
-	if errors.As(err, &unexpected) {
+	if unexpected, ok := errors.AsType[*plumbing.UnexpectedError](err); ok {
 		err = unexpected.Err
 	}
-	var httpErr *githttp.Err
-	if errors.As(err, &httpErr) {
+	if httpErr, ok := errors.AsType[*githttp.Err](err); ok {
 		return IsTransientStatus(httpErr.StatusCode())
 	}
 

@@ -22,7 +22,7 @@ func dereference(i any) any {
 	infType := reflect.TypeOf(i)
 
 	// If not a pointer, noop
-	if infType.Kind() != reflect.Ptr {
+	if infType.Kind() != reflect.Pointer {
 		return i
 	}
 

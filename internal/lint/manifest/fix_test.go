@@ -473,12 +473,12 @@ func TestFixDoesNotConsolidateSiblingsOnDiffersTypePath(t *testing.T) {
 func TestKnownArgFieldsMatchesArgument(t *testing.T) {
 	want := map[string]bool{}
 	rt := reflect.TypeFor[configuration.Argument]()
-	for i := range rt.NumField() {
-		tag := rt.Field(i).Tag.Get("yaml")
+	for field := range rt.Fields() {
+		tag := field.Tag.Get("yaml")
 		if tag == "" || tag == "-" {
 			continue
 		}
-		name := strings.Split(tag, ",")[0]
+		name, _, _ := strings.Cut(tag, ",")
 		if name == "" {
 			continue
 		}
