@@ -33,7 +33,6 @@ func TestCloneManifestHandlesEveryReferenceField(t *testing.T) {
 	referenceKinds := []reflect.Kind{reflect.Map, reflect.Slice, reflect.Pointer, reflect.Interface, reflect.Struct}
 	for typ, fields := range handled {
 		for field := range typ.Fields() {
-			field := field
 			if slices.Contains(referenceKinds, field.Type.Kind()) {
 				assert.Assert(t, fields[field.Name],
 					"%s.%s is a reference type that cloneManifest may not copy", typ.Name(), field.Name)

@@ -25,6 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// logFieldModule is the structured log field name for a module's import path.
+const logFieldModule = "module"
+
 // ErrChannelConflict indicates a module was previously resolved with a
 // different release channel than is now required.
 var ErrChannelConflict = errors.New("unable to resolve module: channel conflict")
@@ -132,7 +135,7 @@ func (list *workList) pop() *workItem {
 	if rm.dontResolve {
 		// this module has already been resolved and should always be used
 		list.log.WithFields(logrus.Fields{
-			"module": importPath,
+			logFieldModule: importPath,
 		}).Debug("Using in-memory module")
 		return &workItem{importPath: importPath, inProgressResolution: rm, spec: resolv}
 	}
@@ -147,8 +150,8 @@ func (list *workList) pop() *workItem {
 	rm.mu.Unlock()
 
 	list.log.WithFields(logrus.Fields{
-		"module": importPath,
-		"parent": resolv.parent,
+		logFieldModule: importPath,
+		"parent":       resolv.parent,
 	}).Debug("resolving module")
 
 	uri := "https://" + importPath
