@@ -212,8 +212,8 @@ func work(ctx context.Context, opts *ModuleResolveOptions, item *workItem, wl *w
 	item.inProgressResolution.mu.Unlock()
 
 	log.WithFields(logrus.Fields{
-		"module":  item.importPath,
-		"version": version.GitRef(),
+		logFieldModule: item.importPath,
+		"version":      version.GitRef(),
 	}).Debug("resolved module")
 	return nil
 }

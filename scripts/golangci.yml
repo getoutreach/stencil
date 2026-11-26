@@ -15,6 +15,7 @@ linters:
   enable:
     - bodyclose
     - copyloopvar # Detects places where loop variables are copied.
+    - depguard
     - dogsled
     - errcheck
     - errorlint
@@ -52,7 +53,6 @@ linters:
     - gochecksumtype
     - godoclint
     - godot
-    - gomoddirectives
     - importas
     - intrange
     - iotamixing
@@ -81,6 +81,18 @@ linters:
     - wastedassign
     - zerologlint
   settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - "$all"
+          deny:
+            - pkg: "github.com/getoutreach/async/pkg/async"
+              desc: "archived since 2022; use github.com/getoutreach/gobox/pkg/async instead"
+            - pkg: "gopkg.in/yaml.v2"
+              desc: "archived; use go.yaml.in/yaml/v3 (latest major) or go.yaml.in/yaml/v2 (for strict compatibility)"
+            - pkg: "gopkg.in/yaml.v3"
+              desc: "archived; use go.yaml.in/yaml/v3"
     dupl:
       threshold: 100
     errcheck:

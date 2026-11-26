@@ -12,6 +12,9 @@ builds:
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: darwin
+        goarch: amd64
     ldflags:
       - '-w -s -X "github.com/getoutreach/gobox/pkg/app.Version=v{{ .Version }}"'
       - '-X "main.HoneycombTracingKey={{ .Env.HONEYCOMB_APIKEY }}"'
@@ -22,7 +25,9 @@ builds:
 
       ## <</Stencil::Block>>
 
+## <<Stencil::Block(archives)>>
 archives: []
+## <</Stencil::Block>>
 checksum:
   name_template: "checksums.txt"
 release:

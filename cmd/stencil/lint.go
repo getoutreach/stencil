@@ -977,6 +977,7 @@ func writeFixedFile(path string, original []byte) func([]byte) error {
 		if info, statErr := os.Stat(path); statErr == nil {
 			mode = info.Mode().Perm()
 		}
+		//nolint:gosec // Why: path is the manifest file the user asked to fix.
 		return os.WriteFile(path, fixed, mode)
 	}
 }

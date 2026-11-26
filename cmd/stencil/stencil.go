@@ -149,6 +149,7 @@ func main() {
 	gcli.RunV3(ctx, cancel, &app, &gcli.Config{
 		Logger: log,
 		Telemetry: gcli.TelemetryConfig{
+			Disabled: false,
 			Otel: gcli.TelemetryOtelConfig{
 				Dataset:         HoneycombDataset,
 				HoneycombAPIKey: cfg.SecretData(HoneycombTracingKey),

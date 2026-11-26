@@ -31,11 +31,9 @@ func NewExtensionClient(ctx context.Context, extPath string, log logrus.FieldLog
 			Output:      &logger{fn: log.Debug},
 			DisableTime: true,
 		}),
-		HandshakeConfig: plugin.HandshakeConfig{
-			ProtocolVersion:  Version,
-			MagicCookieKey:   CookieKey,
-			MagicCookieValue: CookieValue,
-		},
+		ProtocolVersion:  Version,
+		MagicCookieKey:   CookieKey,
+		MagicCookieValue: CookieValue,
 		Plugins: map[string]plugin.Plugin{
 			Name: &ExtensionPlugin{log, nil},
 		},
