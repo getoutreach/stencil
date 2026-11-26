@@ -12,7 +12,6 @@ arguments:
     linters:
       strict: true
   lintroller: platinum
-  metrics: datadog
   notifications:
     releaseFailureSlackChannel: C01CEQP2MA6
   oss: true
@@ -24,12 +23,6 @@ arguments:
   reportingTeam: fnd-dt
   slack: dev-tooling-notifications
   tier: 2
-  tracing: opentelemetry
-  vaultSecrets:
-    - deploy/honeycomb_new/%(environment)s/honeycomb
-    - deploy/launchdarkly/%(environment)s/launchdarkly
-    - deploy/mint/%(environment)s/validation/mint-validator-payload
-    - deploy/flagship-shared-secret/%(environment)s/authn-flagship-payload
   versions:
     prettier: "3"
     urfave-cli: "v3"
