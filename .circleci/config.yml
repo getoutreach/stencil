@@ -66,17 +66,7 @@ release_branches: &release_branches # Release branch
 
 jobs:
   ## <<Stencil::Block(circleJobs)>>
-  integration:
-    executor:
-      name: shared/testbed-docker-aws
-      docker_tag: stable
-    resource_class: medium+
-    steps:
-      - shared/setup_environment
-      - run:
-          name: Run integration tests
-          no_output_timeout: 30m
-          command: echo "Implement me!"
+
   ## <</Stencil::Block>>
 
   ### Start jobs inserted by other modules
@@ -150,12 +140,7 @@ workflows:
         - not: << pipeline.parameters.stencil_upgrade >>
     jobs:
       ## <<Stencil::Block(circleWorkflowJobs)>>
-      - integration:
-          context:
-            - aws-credentials
-            - docker-registry
-            - ghaccesstoken
-            - npm-credentials
+
       ## <</Stencil::Block>>
       ### Start jobs inserted by other modules
       ### End jobs inserted by other modules
@@ -167,7 +152,6 @@ workflows:
           ## <</Stencil::Block>>
           requires:
             ## <<Stencil::Block(circleReleaseRequires)>>
-            - integration
 
             ## <</Stencil::Block>>
             - shared/test
