@@ -64,7 +64,7 @@ release_branches: &release_branches # Release branch
 
 ## <</Stencil::Block>>
 
-jobs:
+jobs: {}
   ## <<Stencil::Block(circleJobs)>>
 
   ## <</Stencil::Block>>

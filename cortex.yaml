@@ -45,7 +45,7 @@ info:
     tier: tier_2
     framework: stencil
     language: Golang
-    stencil_version: v1.47.0
+    stencil_version: v1.47.1-rc.3
     golang_version: 1.27.4
     cli: true
     service: false
